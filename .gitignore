@@ -1,8 +1,26 @@
+# Node / Frontend
 node_modules/
-build/
+**/node_modules/
 dist/
-coverage/
-.DS_Store
+**/dist/
+build/
+.vite/
+**/.vite/
 *.log
 .env*
 !.env.example
+
+# .NET / Backend
+bin/
+**/bin/
+obj/
+**/obj/
+.vs/
+**/.vs/
+*.user
+*.suo
+
+# System
+.DS_Store
+Thumbs.db
+
