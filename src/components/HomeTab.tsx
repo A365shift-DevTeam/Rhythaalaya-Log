@@ -41,10 +41,10 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   return (
     <div className="space-y-6 md:space-y-8 pb-12">
       {/* Top Banner Greeting */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-sans text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+            <span className="font-sans text-xs font-semibold uppercase tracking-wider text-brand-500 dark:text-brand-400">
               {formattedDate}
             </span>
             <span className="text-slate-300 dark:text-slate-700">•</span>
@@ -64,7 +64,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={onOpenAddStudent}
-            className="flex-1 sm:flex-initial bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95"
+            className="btn-brand flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-[18px]">person_add</span>
             <span>Add Student</span>
@@ -84,13 +84,13 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         {/* Total Students */}
         <div
           onClick={() => setCurrentTab('students')}
-          className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 cursor-pointer flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:border-indigo-300 dark:hover:border-indigo-700 shadow-xs"
+          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-5 cursor-pointer flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs"
         >
           <div className="flex items-center justify-between">
             <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Active Students
             </span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">group</span>
             </div>
           </div>
@@ -108,13 +108,13 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         {/* Active Batches */}
         <div
           onClick={() => setCurrentTab('menu')}
-          className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 cursor-pointer flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:border-indigo-300 dark:hover:border-indigo-700 shadow-xs"
+          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-5 cursor-pointer flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs"
         >
           <div className="flex items-center justify-between">
             <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Batches
             </span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">calendar_view_week</span>
             </div>
           </div>
@@ -131,7 +131,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         {/* Revenue Collected */}
         <div
           onClick={() => setCurrentTab('finance')}
-          className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 cursor-pointer flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:border-indigo-300 dark:hover:border-indigo-700 shadow-xs"
+          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-5 cursor-pointer flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs"
         >
           <div className="flex items-center justify-between">
             <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -154,13 +154,13 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         {/* Avg Attendance */}
         <div
           onClick={() => setCurrentTab('log')}
-          className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 cursor-pointer flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:border-indigo-300 dark:hover:border-indigo-700 shadow-xs"
+          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-5 cursor-pointer flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs"
         >
           <div className="flex items-center justify-between">
             <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Attendance Avg
             </span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
             </div>
           </div>
@@ -178,7 +178,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       {/* Main Row: Batches Schedule & Overdue Alert */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's Batches (2 cols) */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-brand-200/60 dark:border-brand-800 shadow-xs flex flex-col justify-between">
           <div className="flex justify-between items-center mb-5">
             <div>
               <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">
@@ -190,7 +190,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             </div>
             <button
               onClick={onOpenAddBatch}
-              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-sans text-xs font-bold uppercase tracking-wider flex items-center gap-1"
+              className="text-brand-500 dark:text-brand-400 hover:text-brand-600 font-sans text-xs font-bold uppercase tracking-wider flex items-center gap-1"
             >
               <span className="material-symbols-outlined text-sm">add</span>
               <span>New Batch</span>
@@ -201,10 +201,10 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             {batches.map((b, idx) => (
               <div
                 key={b.id}
-                className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all"
+                className="p-4 rounded-xl bg-brand-50/70 dark:bg-brand-900/40 border border-brand-200/50 dark:border-brand-700/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-brand-300 dark:hover:border-brand-600 transition-all"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-600/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 flex items-center justify-center font-bold text-sm shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-500 dark:bg-brand-500/20 dark:text-brand-400 flex items-center justify-center font-bold text-sm shrink-0">
                     {idx + 1}
                   </div>
                   <div>
@@ -218,12 +218,12 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-700/60">
-                  <span className="font-sans text-xs font-semibold bg-indigo-50 dark:bg-slate-900 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-100 dark:border-indigo-900/50">
+                  <span className="font-sans text-xs font-semibold bg-brand-50 dark:bg-slate-900 text-brand-600 dark:text-brand-300 px-2.5 py-1 rounded-lg border border-brand-100 dark:border-brand-800/50">
                     {b.enrolledCount} Enrolled
                   </span>
                   <button
                     onClick={() => setCurrentTab('log')}
-                    className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-all flex items-center gap-1 shadow-xs active:scale-95"
+                    className="btn-brand px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-sm">fact_check</span>
                     <span>Roll</span>
@@ -235,7 +235,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         </div>
 
         {/* Pending Fee Banner Card */}
-        <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 text-white rounded-2xl p-6 shadow-lg shadow-indigo-600/15 flex flex-col justify-between relative overflow-hidden">
+        <div className="bg-gradient-to-br from-brand-400 via-brand-500 to-[#63c06a] text-white rounded-2xl p-6 shadow-lg shadow-brand-500/15 flex flex-col justify-between relative overflow-hidden">
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -258,7 +258,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           <div className="mt-6 space-y-2.5">
             <button
               onClick={() => setCurrentTab('finance')}
-              className="w-full bg-white text-indigo-700 py-2.5 rounded-xl font-sans text-xs font-bold uppercase tracking-wider hover:bg-indigo-50 transition-colors shadow-xs active:scale-[0.98]"
+              className="w-full bg-white text-brand-600 py-2.5 rounded-xl font-sans text-xs font-bold uppercase tracking-wider hover:bg-brand-50 transition-colors shadow-xs active:scale-[0.98]"
             >
               Manage Reminders
             </button>
@@ -273,7 +273,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       </div>
 
       {/* Recent Activity Feed */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-brand-200/60 dark:border-brand-800 shadow-xs">
         <div className="flex justify-between items-center mb-5">
           <div>
             <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">
@@ -285,7 +285,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           </div>
           <button
             onClick={() => setCurrentTab('finance')}
-            className="font-sans text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline uppercase tracking-wider"
+            className="font-sans text-xs font-bold text-brand-500 dark:text-brand-400 hover:underline uppercase tracking-wider"
           >
             View All
           </button>

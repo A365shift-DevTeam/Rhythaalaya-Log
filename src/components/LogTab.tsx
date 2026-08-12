@@ -65,14 +65,14 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStud
     <div className="space-y-6 md:space-y-8 pb-12 relative">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-20 right-4 md:right-8 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-indigo-500/40 animate-bounce">
+        <div className="fixed top-20 right-4 md:right-8 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-brand-500/40 animate-bounce">
           <span className="material-symbols-outlined text-emerald-400">check_circle</span>
           <span className="font-sans text-xs font-bold">{toastMessage}</span>
         </div>
       )}
 
       {/* Header & Batch Controls */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs">
         <div>
           <h2 className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Attendance Log
@@ -92,7 +92,7 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStud
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+              className="w-full pl-9 pr-3 py-2 bg-brand-50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
             />
           </div>
 
@@ -104,7 +104,7 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStud
             <select
               value={selectedBatch}
               onChange={(e) => setSelectedBatch(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none appearance-none cursor-pointer"
+              className="w-full pl-9 pr-8 py-2 bg-brand-50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none appearance-none cursor-pointer"
             >
               {batches.map((b) => (
                 <option key={b.id} value={b.name}>
@@ -141,7 +141,7 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStud
             </span>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs overflow-hidden">
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {displayList.map((student) => {
                 const currentStatus = attendance[student.id] || 'P';
@@ -160,10 +160,10 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStud
                         <img
                           src={student.avatar}
                           alt={student.name}
-                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                          className="w-10 h-10 rounded-xl object-cover border border-brand-200 dark:border-brand-700 shrink-0"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-heading font-bold text-sm shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center font-heading font-bold text-sm shrink-0">
                           {initials}
                         </div>
                       )}
@@ -230,7 +230,7 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStud
         {/* Side Panel (Summary & Trends) */}
         <div className="flex flex-col gap-5">
           {/* Summary Card */}
-          <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 text-white rounded-2xl p-6 shadow-lg shadow-indigo-600/15 flex flex-col gap-4 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-brand-400 via-brand-500 to-[#63c06a] text-white rounded-2xl p-6 shadow-lg shadow-brand-500/15 flex flex-col gap-4 relative overflow-hidden">
             <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <h3 className="font-heading text-lg font-bold opacity-90">Session Summary</h3>
             
@@ -261,14 +261,14 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStud
 
             <button
               onClick={handleSubmitAttendance}
-              className="w-full mt-2 bg-white text-indigo-700 font-sans text-xs font-bold uppercase tracking-wider py-3 rounded-xl hover:bg-indigo-50 transition-colors shadow-xs active:scale-[0.98]"
+              className="w-full mt-2 bg-white text-brand-600 font-sans text-xs font-bold uppercase tracking-wider py-3 rounded-xl hover:bg-brand-50 transition-colors shadow-xs active:scale-[0.98]"
             >
               Submit Attendance Log
             </button>
           </div>
 
           {/* Trend Chart Card */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-6 flex flex-col gap-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs p-6 flex flex-col gap-4">
             <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">
               30-Day Roll Trend
             </h3>
@@ -286,7 +286,7 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStud
               <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <polyline
                   fill="none"
-                  stroke="#4f46e5"
+                  stroke="#45b080"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -301,19 +301,19 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStud
 
                 <defs>
                   <linearGradient id="sparkGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#4f46e5" stopOpacity="1" />
-                    <stop offset="100%" stopColor="#4f46e5" stopOpacity="0" />
+                    <stop offset="0%" stopColor="#45b080" stopOpacity="1" />
+                    <stop offset="100%" stopColor="#45b080" stopOpacity="0" />
                   </linearGradient>
                 </defs>
 
-                <circle cx="100" cy="10" r="4" fill="#4f46e5" />
+                <circle cx="100" cy="10" r="4" fill="#45b080" />
               </svg>
 
               {/* X-axis labels */}
               <div className="absolute bottom-0 left-8 right-0 flex justify-between text-[10px] text-slate-400 translate-y-full pt-1.5 font-sans">
                 <span>Oct 1</span>
                 <span>Oct 12</span>
-                <span className="font-bold text-indigo-600 dark:text-indigo-400">Today</span>
+                <span className="font-bold text-brand-500 dark:text-brand-400">Today</span>
               </div>
             </div>
           </div>

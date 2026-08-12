@@ -41,8 +41,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-[#0f172a] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#c7c4d7]/40 space-y-4">
-        <div className="flex justify-between items-center border-b border-[#eff4ff] dark:border-[#1e293b] pb-3">
+      <div className="bg-white dark:bg-[#0f172a] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#a8ddd0]/40 space-y-4">
+        <div className="flex justify-between items-center border-b border-[#f3faf7] dark:border-[#1e293b] pb-3">
           <h3 className="font-heading text-xl font-bold text-[#0b1c30] dark:text-[#f8fafc]">
             Add Financial Entry
           </h3>
@@ -62,7 +62,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               placeholder="e.g. Studio Rent / Sound Equipment"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full p-2.5 bg-[#f8f9ff] dark:bg-[#1e293b] border border-[#c7c4d7] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
+              className="w-full p-2.5 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
             />
           </div>
 
@@ -74,7 +74,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as any)}
-                className="w-full p-2.5 bg-[#f8f9ff] dark:bg-[#1e293b] border border-[#c7c4d7] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
+                className="w-full p-2.5 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
               >
                 <option value="income">Income (+)</option>
                 <option value="expense">Expense (-)</option>
@@ -91,7 +91,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 placeholder="250"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full p-2.5 bg-[#f8f9ff] dark:bg-[#1e293b] border border-[#c7c4d7] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
+                className="w-full p-2.5 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
               />
             </div>
           </div>
@@ -103,7 +103,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full p-2.5 bg-[#f8f9ff] dark:bg-[#1e293b] border border-[#c7c4d7] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
+              className="w-full p-2.5 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
             >
               <option value="Fees">Student Fees</option>
               <option value="Rent">Rent & Operations</option>
@@ -116,13 +116,13 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#565e74] hover:bg-[#eff4ff]"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#565e74] hover:bg-[#f3faf7]"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl text-xs font-semibold bg-[#4648d4] text-white hover:bg-[#3b3db9] shadow-sm"
+              className="btn-brand px-5 py-2 rounded-xl text-xs font-semibold"
             >
               Save Entry
             </button>

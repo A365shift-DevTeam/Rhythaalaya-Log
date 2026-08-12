@@ -25,28 +25,28 @@ export const Navigation: React.FC<NavigationProps> = ({
   return (
     <>
       {/* Desktop Sidebar Drawer */}
-      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-[270px] p-5 border-r border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl z-50">
+      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-[270px] p-5 border-r border-brand-200/70 dark:border-brand-800 bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl z-50">
         {/* Brand Header */}
         <div 
           className="flex items-center gap-3 mb-6 px-1 cursor-pointer group" 
           onClick={() => setCurrentTab('home')}
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-400 to-[#63c06a] text-white flex items-center justify-center shadow-md shadow-brand-500/25 group-hover:scale-105 transition-transform">
             <span className="material-symbols-outlined text-2xl filled">auto_awesome</span>
           </div>
           <div>
             <span className="font-heading text-xl font-extrabold text-slate-900 dark:text-white tracking-tight block">
               StudioSync
             </span>
-            <span className="font-sans text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block -mt-1">
+            <span className="font-sans text-[11px] font-semibold text-brand-500 dark:text-brand-400 uppercase tracking-widest block -mt-1">
               Studio OS
             </span>
           </div>
         </div>
 
         {/* Studio Profile Card */}
-        <div className="flex items-center gap-3 p-3 mb-6 bg-slate-100/70 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 rounded-2xl">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm overflow-hidden shrink-0 border border-indigo-400/30 shadow-inner">
+        <div className="flex items-center gap-3 p-3 mb-6 bg-brand-50/90 dark:bg-brand-900/50 border border-brand-200/70 dark:border-brand-700/50 rounded-2xl">
+          <div className="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center font-bold text-sm overflow-hidden shrink-0 border border-brand-400/30 shadow-inner">
             {settings.logoUrl ? (
               <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover" />
             ) : (
@@ -54,11 +54,11 @@ export const Navigation: React.FC<NavigationProps> = ({
             )}
           </div>
           <div className="overflow-hidden flex-1 min-w-0">
-            <p className="font-sans text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+            <p className="font-sans text-xs font-bold text-slate-900 dark:text-brand-50 truncate">
               {settings.name}
             </p>
-            <p className="font-sans text-[11px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <p className="font-sans text-[11px] text-slate-500 dark:text-brand-200/80 truncate flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
               {settings.type}
             </p>
           </div>
@@ -74,8 +74,8 @@ export const Navigation: React.FC<NavigationProps> = ({
                 onClick={() => setCurrentTab(item.id)}
                 className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl transition-all text-left font-sans text-sm font-medium ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 font-semibold'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                    ? 'bg-gradient-to-r from-brand-400 via-brand-500 to-[#63c06a] text-white shadow-md shadow-brand-400/30 font-semibold'
+                    : 'text-slate-600 dark:text-brand-100 hover:bg-brand-50 dark:hover:bg-brand-900/60'
                 }`}
               >
                 <span className={`material-symbols-outlined text-[20px] ${isActive ? 'filled' : ''}`}>
@@ -91,10 +91,10 @@ export const Navigation: React.FC<NavigationProps> = ({
         </nav>
 
         {/* Sidebar Footer Action */}
-        <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 space-y-3">
+        <div className="pt-4 border-t border-brand-200/70 dark:border-brand-800 space-y-3">
           <button
             onClick={onOpenAddStudent}
-            className="w-full bg-indigo-600 text-white py-3 px-4 rounded-xl font-sans text-xs font-bold uppercase tracking-wider hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-[0.98]"
+            className="btn-brand w-full py-3 px-4 rounded-xl font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-[18px]">person_add</span>
             <span>Add Student</span>
@@ -103,9 +103,9 @@ export const Navigation: React.FC<NavigationProps> = ({
       </aside>
 
       {/* Mobile Top Header */}
-      <header className="md:hidden sticky top-0 z-40 flex justify-between items-center px-4 py-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 shadow-xs">
+      <header className="md:hidden sticky top-0 z-40 flex justify-between items-center px-4 py-3 bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl border-b border-brand-200/70 dark:border-brand-800 shadow-xs">
         <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setCurrentTab('home')}>
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-400 to-[#63c06a] text-white flex items-center justify-center shadow-xs">
             <span className="material-symbols-outlined text-lg filled">auto_awesome</span>
           </div>
           <h1 className="font-heading text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -114,7 +114,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         </div>
         <button
           onClick={onOpenAddStudent}
-          className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-sans text-xs font-semibold hover:bg-indigo-700 transition-all flex items-center gap-1 shadow-xs active:scale-95"
+          className="btn-brand px-3 py-1.5 rounded-lg font-sans text-xs font-semibold flex items-center gap-1"
         >
           <span className="material-symbols-outlined text-[16px]">add</span>
           <span>Student</span>
@@ -122,7 +122,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       </header>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 w-full h-[60px] z-50 flex justify-around items-center px-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 shadow-lg">
+      <nav className="md:hidden fixed bottom-0 left-0 w-full h-[60px] z-50 flex justify-around items-center px-2 bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl border-t border-brand-200/70 dark:border-brand-800 shadow-lg">
         {navItems.map((item) => {
           const isActive = currentTab === item.id;
           return (
@@ -131,8 +131,8 @@ export const Navigation: React.FC<NavigationProps> = ({
               onClick={() => setCurrentTab(item.id)}
               className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
                 isActive
-                  ? 'text-indigo-600 dark:text-indigo-400 font-bold'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
+                  ? 'text-brand-500 dark:text-brand-400 font-bold'
+                  : 'text-slate-500 dark:text-brand-200/70 hover:text-brand-700'
               }`}
             >
               <span className={`material-symbols-outlined text-[20px] ${isActive ? 'filled' : ''}`}>

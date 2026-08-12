@@ -65,7 +65,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           </h3>
           <button
             onClick={() => setIsEditingOrg(!isEditingOrg)}
-            className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-brand-500 dark:text-brand-400 hover:underline flex items-center gap-1"
           >
             <span className="material-symbols-outlined text-[16px]">
               {isEditingOrg ? 'close' : 'edit'}
@@ -74,7 +74,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           </button>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs overflow-hidden">
           {isEditingOrg ? (
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -86,7 +86,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                     type="text"
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-brand-200 dark:border-brand-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
                   />
                 </div>
                 <div>
@@ -97,13 +97,13 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                     type="text"
                     value={orgType}
                     onChange={(e) => setOrgType(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-brand-200 dark:border-brand-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
                   />
                 </div>
               </div>
               <button
                 onClick={handleSaveOrg}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs"
+                className="btn-brand px-5 py-2.5 rounded-xl text-xs font-bold"
               >
                 Save Profile
               </button>
@@ -112,7 +112,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
               <div className="p-4 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined">storefront</span>
                   </div>
                   <div>
@@ -126,7 +126,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
               <div className="p-4 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined">category</span>
                   </div>
                   <div>
@@ -140,7 +140,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
               <div className="p-4 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined">image</span>
                   </div>
                   <div>
@@ -150,7 +150,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                     </div>
                   </div>
                 </div>
-                <div className="w-9 h-9 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
+                <div className="w-9 h-9 rounded-xl overflow-hidden border border-brand-200 dark:border-brand-700 shrink-0">
                   <img src={settings.logoUrl} alt="Logo" className="w-full h-full object-cover" />
                 </div>
               </div>
@@ -164,10 +164,10 @@ export const MenuTab: React.FC<MenuTabProps> = ({
         <h3 className="font-heading text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs px-1">
           Theme & Display
         </h3>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
           <div className="p-4 sm:px-6 flex items-center justify-between">
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined">palette</span>
               </div>
               <div>
@@ -190,8 +190,8 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               <button
                 type="button"
                 onClick={() => setSettings((p) => ({ ...p, themeColor: 'purple' }))}
-                className={`w-7 h-7 rounded-full bg-indigo-600 transition-all ${
-                  settings.themeColor === 'purple' ? 'ring-2 ring-offset-2 ring-indigo-600 scale-110' : ''
+                className={`w-7 h-7 rounded-full bg-brand-500 transition-all ${
+                  settings.themeColor === 'purple' ? 'ring-2 ring-offset-2 ring-brand-500 scale-110' : ''
                 }`}
               />
               <button
@@ -213,7 +213,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
           <div className="p-4 sm:px-6 flex items-center justify-between">
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined">dark_mode</span>
               </div>
               <div>
@@ -232,7 +232,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 onChange={handleToggleDarkMode}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
             </label>
           </div>
         </div>
@@ -243,10 +243,10 @@ export const MenuTab: React.FC<MenuTabProps> = ({
         <h3 className="font-heading text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs px-1">
           Fees & Courses
         </h3>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
           <div className="p-4 sm:px-6 flex items-center justify-between">
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined">payments</span>
               </div>
               <div>
@@ -263,7 +263,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
           <div className="p-4 sm:px-6 flex items-center justify-between">
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined">event_repeat</span>
               </div>
               <div>
@@ -273,7 +273,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 <div className="font-sans text-xs text-slate-500">Monthly invoice dispatch day</div>
               </div>
             </div>
-            <div className="font-sans text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/80 px-3 py-1 rounded-full">
+            <div className="font-sans text-xs font-bold text-brand-500 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/80 px-3 py-1 rounded-full">
               {settings.feeDueDate}
             </div>
           </div>
@@ -283,7 +283,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
             className="p-4 sm:px-6 flex items-center justify-between hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined">school</span>
               </div>
               <div>
@@ -293,7 +293,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 <div className="font-sans text-xs text-slate-500">Manage class timings and instructors</div>
               </div>
             </div>
-            <div className="flex items-center gap-1 font-sans text-xs font-bold text-indigo-600 dark:text-indigo-400">
+            <div className="flex items-center gap-1 font-sans text-xs font-bold text-brand-500 dark:text-brand-400">
               <span className="material-symbols-outlined text-[18px]">add_circle</span>
               <span>New Batch</span>
             </div>
@@ -306,7 +306,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
         <h3 className="font-heading text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs px-1">
           Data Management
         </h3>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
           <div
             onClick={onExportData}
             className="p-4 sm:px-6 flex items-center justify-between hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"
@@ -329,7 +329,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
           <label className="p-4 sm:px-6 flex items-center justify-between hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors">
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined">file_upload</span>
               </div>
               <div>

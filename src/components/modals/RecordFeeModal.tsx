@@ -43,10 +43,10 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-[#0f172a] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#c7c4d7]/40 space-y-4">
-        <div className="flex justify-between items-center border-b border-[#eff4ff] dark:border-[#1e293b] pb-3">
+      <div className="bg-white dark:bg-[#0f172a] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#a8ddd0]/40 space-y-4">
+        <div className="flex justify-between items-center border-b border-[#f3faf7] dark:border-[#1e293b] pb-3">
           <h3 className="font-heading text-xl font-bold text-[#0b1c30] dark:text-[#f8fafc] flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#4648d4]">payments</span>
+            <span className="material-symbols-outlined text-[#45b080]">payments</span>
             <span>Record Fee Payment</span>
           </h3>
           <button onClick={onClose} className="text-[#565e74] hover:text-[#0b1c30] p-1">
@@ -62,7 +62,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({
             <select
               value={selectedStudentId}
               onChange={(e) => handleStudentChange(e.target.value)}
-              className="w-full p-2.5 bg-[#f8f9ff] dark:bg-[#1e293b] border border-[#c7c4d7] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
+              className="w-full p-2.5 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
             >
               {students.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -82,7 +82,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({
                 required
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full p-2.5 bg-[#f8f9ff] dark:bg-[#1e293b] border border-[#c7c4d7] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
+                className="w-full p-2.5 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
               />
             </div>
 
@@ -93,7 +93,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({
               <select
                 value={method}
                 onChange={(e) => setMethod(e.target.value as any)}
-                className="w-full p-2.5 bg-[#f8f9ff] dark:bg-[#1e293b] border border-[#c7c4d7] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
+                className="w-full p-2.5 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
               >
                 <option value="Cash">Cash</option>
                 <option value="Card">Credit/Debit Card</option>
@@ -103,7 +103,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({
             </div>
           </div>
 
-          <div className="p-3 bg-[#e5eeff]/50 dark:bg-[#1e293b] rounded-xl text-xs text-[#565e74] dark:text-[#cbd5e1]">
+          <div className="p-3 bg-[#e8f4ef]/50 dark:bg-[#1e293b] rounded-xl text-xs text-[#565e74] dark:text-[#cbd5e1]">
             ✓ Recording payment will automatically update the student's status to{' '}
             <strong className="text-emerald-600 dark:text-emerald-400">Paid</strong> and log a new income transaction.
           </div>
@@ -112,13 +112,13 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#565e74] hover:bg-[#eff4ff]"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#565e74] hover:bg-[#f3faf7]"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl text-xs font-semibold bg-[#16a34a] text-white hover:bg-[#15803d] shadow-sm flex items-center gap-1.5"
+              className="btn-brand px-5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined text-[16px]">check</span>
               <span>Confirm & Mark Paid</span>

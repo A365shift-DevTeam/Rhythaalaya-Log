@@ -38,8 +38,8 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-[#0f172a] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#c7c4d7]/40 space-y-4">
-        <div className="flex justify-between items-center border-b border-[#eff4ff] dark:border-[#1e293b] pb-3">
+      <div className="bg-white dark:bg-[#0f172a] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#a8ddd0]/40 space-y-4">
+        <div className="flex justify-between items-center border-b border-[#f3faf7] dark:border-[#1e293b] pb-3">
           <h3 className="font-heading text-xl font-bold text-[#0b1c30] dark:text-[#f8fafc] flex items-center gap-2">
             <span className="material-symbols-outlined text-[#25D366]">forum</span>
             <span>{isBulk ? 'WhatsApp All Overdue' : `Message ${student?.name}`}</span>
@@ -64,7 +64,7 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
               rows={5}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="w-full p-3 bg-[#f8f9ff] dark:bg-[#1e293b] border border-[#c7c4d7] rounded-xl text-xs text-[#0b1c30] dark:text-[#f8fafc] focus:outline-none focus:border-[#25D366]"
+              className="w-full p-3 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-xs text-[#0b1c30] dark:text-[#f8fafc] focus:outline-none focus:border-[#25D366]"
             ></textarea>
           </div>
 
@@ -72,7 +72,7 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#565e74] hover:bg-[#eff4ff]"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#565e74] hover:bg-[#f3faf7]"
             >
               Cancel
             </button>
