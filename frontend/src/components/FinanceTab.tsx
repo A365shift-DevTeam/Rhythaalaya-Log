@@ -16,11 +16,18 @@ interface FinanceTabProps {
   }) => Promise<void>;
 }
 
+const DUE_STATUS_STYLE: Record<string, string> = {
+  Overdue: 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300',
+  Partial: 'bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300',
+  Pending: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+};
+
 export const FinanceTab: React.FC<FinanceTabProps> = ({
   students, transactions, outstandingDues, courses, feeStructures, canManage,
   onOpenRecordFee, onOpenWhatsAppAll, onOpenAddTransaction, onAddFeeStructure
 }) => {
   const pendingStudents = students.filter((s) => s.outstandingBalance > 0);
+  const totalDuePending = outstandingDues.reduce((sum, due) => sum + due.balanceAmount, 0);
 
   const totalIncome = transactions.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
   const totalExpense = transactions.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
@@ -96,9 +103,6 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
         </div>
       </div>
 
-      {/* Fee structures */}
-      <FeeStructuresPanel courses={courses} feeStructures={feeStructures} canManage={canManage} onAdd={onAddFeeStructure} />
-
       {/* Bottom Row: Recent Transactions & Pending Fee Reminders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6">
@@ -129,13 +133,20 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
 
         <div className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6 flex flex-col justify-between">
           <div>
-            <div className="flex justify-between items-center mb-5">
+            <div className="flex justify-between items-start mb-5 gap-3">
               <div>
                 <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Dues & Collections</h3>
-                <p className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-0.5">{outstandingDues.length} dues outstanding · {pendingStudents.length} students</p>
+                {outstandingDues.length > 0 ? (
+                  <p className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    <span className="font-extrabold text-rose-600 dark:text-rose-400">₹{totalDuePending.toLocaleString('en-IN')}</span> pending
+                    from {pendingStudents.length} {pendingStudents.length === 1 ? 'student' : 'students'}
+                  </p>
+                ) : (
+                  <p className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-1">Nothing pending right now</p>
+                )}
               </div>
               <button type="button" onClick={onOpenWhatsAppAll} disabled={pendingStudents.length === 0}
-                className="min-h-11 flex items-center gap-1.5 bg-emerald-700 text-white px-3.5 py-2 rounded-xl transition-all font-sans text-xs font-bold uppercase tracking-wider shadow-md shadow-emerald-600/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">
+                className="min-h-11 shrink-0 flex items-center gap-1.5 bg-emerald-700 text-white px-3.5 py-2 rounded-xl transition-all font-sans text-xs font-bold uppercase tracking-wider shadow-md shadow-emerald-600/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">
                 <span className="material-symbols-outlined text-[18px]">forum</span><span>WhatsApp All</span>
               </button>
             </div>
@@ -147,11 +158,12 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                 return (
                   <div key={due.id} className="flex flex-col items-stretch justify-between gap-3 p-3 rounded-xl bg-brand-50/70 dark:bg-brand-900/40 border border-brand-200/50 dark:border-brand-700/50 sm:flex-row sm:items-center">
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center font-bold text-xs">{due.studentName.charAt(0)}</div>
-                      <div>
-                        <div className="font-sans text-xs font-bold text-slate-900 dark:text-white">{due.studentName}</div>
-                        <div className={`font-sans text-[11px] font-semibold mt-0.5 ${due.status === 'Overdue' ? 'text-rose-600' : 'text-slate-500'}`}>
-                          {due.courseName} · {due.status} · due {new Date(due.dueDate).toLocaleDateString('en-IN')}
+                      <div className="w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center font-bold text-xs shrink-0">{due.studentName.charAt(0)}</div>
+                      <div className="min-w-0">
+                        <div className="font-sans text-xs font-bold text-slate-900 dark:text-white truncate">{due.studentName}</div>
+                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                          <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${DUE_STATUS_STYLE[due.status] ?? DUE_STATUS_STYLE.Pending}`}>{due.status}</span>
+                          <span className="font-sans text-[11px] text-slate-500 dark:text-slate-400">{due.courseName} · due {new Date(due.dueDate).toLocaleDateString('en-IN')}</span>
                         </div>
                       </div>
                     </div>
@@ -176,6 +188,9 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Fee structures (admin setup, tucked away since it's rarely touched) */}
+      <FeeStructuresPanel courses={courses} feeStructures={feeStructures} canManage={canManage} onAdd={onAddFeeStructure} />
     </div>
   );
 };
@@ -184,6 +199,7 @@ function FeeStructuresPanel({ courses, feeStructures, canManage, onAdd }: {
   courses: Course[]; feeStructures: FeeStructure[]; canManage: boolean;
   onAdd: (payload: { courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string; effectiveTo?: string | null }) => Promise<void>;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState(false);
   const [courseId, setCourseId] = useState('');
   const [name, setName] = useState('');
@@ -221,14 +237,23 @@ function FeeStructuresPanel({ courses, feeStructures, canManage, onAdd }: {
 
   return (
     <section className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6">
-      <div className="flex justify-between items-center mb-4">
+      <button type="button" onClick={() => setExpanded((value) => !value)}
+        aria-expanded={expanded} className="flex w-full items-center justify-between gap-3 text-left">
         <div>
           <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Fee structures</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Define what each course charges and how often</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            {feeStructures.length} plan{feeStructures.length === 1 ? '' : 's'} · what each course charges and how often
+          </p>
         </div>
+        <span className={`material-symbols-outlined shrink-0 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`}>expand_more</span>
+      </button>
+
+      {expanded && (
+      <div className="mt-4">
+      <div className="flex justify-end mb-4">
         {canManage && <button type="button" onClick={handleOpen} disabled={courses.length === 0}
           className="btn-brand min-h-10 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:opacity-50">
-          <span className="material-symbols-outlined text-[16px]">add</span>Add
+          <span className="material-symbols-outlined text-[16px]">add</span>Add fee plan
         </button>}
       </div>
 
@@ -274,6 +299,8 @@ function FeeStructuresPanel({ courses, feeStructures, canManage, onAdd }: {
             </div>
           ))}
         </div>
+      )}
+      </div>
       )}
     </section>
   );
