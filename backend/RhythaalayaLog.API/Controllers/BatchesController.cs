@@ -20,4 +20,9 @@ public sealed class BatchesController(IAcademyService service) : ControllerBase
         var result = await service.CreateBatchAsync(request, ct);
         return Created($"/api/batches/{result.Id}", result);
     }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<ActionResult<BatchDto>> Update(Guid id, UpdateBatchRequest request, CancellationToken ct) =>
+        Ok(await service.UpdateBatchAsync(id, request, ct));
 }

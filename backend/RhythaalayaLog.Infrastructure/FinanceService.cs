@@ -1,0 +1,324 @@
+using Microsoft.EntityFrameworkCore;
+using RhythaalayaLog.Application;
+using RhythaalayaLog.Domain;
+
+namespace RhythaalayaLog.Infrastructure;
+
+public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext, FeeDueGenerator dueGenerator) : IFinanceService
+{
+    public async Task<IReadOnlyList<FeeStructureDto>> GetFeeStructuresAsync(Guid? courseId, CancellationToken ct)
+    {
+        var query = db.FeeStructures.AsNoTracking().Include(x => x.Course).AsQueryable();
+        if (courseId.HasValue) query = query.Where(x => x.CourseId == courseId.Value);
+        var items = await query.OrderByDescending(x => x.EffectiveFrom).ToListAsync(ct);
+        return items.Select(MapStructure).ToList();
+    }
+
+    public async Task<FeeStructureDto> CreateFeeStructureAsync(CreateFeeStructureRequest request, CancellationToken ct)
+    {
+        RequireText(request.Name, nameof(request.Name));
+        if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
+        if (request.EffectiveTo.HasValue && request.EffectiveTo.Value < request.EffectiveFrom)
+            throw new AppValidationException(nameof(request.EffectiveTo));
+        if (!await db.Courses.AnyAsync(x => x.Id == request.CourseId && x.IsActive, ct))
+            throw new AppValidationException(nameof(request.CourseId));
+
+        var previousActive = await db.FeeStructures.Where(x => x.CourseId == request.CourseId && x.IsActive).ToListAsync(ct);
+        if (previousActive.Any(x => x.EffectiveFrom >= request.EffectiveFrom))
+            throw new ConflictException("A new fee structure must start after the course's existing active structure.");
+        foreach (var previous in previousActive)
+        {
+            previous.EffectiveTo = request.EffectiveFrom.AddDays(-1);
+            previous.IsActive = false;
+        }
+
+        var structure = new FeeStructure
+        {
+            TenantId = RequireTenant(), CourseId = request.CourseId, Name = request.Name.Trim(), Amount = request.Amount,
+            Frequency = request.Frequency, EffectiveFrom = request.EffectiveFrom, EffectiveTo = request.EffectiveTo
+        };
+        db.FeeStructures.Add(structure);
+        await db.SaveChangesAsync(ct);
+        return MapStructure(await db.FeeStructures.AsNoTracking().Include(x => x.Course).SingleAsync(x => x.Id == structure.Id, ct));
+    }
+
+    public async Task<FeeStructureDto> UpdateFeeStructureAsync(Guid id, UpdateFeeStructureRequest request, CancellationToken ct)
+    {
+        RequireText(request.Name, nameof(request.Name));
+        var structure = await db.FeeStructures.FindAsync([id], ct) ?? throw new NotFoundException(nameof(FeeStructure));
+        if (request.EffectiveTo.HasValue && request.EffectiveTo.Value < structure.EffectiveFrom)
+            throw new AppValidationException(nameof(request.EffectiveTo));
+        structure.Name = request.Name.Trim();
+        structure.EffectiveTo = request.EffectiveTo;
+        structure.IsActive = request.IsActive;
+        await db.SaveChangesAsync(ct);
+        return MapStructure(await db.FeeStructures.AsNoTracking().Include(x => x.Course).SingleAsync(x => x.Id == id, ct));
+    }
+
+    public async Task<IReadOnlyList<FeeDueDto>> GetStudentFeeDuesAsync(Guid studentId, CancellationToken ct)
+    {
+        await dueGenerator.EnsureForStudentAsync(studentId, ct);
+        var dues = await DueQuery().Where(x => x.StudentId == studentId).OrderByDescending(x => x.DueDate).ToListAsync(ct);
+        return await MapDuesAsync(dues, ct);
+    }
+
+    public async Task<IReadOnlyList<FeeDueDto>> GetFeeDuesAsync(FeeDueStatus? status, CancellationToken ct)
+    {
+        await dueGenerator.EnsureForTenantAsync(ct);
+        var query = DueQuery();
+        if (status.HasValue) query = query.Where(x => x.Status == status.Value);
+        var dues = await query.OrderBy(x => x.DueDate).ToListAsync(ct);
+        return await MapDuesAsync(dues, ct);
+    }
+
+    public async Task<FeePaymentDto> RecordFeePaymentAsync(RecordFeePaymentRequest request, CancellationToken ct)
+    {
+        if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
+        var tenantId = RequireTenant();
+        var userId = RequireUser();
+        var student = await db.Students.SingleOrDefaultAsync(x => x.Id == request.StudentId && x.IsActive, ct)
+            ?? throw new NotFoundException(nameof(Student));
+        var paymentDate = (request.PaymentDate ?? DateTimeOffset.UtcNow).ToUniversalTime();
+
+        var payment = new FeePayment
+        {
+            TenantId = tenantId, StudentId = student.Id, ReceiptNumber = await NextReceiptNumberAsync(ct),
+            Amount = request.Amount, PaymentDate = paymentDate, Method = request.Method,
+            ReferenceNumber = Clean(request.ReferenceNumber), CollectedByUserId = userId, Remarks = Clean(request.Remarks)
+        };
+        db.FeePayments.Add(payment);
+
+        var touchedDueIds = new List<Guid>();
+        if (request.FeeDueId.HasValue)
+        {
+            var due = await db.FeeDues.SingleOrDefaultAsync(x => x.Id == request.FeeDueId.Value && x.StudentId == student.Id, ct)
+                ?? throw new AppValidationException(nameof(request.FeeDueId));
+            if (due.Status is FeeDueStatus.Paid or FeeDueStatus.Cancelled)
+                throw new ConflictException("This fee due is already settled or cancelled.");
+            var paidSoFar = await db.FeePaymentAllocations.Where(x => x.FeeDueId == due.Id).SumAsync(x => (decimal?)x.Amount, ct) ?? 0;
+            var balance = due.NetAmount - paidSoFar;
+            if (request.Amount > balance) throw new AppValidationException("Payment cannot exceed the fee due's remaining balance.");
+            db.FeePaymentAllocations.Add(new FeePaymentAllocation { TenantId = tenantId, FeePayment = payment, FeeDueId = due.Id, Amount = request.Amount });
+            touchedDueIds.Add(due.Id);
+        }
+        else
+        {
+            var remaining = request.Amount;
+            var outstanding = await db.FeeDues.Where(x => x.StudentId == student.Id
+                && (x.Status == FeeDueStatus.Pending || x.Status == FeeDueStatus.Partial || x.Status == FeeDueStatus.Overdue))
+                .OrderBy(x => x.DueDate).ToListAsync(ct);
+            foreach (var due in outstanding)
+            {
+                if (remaining <= 0) break;
+                var paidSoFar = await db.FeePaymentAllocations.Where(x => x.FeeDueId == due.Id).SumAsync(x => (decimal?)x.Amount, ct) ?? 0;
+                var balance = due.NetAmount - paidSoFar;
+                if (balance <= 0) continue;
+                var take = Math.Min(balance, remaining);
+                db.FeePaymentAllocations.Add(new FeePaymentAllocation { TenantId = tenantId, FeePayment = payment, FeeDueId = due.Id, Amount = take });
+                touchedDueIds.Add(due.Id);
+                remaining -= take;
+            }
+            // any remainder stays unallocated as credit, auto-applied to future dues as they're generated
+        }
+
+        payment.Transaction = new FinancialTransaction
+        {
+            TenantId = tenantId, Title = string.Concat("Fee payment - ", student.Name), Type = TransactionType.Income,
+            Amount = request.Amount, Category = "Student Fees", OccurredAt = paymentDate, FeePayment = payment
+        };
+        await db.SaveChangesAsync(ct);
+
+        foreach (var dueId in touchedDueIds.Distinct()) await dueGenerator.RefreshDueStatusAsync(dueId, ct);
+        await dueGenerator.RefreshOverdueAsync(student.Id, ct);
+        return await MapPaymentAsync(payment.Id, ct);
+    }
+
+    public async Task<FeePaymentDto> RefundFeePaymentAsync(Guid paymentId, RefundFeePaymentRequest request, CancellationToken ct)
+    {
+        var tenantId = RequireTenant();
+        var userId = RequireUser();
+        var original = await db.FeePayments.Include(x => x.Student).SingleOrDefaultAsync(x => x.Id == paymentId, ct)
+            ?? throw new NotFoundException(nameof(FeePayment));
+        if (original.Amount <= 0) throw new AppValidationException("Only original payments can be refunded.");
+        var alreadyRefunded = await db.FeePayments.Where(x => x.RefundOfPaymentId == paymentId)
+            .SumAsync(x => (decimal?)-x.Amount, ct) ?? 0;
+        var refundable = original.Amount - alreadyRefunded;
+        var amount = request.Amount ?? refundable;
+        if (amount <= 0 || amount > refundable) throw new AppValidationException(nameof(request.Amount));
+
+        var refund = new FeePayment
+        {
+            TenantId = tenantId, StudentId = original.StudentId, ReceiptNumber = await NextReceiptNumberAsync(ct),
+            Amount = -amount, PaymentDate = DateTimeOffset.UtcNow, Method = original.Method,
+            CollectedByUserId = userId, Remarks = Clean(request.Remarks), RefundOfPaymentId = original.Id
+        };
+        db.FeePayments.Add(refund);
+
+        var remaining = amount;
+        var originalAllocations = await db.FeePaymentAllocations.Where(x => x.FeePaymentId == paymentId)
+            .OrderByDescending(x => x.AllocatedAt).ToListAsync(ct);
+        var alreadyReversedByAllocation = originalAllocations.Count == 0 ? [] : await db.FeePaymentAllocations
+            .Where(x => x.ReversalOfAllocationId != null && originalAllocations.Select(a => a.Id).Contains(x.ReversalOfAllocationId!.Value))
+            .GroupBy(x => x.ReversalOfAllocationId!.Value)
+            .ToDictionaryAsync(g => g.Key, g => -g.Sum(x => x.Amount), ct);
+        var touchedDueIds = new List<Guid>();
+        foreach (var allocation in originalAllocations)
+        {
+            if (remaining <= 0) break;
+            var reversible = allocation.Amount - alreadyReversedByAllocation.GetValueOrDefault(allocation.Id);
+            if (reversible <= 0) continue;
+            var take = Math.Min(reversible, remaining);
+            db.FeePaymentAllocations.Add(new FeePaymentAllocation
+            {
+                TenantId = tenantId, FeePayment = refund, FeeDueId = allocation.FeeDueId,
+                Amount = -take, ReversalOfAllocationId = allocation.Id
+            });
+            touchedDueIds.Add(allocation.FeeDueId);
+            remaining -= take;
+        }
+        // any remainder was unconsumed credit on the original payment; nothing more to reverse against a due
+
+        refund.Transaction = new FinancialTransaction
+        {
+            TenantId = tenantId, Title = string.Concat("Refund - ", original.Student.Name), Type = TransactionType.Expense,
+            Amount = amount, Category = "Refund", OccurredAt = refund.PaymentDate, FeePayment = refund
+        };
+        await db.SaveChangesAsync(ct);
+
+        foreach (var dueId in touchedDueIds.Distinct()) await dueGenerator.RefreshDueStatusAsync(dueId, ct);
+        await dueGenerator.RefreshOverdueAsync(original.StudentId, ct);
+        return await MapPaymentAsync(refund.Id, ct);
+    }
+
+    public async Task<IReadOnlyList<FeePaymentDto>> GetStudentPaymentsAsync(Guid studentId, CancellationToken ct)
+    {
+        var payments = await db.FeePayments.AsNoTracking().Include(x => x.Student)
+            .Where(x => x.StudentId == studentId).OrderByDescending(x => x.PaymentDate).ToListAsync(ct);
+        return await MapPaymentsAsync(payments, ct);
+    }
+
+    public async Task<ReceiptDto> GetReceiptAsync(Guid paymentId, CancellationToken ct)
+    {
+        var payment = await db.FeePayments.AsNoTracking().Include(x => x.Student)
+            .SingleOrDefaultAsync(x => x.Id == paymentId, ct) ?? throw new NotFoundException(nameof(FeePayment));
+        var settings = await db.OrganizationSettings.AsNoTracking().SingleOrDefaultAsync(ct) ?? OrganizationSettingsDefaults.Create(RequireTenant());
+        var collectedByName = await db.Users.AsNoTracking().Where(x => x.Id == payment.CollectedByUserId)
+            .Select(x => x.FullName).FirstOrDefaultAsync(ct) ?? "Staff";
+        var allocations = await db.FeePaymentAllocations.AsNoTracking()
+            .Include(x => x.FeeDue).ThenInclude(x => x.Enrollment).ThenInclude(x => x.Batch).ThenInclude(x => x.Course)
+            .Where(x => x.FeePaymentId == paymentId).ToListAsync(ct);
+
+        var (courseName, batchName) = allocations.Count switch
+        {
+            0 => ("Advance payment", "-"),
+            1 => (allocations[0].FeeDue.Enrollment.Batch.Course.Name, allocations[0].FeeDue.Enrollment.Batch.Name),
+            _ => ("Multiple courses", "Multiple batches")
+        };
+
+        return new ReceiptDto(payment.Id, payment.ReceiptNumber, settings.Name, settings.ReceiptAddress, settings.ReceiptPhone,
+            settings.ReceiptEmail, settings.LogoUrl, settings.ReceiptShowLogo, settings.ReceiptShowSignature,
+            settings.ReceiptFooter, payment.Student.Name, payment.Student.StudentNumber, courseName, batchName,
+            payment.Amount, payment.PaymentDate, payment.Method, collectedByName);
+    }
+
+    public async Task<FinanceSummaryDto> GetFinanceAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken ct)
+    {
+        if (from >= to) throw new AppValidationException(nameof(from));
+        from = from.ToUniversalTime();
+        to = to.ToUniversalTime();
+        var items = await db.Transactions.AsNoTracking()
+            .Where(x => x.OccurredAt >= from && x.OccurredAt < to)
+            .OrderByDescending(x => x.OccurredAt).ToListAsync(ct);
+        var income = items.Where(x => x.Type == TransactionType.Income).Sum(x => x.Amount);
+        var expenses = items.Where(x => x.Type == TransactionType.Expense).Sum(x => x.Amount);
+        return new FinanceSummaryDto(from, to, income, expenses, income - expenses, items.Select(MapTransaction).ToList());
+    }
+
+    public async Task<TransactionDto> CreateTransactionAsync(CreateTransactionRequest request, CancellationToken ct)
+    {
+        RequireText(request.Title, nameof(request.Title));
+        RequireText(request.Category, nameof(request.Category));
+        if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
+        var item = new FinancialTransaction
+        {
+            TenantId = RequireTenant(), Title = request.Title.Trim(), Type = request.Type, Amount = request.Amount,
+            Category = request.Category.Trim(), OccurredAt = (request.OccurredAt ?? DateTimeOffset.UtcNow).ToUniversalTime()
+        };
+        db.Transactions.Add(item);
+        await db.SaveChangesAsync(ct);
+        return MapTransaction(item);
+    }
+
+    private IQueryable<FeeDue> DueQuery() => db.FeeDues.AsNoTracking().Include(x => x.Student)
+        .Include(x => x.Enrollment).ThenInclude(x => x.Batch).ThenInclude(x => x.Course);
+
+    private async Task<IReadOnlyList<FeeDueDto>> MapDuesAsync(IReadOnlyList<FeeDue> dues, CancellationToken ct)
+    {
+        var ids = dues.Select(x => x.Id).ToList();
+        var paidMap = ids.Count == 0 ? new Dictionary<Guid, decimal>() : await db.FeePaymentAllocations
+            .Where(x => ids.Contains(x.FeeDueId)).GroupBy(x => x.FeeDueId)
+            .Select(g => new { FeeDueId = g.Key, Paid = g.Sum(x => x.Amount) })
+            .ToDictionaryAsync(x => x.FeeDueId, x => x.Paid, ct);
+        return dues.Select(x =>
+        {
+            var paid = paidMap.GetValueOrDefault(x.Id);
+            return new FeeDueDto(x.Id, x.StudentId, x.Student.Name, x.EnrollmentId, x.Enrollment.BatchId,
+                x.Enrollment.Batch.Name, x.Enrollment.Batch.Course.Name, x.FeeStructureId, x.DueDate, x.Amount,
+                x.DiscountAmount, x.NetAmount, paid, x.NetAmount - paid, x.Status);
+        }).ToList();
+    }
+
+    private async Task<FeePaymentDto> MapPaymentAsync(Guid paymentId, CancellationToken ct)
+    {
+        var payment = await db.FeePayments.AsNoTracking().Include(x => x.Student).SingleAsync(x => x.Id == paymentId, ct);
+        return (await MapPaymentsAsync([payment], ct))[0];
+    }
+
+    /// <summary>Batched to avoid one users/allocations round trip per payment.</summary>
+    private async Task<IReadOnlyList<FeePaymentDto>> MapPaymentsAsync(IReadOnlyList<FeePayment> payments, CancellationToken ct)
+    {
+        if (payments.Count == 0) return [];
+        var paymentIds = payments.Select(x => x.Id).ToList();
+        var collectorIds = payments.Select(x => x.CollectedByUserId).Distinct().ToList();
+        var collectorNames = await db.Users.AsNoTracking().Where(x => collectorIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.FullName, ct);
+        var allocations = await db.FeePaymentAllocations.AsNoTracking()
+            .Include(x => x.FeeDue).ThenInclude(x => x.Enrollment).ThenInclude(x => x.Batch).ThenInclude(x => x.Course)
+            .Where(x => paymentIds.Contains(x.FeePaymentId)).ToListAsync(ct);
+        var allocationsByPayment = allocations.ToLookup(x => x.FeePaymentId);
+        return payments.Select(payment => new FeePaymentDto(payment.Id, payment.StudentId, payment.Student.Name,
+            payment.ReceiptNumber, payment.Amount, payment.PaymentDate, payment.Method, payment.ReferenceNumber,
+            collectorNames.GetValueOrDefault(payment.CollectedByUserId, "Staff"), payment.Remarks, payment.RefundOfPaymentId,
+            allocationsByPayment[payment.Id].Select(a => new FeePaymentAllocationDto(a.FeeDueId, a.FeeDue.DueDate,
+                a.FeeDue.Enrollment.Batch.Course.Name, a.FeeDue.Enrollment.Batch.Name, a.Amount)).ToList())).ToList();
+    }
+
+    private async Task<string> NextReceiptNumberAsync(CancellationToken ct)
+    {
+        var settings = await db.OrganizationSettings.SingleOrDefaultAsync(ct);
+        if (settings is null)
+        {
+            settings = OrganizationSettingsDefaults.Create(RequireTenant());
+            db.OrganizationSettings.Add(settings);
+        }
+        var number = settings.NextReceiptNumber;
+        settings.NextReceiptNumber++;
+        return $"{settings.ReceiptPrefix}-{number:D6}";
+    }
+
+    private static FeeStructureDto MapStructure(FeeStructure x) =>
+        new(x.Id, x.CourseId, x.Course.Name, x.Name, x.Amount, x.Frequency, x.EffectiveFrom, x.EffectiveTo, x.IsActive);
+
+    private static TransactionDto MapTransaction(FinancialTransaction item) =>
+        new(item.Id, item.Title, item.Type, item.Amount, item.Category, item.OccurredAt, item.FeePaymentId);
+
+    private static void RequireText(string? value, string field)
+    {
+        if (string.IsNullOrWhiteSpace(value)) throw new AppValidationException(field);
+    }
+
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private Guid RequireTenant() => tenantContext.TenantId ?? throw new AppValidationException("A tenant context is required.");
+    private Guid RequireUser() => tenantContext.UserId ?? throw new AppValidationException("A user context is required.");
+}

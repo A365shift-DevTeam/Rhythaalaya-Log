@@ -2,9 +2,25 @@ namespace RhythaalayaLog.Domain;
 
 public enum AttendanceStatus { Present, Absent, Leave }
 public enum TransactionType { Income, Expense }
-public enum PaymentMethod { Cash, Card, Upi, BankTransfer }
+public enum PaymentMethod { Cash, Upi, Card, BankTransfer, Cheque, Other }
 public enum UserRole { SuperAdmin, TenantAdmin, Staff }
 public enum SubscriptionStatus { Trial, Active, PastDue, Cancelled, Expired }
+public enum EnrollmentStatus { Active, Completed, Withdrawn }
+public enum FeeFrequency { Monthly, Quarterly, HalfYearly, Yearly, OneTime }
+public enum FeeDueStatus { Pending, Partial, Paid, Overdue, Cancelled }
+
+[Flags]
+public enum BatchDays
+{
+    None = 0,
+    Monday = 1 << 0,
+    Tuesday = 1 << 1,
+    Wednesday = 1 << 2,
+    Thursday = 1 << 3,
+    Friday = 1 << 4,
+    Saturday = 1 << 5,
+    Sunday = 1 << 6
+}
 
 public interface ITenantOwned
 {
@@ -59,18 +75,47 @@ public sealed class UserAccount
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
+public sealed class Course : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public required string Name { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public ICollection<Batch> Batches { get; set; } = [];
+    public ICollection<FeeStructure> FeeStructures { get; set; } = [];
+}
+
+public sealed class Staff : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public required string Name { get; set; }
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public ICollection<Batch> Batches { get; set; } = [];
+}
+
 public sealed class Batch : ITenantOwned
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid TenantId { get; set; }
     public required string Name { get; set; }
-    public required string Course { get; set; }
-    public required string Schedule { get; set; }
-    public required string Instructor { get; set; }
-    public decimal MonthlyFee { get; set; }
+    public Guid CourseId { get; set; }
+    public Course Course { get; set; } = null!;
+    public Guid StaffId { get; set; }
+    public Staff Staff { get; set; } = null!;
+    public BatchDays Days { get; set; }
+    public TimeOnly StartTime { get; set; }
+    public TimeOnly EndTime { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly? EndDate { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-    public ICollection<Student> Students { get; set; } = [];
+    public ICollection<Enrollment> Enrollments { get; set; } = [];
 }
 
 public sealed class Student : ITenantOwned
@@ -79,18 +124,33 @@ public sealed class Student : ITenantOwned
     public Guid TenantId { get; set; }
     public required string StudentNumber { get; set; }
     public required string Name { get; set; }
-    public Guid BatchId { get; set; }
-    public Batch Batch { get; set; } = null!;
-    public decimal MonthlyFee { get; set; }
-    public decimal DiscountAmount { get; set; }
-    public decimal OutstandingBalance { get; set; }
+    public DateOnly? DateOfBirth { get; set; }
+    public string? ParentName { get; set; }
+    public string? Address { get; set; }
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public DateOnly JoinDate { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public ICollection<Enrollment> Enrollments { get; set; } = [];
+}
+
+public sealed class Enrollment : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid StudentId { get; set; }
+    public Student Student { get; set; } = null!;
+    public Guid BatchId { get; set; }
+    public Batch Batch { get; set; } = null!;
+    public Guid CourseId { get; set; }
+    public Course Course { get; set; } = null!;
+    public DateOnly EnrolledOn { get; set; }
+    public DateOnly? EndedOn { get; set; }
+    public EnrollmentStatus Status { get; set; } = EnrollmentStatus.Active;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<AttendanceRecord> AttendanceRecords { get; set; } = [];
-    public ICollection<Payment> Payments { get; set; } = [];
+    public ICollection<FeeDue> FeeDues { get; set; } = [];
 }
 
 public sealed class AttendanceRecord : ITenantOwned
@@ -98,25 +158,80 @@ public sealed class AttendanceRecord : ITenantOwned
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid TenantId { get; set; }
     public DateOnly Date { get; set; }
-    public Guid BatchId { get; set; }
-    public Batch Batch { get; set; } = null!;
-    public Guid StudentId { get; set; }
-    public Student Student { get; set; } = null!;
+    public Guid EnrollmentId { get; set; }
+    public Enrollment Enrollment { get; set; } = null!;
     public AttendanceStatus Status { get; set; }
     public DateTimeOffset SubmittedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
-public sealed class Payment : ITenantOwned
+public sealed class FeeStructure : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid CourseId { get; set; }
+    public Course Course { get; set; } = null!;
+    public required string Name { get; set; }
+    public decimal Amount { get; set; }
+    public FeeFrequency Frequency { get; set; }
+    public DateOnly EffectiveFrom { get; set; }
+    public DateOnly? EffectiveTo { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public ICollection<FeeDue> FeeDues { get; set; } = [];
+}
+
+public sealed class FeeDue : ITenantOwned
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid TenantId { get; set; }
     public Guid StudentId { get; set; }
     public Student Student { get; set; } = null!;
+    public Guid EnrollmentId { get; set; }
+    public Enrollment Enrollment { get; set; } = null!;
+    public Guid FeeStructureId { get; set; }
+    public FeeStructure FeeStructure { get; set; } = null!;
+    public DateOnly DueDate { get; set; }
     public decimal Amount { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public decimal NetAmount { get; set; }
+    public FeeDueStatus Status { get; set; } = FeeDueStatus.Pending;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public ICollection<FeePaymentAllocation> Allocations { get; set; } = [];
+}
+
+public sealed class FeePayment : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid StudentId { get; set; }
+    public Student Student { get; set; } = null!;
+    public required string ReceiptNumber { get; set; }
+    public decimal Amount { get; set; }
+    public DateTimeOffset PaymentDate { get; set; } = DateTimeOffset.UtcNow;
     public PaymentMethod Method { get; set; }
-    public string? Reference { get; set; }
-    public DateTimeOffset OccurredAt { get; set; } = DateTimeOffset.UtcNow;
+    public string? ReferenceNumber { get; set; }
+    public Guid CollectedByUserId { get; set; }
+    public string? Remarks { get; set; }
+    public Guid? RefundOfPaymentId { get; set; }
+    public FeePayment? RefundOfPayment { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public ICollection<FeePaymentAllocation> Allocations { get; set; } = [];
     public FinancialTransaction Transaction { get; set; } = null!;
+}
+
+public sealed class FeePaymentAllocation : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid FeePaymentId { get; set; }
+    public FeePayment FeePayment { get; set; } = null!;
+    public Guid FeeDueId { get; set; }
+    public FeeDue FeeDue { get; set; } = null!;
+    public decimal Amount { get; set; }
+    /// <summary>Set on a refund's negative allocation row: the specific original allocation it reverses.</summary>
+    public Guid? ReversalOfAllocationId { get; set; }
+    public FeePaymentAllocation? ReversalOfAllocation { get; set; }
+    public DateTimeOffset AllocatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
 public sealed class FinancialTransaction : ITenantOwned
@@ -128,8 +243,8 @@ public sealed class FinancialTransaction : ITenantOwned
     public decimal Amount { get; set; }
     public required string Category { get; set; }
     public DateTimeOffset OccurredAt { get; set; } = DateTimeOffset.UtcNow;
-    public Guid? PaymentId { get; set; }
-    public Payment? Payment { get; set; }
+    public Guid? FeePaymentId { get; set; }
+    public FeePayment? FeePayment { get; set; }
 }
 
 public sealed class OrganizationSettings : ITenantOwned
@@ -141,12 +256,11 @@ public sealed class OrganizationSettings : ITenantOwned
     public string? LogoUrl { get; set; }
     public string ThemeColor { get; set; } = "emerald";
     public bool DarkMode { get; set; }
-    public decimal DefaultMonthlyFee { get; set; } = 1500;
-    public int FeeDueDay { get; set; } = 5;
     public string Currency { get; set; } = "INR";
     public string Locale { get; set; } = "en-IN";
     public string TimeZone { get; set; } = "Asia/Kolkata";
     public string ReceiptPrefix { get; set; } = "REC";
+    public int NextReceiptNumber { get; set; } = 1;
     public string? ReceiptAddress { get; set; }
     public string? ReceiptPhone { get; set; }
     public string? ReceiptEmail { get; set; }
@@ -155,7 +269,7 @@ public sealed class OrganizationSettings : ITenantOwned
     public bool ReceiptShowSignature { get; set; }
     public bool ReceiptAutoOpen { get; set; } = true;
     public string IncomeCategoriesJson { get; set; } = "[\"Student Fees\",\"Registration\",\"Events\",\"Other Income\"]";
-    public string ExpenseCategoriesJson { get; set; } = "[\"Rent & Operations\",\"Instructor Salary\",\"Equipment\",\"Utilities\",\"Marketing\",\"Other Expense\"]";
+    public string ExpenseCategoriesJson { get; set; } = "[\"Rent & Operations\",\"Instructor Salary\",\"Equipment\",\"Utilities\",\"Marketing\",\"Other Expense\",\"Refund\"]";
     public bool NotificationsEnabled { get; set; } = true;
     public bool FeeReminderNotifications { get; set; } = true;
     public bool PaymentNotifications { get; set; } = true;

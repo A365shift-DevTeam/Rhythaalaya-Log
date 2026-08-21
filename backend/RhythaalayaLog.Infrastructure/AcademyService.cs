@@ -5,77 +5,146 @@ using RhythaalayaLog.Domain;
 
 namespace RhythaalayaLog.Infrastructure;
 
-public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext) : IAcademyService
+public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext,
+    FeeDueGenerator dueGenerator, FeeBalanceCalculator balances) : IAcademyService
 {
-    public async Task<IReadOnlyList<BatchDto>> GetBatchesAsync(CancellationToken ct) =>
-        await db.Batches.AsNoTracking().OrderBy(x => x.Name)
-            .Select(x => new BatchDto(x.Id, x.Name, x.Course, x.Schedule, x.Instructor,
-                x.MonthlyFee, x.IsActive, x.Students.Count(s => s.IsActive)))
+    public async Task<IReadOnlyList<CourseDto>> GetCoursesAsync(CancellationToken ct) =>
+        await db.Courses.AsNoTracking().OrderBy(x => x.Name)
+            .Select(x => new CourseDto(x.Id, x.Name, x.Description, x.IsActive, x.Batches.Count(b => b.IsActive)))
             .ToListAsync(ct);
+
+    public async Task<CourseDto> CreateCourseAsync(CreateCourseRequest request, CancellationToken ct)
+    {
+        RequireText(request.Name, nameof(request.Name));
+        var course = new Course { TenantId = RequireTenant(), Name = request.Name.Trim(), Description = Clean(request.Description) };
+        db.Courses.Add(course);
+        await db.SaveChangesAsync(ct);
+        return new CourseDto(course.Id, course.Name, course.Description, true, 0);
+    }
+
+    public async Task<CourseDto> UpdateCourseAsync(Guid id, UpdateCourseRequest request, CancellationToken ct)
+    {
+        RequireText(request.Name, nameof(request.Name));
+        var course = await db.Courses.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Course));
+        course.Name = request.Name.Trim();
+        course.Description = Clean(request.Description);
+        course.IsActive = request.IsActive;
+        await db.SaveChangesAsync(ct);
+        var batchCount = await db.Batches.CountAsync(x => x.CourseId == id && x.IsActive, ct);
+        return new CourseDto(course.Id, course.Name, course.Description, course.IsActive, batchCount);
+    }
+
+    public async Task<IReadOnlyList<StaffDto>> GetStaffAsync(CancellationToken ct) =>
+        await db.Staff.AsNoTracking().OrderBy(x => x.Name)
+            .Select(x => new StaffDto(x.Id, x.Name, x.Phone, x.Email, x.IsActive, x.Batches.Count(b => b.IsActive)))
+            .ToListAsync(ct);
+
+    public async Task<StaffDto> CreateStaffAsync(CreateStaffRequest request, CancellationToken ct)
+    {
+        RequireText(request.Name, nameof(request.Name));
+        var staff = new Staff { TenantId = RequireTenant(), Name = request.Name.Trim(), Phone = Clean(request.Phone), Email = Clean(request.Email) };
+        db.Staff.Add(staff);
+        await db.SaveChangesAsync(ct);
+        return new StaffDto(staff.Id, staff.Name, staff.Phone, staff.Email, true, 0);
+    }
+
+    public async Task<StaffDto> UpdateStaffAsync(Guid id, UpdateStaffRequest request, CancellationToken ct)
+    {
+        RequireText(request.Name, nameof(request.Name));
+        var staff = await db.Staff.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Staff));
+        staff.Name = request.Name.Trim();
+        staff.Phone = Clean(request.Phone);
+        staff.Email = Clean(request.Email);
+        staff.IsActive = request.IsActive;
+        await db.SaveChangesAsync(ct);
+        var batchCount = await db.Batches.CountAsync(x => x.StaffId == id && x.IsActive, ct);
+        return new StaffDto(staff.Id, staff.Name, staff.Phone, staff.Email, staff.IsActive, batchCount);
+    }
+
+    public async Task<IReadOnlyList<BatchDto>> GetBatchesAsync(CancellationToken ct)
+    {
+        var batches = await BatchQuery().OrderBy(x => x.Name).ToListAsync(ct);
+        return batches.Select(MapBatch).ToList();
+    }
 
     public async Task<BatchDto> CreateBatchAsync(CreateBatchRequest request, CancellationToken ct)
     {
-        ValidateBatch(request);
+        await ValidateBatchAsync(request.Name, request.CourseId, request.StaffId, request.Days,
+            request.StartTime, request.EndTime, request.StartDate, request.EndDate, ct);
         var batch = new Batch
         {
-            TenantId = RequireTenant(),
-            Name = request.Name.Trim(),
-            Course = request.Course.Trim(),
-            Schedule = request.Schedule.Trim(),
-            Instructor = request.Instructor.Trim(),
-            MonthlyFee = request.MonthlyFee
+            TenantId = RequireTenant(), Name = request.Name.Trim(), CourseId = request.CourseId, StaffId = request.StaffId,
+            Days = ToBatchDays(request.Days), StartTime = request.StartTime, EndTime = request.EndTime,
+            StartDate = request.StartDate, EndDate = request.EndDate
         };
         db.Batches.Add(batch);
         await db.SaveChangesAsync(ct);
-        return new BatchDto(batch.Id, batch.Name, batch.Course, batch.Schedule, batch.Instructor,
-            batch.MonthlyFee, true, 0);
+        return await GetBatchAsync(batch.Id, ct);
+    }
+
+    public async Task<BatchDto> UpdateBatchAsync(Guid id, UpdateBatchRequest request, CancellationToken ct)
+    {
+        await ValidateBatchAsync(request.Name, request.CourseId, request.StaffId, request.Days,
+            request.StartTime, request.EndTime, request.StartDate, request.EndDate, ct, id);
+        var batch = await db.Batches.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Batch));
+        batch.Name = request.Name.Trim();
+        batch.CourseId = request.CourseId;
+        batch.StaffId = request.StaffId;
+        batch.Days = ToBatchDays(request.Days);
+        batch.StartTime = request.StartTime;
+        batch.EndTime = request.EndTime;
+        batch.StartDate = request.StartDate;
+        batch.EndDate = request.EndDate;
+        batch.IsActive = request.IsActive;
+        await db.SaveChangesAsync(ct);
+        return await GetBatchAsync(id, ct);
     }
 
     public async Task<IReadOnlyList<StudentDto>> GetStudentsAsync(string? search, Guid? batchId,
         bool includeInactive, CancellationToken ct)
     {
+        await dueGenerator.EnsureForTenantAsync(ct);
         var query = StudentQuery();
         if (!includeInactive) query = query.Where(x => x.IsActive);
-        if (batchId.HasValue) query = query.Where(x => x.BatchId == batchId.Value);
+        if (batchId.HasValue) query = query.Where(x => x.Enrollments.Any(e => e.BatchId == batchId.Value && e.Status == EnrollmentStatus.Active));
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim().ToLower();
-            query = query.Where(x => x.Name.ToLower().Contains(term)
-                || x.StudentNumber.ToLower().Contains(term));
+            query = query.Where(x => x.Name.ToLower().Contains(term) || x.StudentNumber.ToLower().Contains(term));
         }
         var students = await query.OrderBy(x => x.Name).ToListAsync(ct);
-        return students.Select(MapStudent).ToList();
+        return await MapStudentsAsync(students, ct);
     }
 
     public async Task<StudentDto> GetStudentAsync(Guid id, CancellationToken ct)
     {
-        var student = await StudentQuery().SingleOrDefaultAsync(x => x.Id == id, ct);
-        if (student is null) throw new NotFoundException(nameof(Student));
-        return MapStudent(student);
+        await dueGenerator.EnsureForStudentAsync(id, ct);
+        var student = await StudentQuery().SingleOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException(nameof(Student));
+        return (await MapStudentsAsync([student], ct))[0];
     }
 
     public async Task<StudentDto> CreateStudentAsync(CreateStudentRequest request, CancellationToken ct)
     {
-        ValidateStudent(request.Name, request.MonthlyFee, request.DiscountAmount, request.OpeningBalance);
+        RequireText(request.Name, nameof(request.Name));
         var tenantId = RequireTenant();
         var now = DateTimeOffset.UtcNow;
         var subscription = await db.TenantSubscriptions.AsNoTracking().Include(x => x.Plan)
             .Where(x => x.TenantId == tenantId
                 && (x.Status == SubscriptionStatus.Active || x.Status == SubscriptionStatus.Trial)
                 && x.StartsAt <= now && x.EndsAt > now)
-            .OrderByDescending(x => x.EndsAt)
-            .FirstOrDefaultAsync(ct)
+            .OrderByDescending(x => x.EndsAt).FirstOrDefaultAsync(ct)
             ?? throw new ConflictException("The academy has no active subscription.");
         var activeStudents = await db.Students.CountAsync(x => x.IsActive, ct);
         if (activeStudents >= subscription.Plan.MaxStudents)
             throw new ConflictException("Subscription student limit reached.");
-        var batch = await db.Batches.AsNoTracking()
-            .SingleOrDefaultAsync(x => x.Id == request.BatchId && x.IsActive, ct);
-        if (batch is null)
-            throw new AppValidationException(nameof(request.BatchId));
-        if (request.MonthlyFee + request.DiscountAmount != batch.MonthlyFee)
-            throw new AppValidationException("The student fee and discount must match the selected batch fee.");
-        var student = NewStudent(request);
+        var student = new Student
+        {
+            TenantId = tenantId,
+            StudentNumber = string.Concat("STU", DateTime.UtcNow.Year, Guid.NewGuid().ToString()[..8]).ToUpperInvariant(),
+            Name = request.Name.Trim(), DateOfBirth = request.DateOfBirth, ParentName = Clean(request.ParentName),
+            Phone = Clean(request.Phone), Email = Clean(request.Email), Address = Clean(request.Address),
+            JoinDate = request.JoinDate ?? DateOnly.FromDateTime(DateTime.UtcNow)
+        };
         db.Students.Add(student);
         await db.SaveChangesAsync(ct);
         return await GetStudentAsync(student.Id, ct);
@@ -83,18 +152,14 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 
     public async Task<StudentDto> UpdateStudentAsync(Guid id, UpdateStudentRequest request, CancellationToken ct)
     {
-        ValidateStudent(request.Name, request.MonthlyFee, request.DiscountAmount, request.OutstandingBalance);
-        var student = await db.Students.FindAsync([id], ct);
-        if (student is null) throw new NotFoundException(nameof(Student));
-        if (!await db.Batches.AnyAsync(x => x.Id == request.BatchId && x.IsActive, ct))
-            throw new AppValidationException(nameof(request.BatchId));
+        RequireText(request.Name, nameof(request.Name));
+        var student = await db.Students.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Student));
         student.Name = request.Name.Trim();
-        student.BatchId = request.BatchId;
-        student.MonthlyFee = request.MonthlyFee;
-        student.DiscountAmount = request.DiscountAmount;
-        student.OutstandingBalance = request.OutstandingBalance;
+        student.DateOfBirth = request.DateOfBirth;
+        student.ParentName = Clean(request.ParentName);
         student.Phone = Clean(request.Phone);
         student.Email = Clean(request.Email);
+        student.Address = Clean(request.Address);
         student.IsActive = request.IsActive;
         await db.SaveChangesAsync(ct);
         return await GetStudentAsync(id, ct);
@@ -102,21 +167,52 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 
     public async Task ArchiveStudentAsync(Guid id, CancellationToken ct)
     {
-        var student = await db.Students.FindAsync([id], ct);
-        if (student is null) throw new NotFoundException(nameof(Student));
+        var student = await db.Students.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Student));
         student.IsActive = false;
         await db.SaveChangesAsync(ct);
     }
 
+    public async Task<StudentDto> CreateEnrollmentAsync(CreateEnrollmentRequest request, CancellationToken ct)
+    {
+        var student = await db.Students.SingleOrDefaultAsync(x => x.Id == request.StudentId && x.IsActive, ct)
+            ?? throw new AppValidationException(nameof(request.StudentId));
+        var batch = await db.Batches.SingleOrDefaultAsync(x => x.Id == request.BatchId && x.IsActive, ct)
+            ?? throw new AppValidationException(nameof(request.BatchId));
+        var alreadyEnrolled = await db.Enrollments.AnyAsync(x => x.StudentId == request.StudentId
+            && x.BatchId == request.BatchId && x.Status == EnrollmentStatus.Active, ct);
+        if (alreadyEnrolled) throw new ConflictException("The student is already actively enrolled in this batch.");
+        var enrollment = new Enrollment
+        {
+            TenantId = RequireTenant(), StudentId = student.Id, BatchId = batch.Id, CourseId = batch.CourseId,
+            EnrolledOn = request.EnrolledOn ?? DateOnly.FromDateTime(DateTime.UtcNow)
+        };
+        db.Enrollments.Add(enrollment);
+        await db.SaveChangesAsync(ct);
+        await dueGenerator.EnsureForEnrollmentAsync(enrollment.Id, ct);
+        return await GetStudentAsync(student.Id, ct);
+    }
+
+    public async Task<StudentDto> EndEnrollmentAsync(Guid enrollmentId, EndEnrollmentRequest request, CancellationToken ct)
+    {
+        if (request.Status == EnrollmentStatus.Active) throw new AppValidationException(nameof(request.Status));
+        var enrollment = await db.Enrollments.SingleOrDefaultAsync(x => x.Id == enrollmentId, ct)
+            ?? throw new NotFoundException(nameof(Enrollment));
+        enrollment.Status = request.Status;
+        enrollment.EndedOn = request.EndedOn ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        await db.SaveChangesAsync(ct);
+        return await GetStudentAsync(enrollment.StudentId, ct);
+    }
+
     public async Task<AttendanceLogDto> GetAttendanceAsync(DateOnly date, Guid batchId, CancellationToken ct)
     {
-        var batch = await db.Batches.AsNoTracking().SingleOrDefaultAsync(x => x.Id == batchId, ct);
-        if (batch is null) throw new NotFoundException(nameof(Batch));
-        var students = await db.Students.AsNoTracking()
-            .Where(x => x.BatchId == batchId && x.IsActive).OrderBy(x => x.Name).ToListAsync(ct);
+        var batch = await db.Batches.AsNoTracking().SingleOrDefaultAsync(x => x.Id == batchId, ct)
+            ?? throw new NotFoundException(nameof(Batch));
+        var roster = await db.Enrollments.AsNoTracking().Include(x => x.Student)
+            .Where(x => x.BatchId == batchId && x.Status == EnrollmentStatus.Active)
+            .OrderBy(x => x.Student.Name).ToListAsync(ct);
         var records = await db.AttendanceRecords.AsNoTracking()
-            .Where(x => x.BatchId == batchId && x.Date == date).ToDictionaryAsync(x => x.StudentId, ct);
-        var entries = students.Select(x => new AttendanceRecordDto(x.Id, x.Name,
+            .Where(x => x.Date == date && x.Enrollment.BatchId == batchId).ToDictionaryAsync(x => x.EnrollmentId, ct);
+        var entries = roster.Select(x => new AttendanceRecordDto(x.Id, x.StudentId, x.Student.Name,
             records.TryGetValue(x.Id, out var record) ? record.Status : AttendanceStatus.Present)).ToList();
         return new AttendanceLogDto(date, batchId, batch.Name, entries);
     }
@@ -124,16 +220,16 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     public async Task<AttendanceLogDto> SubmitAttendanceAsync(SubmitAttendanceRequest request, CancellationToken ct)
     {
         if (request.Entries.Count == 0) throw new AppValidationException(nameof(request.Entries));
-        var ids = request.Entries.Select(x => x.StudentId).ToList();
+        var ids = request.Entries.Select(x => x.EnrollmentId).ToList();
         if (ids.Distinct().Count() != ids.Count) throw new AppValidationException(nameof(request.Entries));
-        var validCount = await db.Students.CountAsync(x => ids.Contains(x.Id)
-            && x.BatchId == request.BatchId && x.IsActive, ct);
+        var validCount = await db.Enrollments.CountAsync(x => ids.Contains(x.Id)
+            && x.BatchId == request.BatchId && x.Status == EnrollmentStatus.Active, ct);
         if (validCount != ids.Count) throw new AppValidationException(nameof(request.BatchId));
         var existing = await db.AttendanceRecords.Where(x => x.Date == request.Date
-            && x.BatchId == request.BatchId && ids.Contains(x.StudentId)).ToDictionaryAsync(x => x.StudentId, ct);
+            && ids.Contains(x.EnrollmentId)).ToDictionaryAsync(x => x.EnrollmentId, ct);
         foreach (var entry in request.Entries)
         {
-            if (existing.TryGetValue(entry.StudentId, out var record))
+            if (existing.TryGetValue(entry.EnrollmentId, out var record))
             {
                 record.Status = entry.Status;
                 record.SubmittedAt = DateTimeOffset.UtcNow;
@@ -142,9 +238,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             {
                 db.AttendanceRecords.Add(new AttendanceRecord
                 {
-                    TenantId = RequireTenant(),
-                    Date = request.Date, BatchId = request.BatchId,
-                    StudentId = entry.StudentId, Status = entry.Status
+                    TenantId = RequireTenant(), Date = request.Date, EnrollmentId = entry.EnrollmentId, Status = entry.Status
                 });
             }
         }
@@ -152,80 +246,21 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         return await GetAttendanceAsync(request.Date, request.BatchId, ct);
     }
 
-    public async Task<PaymentDto> RecordPaymentAsync(RecordPaymentRequest request, CancellationToken ct)
-    {
-        if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
-        var student = await db.Students.SingleOrDefaultAsync(x => x.Id == request.StudentId && x.IsActive, ct);
-        if (student is null) throw new NotFoundException(nameof(Student));
-        if (student.OutstandingBalance <= 0)
-            throw new ConflictException("The student has no outstanding fee balance.");
-        if (request.Amount > student.OutstandingBalance)
-            throw new AppValidationException("Payment cannot exceed the outstanding balance.");
-        var occurredAt = (request.OccurredAt ?? DateTimeOffset.UtcNow).ToUniversalTime();
-        var payment = new Payment
-        {
-            TenantId = RequireTenant(),
-            StudentId = student.Id, Amount = request.Amount, Method = request.Method,
-            Reference = Clean(request.Reference), OccurredAt = occurredAt
-        };
-        payment.Transaction = new FinancialTransaction
-        {
-            TenantId = RequireTenant(),
-            Title = string.Concat(nameof(Payment), ' ', student.Name), Type = TransactionType.Income,
-            Amount = request.Amount, Category = nameof(Payment), OccurredAt = payment.OccurredAt,
-            Payment = payment
-        };
-        student.OutstandingBalance -= request.Amount;
-        db.Payments.Add(payment);
-        await db.SaveChangesAsync(ct);
-        return new PaymentDto(payment.Id, payment.StudentId, payment.Amount, payment.Method,
-            payment.Reference, payment.OccurredAt);
-    }
-
-    public async Task<FinanceSummaryDto> GetFinanceAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken ct)
-    {
-        if (from >= to) throw new AppValidationException(nameof(from));
-        from = from.ToUniversalTime();
-        to = to.ToUniversalTime();
-        var items = await db.Transactions.AsNoTracking()
-            .Where(x => x.OccurredAt >= from && x.OccurredAt < to)
-            .OrderByDescending(x => x.OccurredAt).ToListAsync(ct);
-        var income = items.Where(x => x.Type == TransactionType.Income).Sum(x => x.Amount);
-        var expenses = items.Where(x => x.Type == TransactionType.Expense).Sum(x => x.Amount);
-        return new FinanceSummaryDto(from, to, income, expenses, income - expenses,
-            items.Select(MapTransaction).ToList());
-    }
-
-    public async Task<TransactionDto> CreateTransactionAsync(CreateTransactionRequest request, CancellationToken ct)
-    {
-        RequireText(request.Title, nameof(request.Title));
-        RequireText(request.Category, nameof(request.Category));
-        if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
-        var item = new FinancialTransaction
-        {
-            TenantId = RequireTenant(),
-            Title = request.Title.Trim(), Type = request.Type, Amount = request.Amount,
-            Category = request.Category.Trim(),
-            OccurredAt = (request.OccurredAt ?? DateTimeOffset.UtcNow).ToUniversalTime()
-        };
-        db.Transactions.Add(item);
-        await db.SaveChangesAsync(ct);
-        return MapTransaction(item);
-    }
-
     public async Task<DashboardDto> GetDashboardAsync(DateOnly date, CancellationToken ct)
     {
+        await dueGenerator.EnsureForTenantAsync(ct);
         var from = new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
         var to = from.AddDays(1);
         var students = await db.Students.CountAsync(x => x.IsActive, ct);
-        var batches = await db.Batches.CountAsync(x => x.IsActive, ct);
-        var outstanding = await db.Students.Where(x => x.IsActive).SumAsync(x => x.OutstandingBalance, ct);
+        var batchCount = await db.Batches.CountAsync(x => x.IsActive, ct);
+        var activeStudentIds = await db.Students.Where(x => x.IsActive).Select(x => x.Id).ToListAsync(ct);
+        var outstanding = (await balances.ByStudentAsync(activeStudentIds, ct)).Values.Sum();
         var collected = await db.Transactions.Where(x => x.Type == TransactionType.Income
             && x.OccurredAt >= from && x.OccurredAt < to).SumAsync(x => x.Amount, ct);
         var attendance = await db.AttendanceRecords.Where(x => x.Date == date).ToListAsync(ct);
         var percentage = attendance.Count == 0 ? 0 : Math.Round((decimal)attendance.Count(x =>
             x.Status == AttendanceStatus.Present) / attendance.Count * 100, 1);
-        return new DashboardDto(students, batches, outstanding, collected, percentage);
+        return new DashboardDto(students, batchCount, outstanding, collected, percentage);
     }
 
     public async Task<SettingsDto> GetSettingsAsync(CancellationToken ct)
@@ -233,7 +268,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         var settings = await db.OrganizationSettings.SingleOrDefaultAsync(ct);
         if (settings is null)
         {
-            settings = DefaultSettings(RequireTenant());
+            settings = OrganizationSettingsDefaults.Create(RequireTenant());
             db.OrganizationSettings.Add(settings);
             await db.SaveChangesAsync(ct);
         }
@@ -243,67 +278,72 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     public async Task<SettingsDto> UpdateSettingsAsync(UpdateSettingsRequest request, CancellationToken ct)
     {
         ValidateSettings(request);
-        var settings = await db.OrganizationSettings.SingleOrDefaultAsync(ct) ?? DefaultSettings(RequireTenant());
+        var settings = await db.OrganizationSettings.SingleOrDefaultAsync(ct) ?? OrganizationSettingsDefaults.Create(RequireTenant());
         if (db.Entry(settings).State == EntityState.Detached) db.OrganizationSettings.Add(settings);
         ApplySettings(settings, request);
         await db.SaveChangesAsync(ct);
         return MapSettings(settings);
     }
 
-    private IQueryable<Student> StudentQuery() => db.Students.AsNoTracking()
-        .Include(x => x.Batch).Include(x => x.AttendanceRecords);
-
-    private static StudentDto MapStudent(Student student)
+    private async Task<BatchDto> GetBatchAsync(Guid id, CancellationToken ct)
     {
-        var total = student.AttendanceRecords.Count;
-        var present = student.AttendanceRecords.Count(x => x.Status == AttendanceStatus.Present);
-        var percentage = total == 0 ? 0 : Math.Round((decimal)present / total * 100, 1);
-        return new StudentDto(student.Id, student.StudentNumber, student.Name, student.BatchId,
-            student.Batch.Name, student.Batch.Course, student.MonthlyFee, student.DiscountAmount, student.OutstandingBalance,
-            student.OutstandingBalance > 0 ? "Pending" : "Paid", percentage, student.Phone,
-            student.Email, student.JoinDate, student.IsActive);
+        var batch = await BatchQuery().SingleAsync(x => x.Id == id, ct);
+        return MapBatch(batch);
     }
 
-    private Student NewStudent(CreateStudentRequest request) => new()
-    {
-        TenantId = RequireTenant(),
-        StudentNumber = string.Concat(nameof(Student)[..3].ToUpperInvariant(), DateTime.UtcNow.Year,
-            Guid.NewGuid().ToString()[..8]),
-        Name = request.Name.Trim(),
-        BatchId = request.BatchId,
-        MonthlyFee = request.MonthlyFee,
-        DiscountAmount = request.DiscountAmount,
-        OutstandingBalance = request.OpeningBalance,
-        Phone = Clean(request.Phone),
-        Email = Clean(request.Email),
-        JoinDate = request.JoinDate ?? DateOnly.FromDateTime(DateTime.UtcNow)
-    };
+    private IQueryable<Batch> BatchQuery() => db.Batches.AsNoTracking()
+        .Include(x => x.Course).Include(x => x.Staff).Include(x => x.Enrollments);
 
-    private static TransactionDto MapTransaction(FinancialTransaction item) =>
-        new(item.Id, item.Title, item.Type, item.Amount, item.Category, item.OccurredAt, item.PaymentId);
+    private static BatchDto MapBatch(Batch x) => new(x.Id, x.Name, x.CourseId, x.Course.Name, x.StaffId, x.Staff.Name,
+        FromBatchDays(x.Days), x.StartTime, x.EndTime, x.StartDate, x.EndDate, x.IsActive,
+        x.Enrollments.Count(e => e.Status == EnrollmentStatus.Active));
 
-    private static OrganizationSettings DefaultSettings(Guid tenantId) => new()
+    private static IReadOnlyList<DayOfWeek> FromBatchDays(BatchDays days)
     {
-        Id = Guid.NewGuid(),
-        TenantId = tenantId,
-        Name = "Rhythaalaya Academy",
-        Type = "Dance and Arts Academy",
-        ThemeColor = "emerald",
-        DefaultMonthlyFee = 1500,
-        FeeDueDay = 5,
-        Currency = "INR",
-        Locale = "en-IN",
-        TimeZone = "Asia/Kolkata"
-    };
+        var list = new List<DayOfWeek>();
+        if (days.HasFlag(BatchDays.Monday)) list.Add(DayOfWeek.Monday);
+        if (days.HasFlag(BatchDays.Tuesday)) list.Add(DayOfWeek.Tuesday);
+        if (days.HasFlag(BatchDays.Wednesday)) list.Add(DayOfWeek.Wednesday);
+        if (days.HasFlag(BatchDays.Thursday)) list.Add(DayOfWeek.Thursday);
+        if (days.HasFlag(BatchDays.Friday)) list.Add(DayOfWeek.Friday);
+        if (days.HasFlag(BatchDays.Saturday)) list.Add(DayOfWeek.Saturday);
+        if (days.HasFlag(BatchDays.Sunday)) list.Add(DayOfWeek.Sunday);
+        return list;
+    }
+
+    private IQueryable<Student> StudentQuery() => db.Students.AsNoTracking()
+        .Include(x => x.Enrollments).ThenInclude(x => x.Batch).ThenInclude(x => x.Course)
+        .Include(x => x.Enrollments).ThenInclude(x => x.AttendanceRecords);
+
+    private async Task<IReadOnlyList<StudentDto>> MapStudentsAsync(IReadOnlyList<Student> students, CancellationToken ct)
+    {
+        var studentIds = students.Select(x => x.Id).ToList();
+        var enrollmentIds = students.SelectMany(x => x.Enrollments).Select(x => x.Id).ToList();
+        var studentBalances = await balances.ByStudentAsync(studentIds, ct);
+        var enrollmentBalances = await balances.ByEnrollmentAsync(enrollmentIds, ct);
+        return students.Select(student =>
+        {
+            var records = student.Enrollments.SelectMany(x => x.AttendanceRecords).ToList();
+            var attendancePercentage = records.Count == 0 ? 0
+                : Math.Round((decimal)records.Count(x => x.Status == AttendanceStatus.Present) / records.Count * 100, 1);
+            var enrollments = student.Enrollments.OrderByDescending(x => x.EnrolledOn)
+                .Select(enrollment => new EnrollmentSummaryDto(enrollment.Id, enrollment.BatchId, enrollment.Batch.Name,
+                    enrollment.CourseId, enrollment.Batch.Course.Name, enrollment.EnrolledOn, enrollment.EndedOn,
+                    enrollment.Status, enrollmentBalances.GetValueOrDefault(enrollment.Id)))
+                .ToList();
+            return new StudentDto(student.Id, student.StudentNumber, student.Name, student.DateOfBirth,
+                student.ParentName, student.Address, student.Phone, student.Email, student.JoinDate, student.IsActive,
+                studentBalances.GetValueOrDefault(student.Id), attendancePercentage, enrollments);
+        }).ToList();
+    }
 
     private static SettingsDto MapSettings(OrganizationSettings x) =>
-        new(x.Id, x.Name, x.Type, x.LogoUrl, x.ThemeColor, x.DarkMode, x.DefaultMonthlyFee,
-            x.FeeDueDay, x.Currency, x.Locale, x.TimeZone, x.ReceiptPrefix, x.ReceiptAddress,
-            x.ReceiptPhone, x.ReceiptEmail, x.ReceiptFooter, x.ReceiptShowLogo,
-            x.ReceiptShowSignature, x.ReceiptAutoOpen,
+        new(x.Id, x.Name, x.Type, x.LogoUrl, x.ThemeColor, x.DarkMode, x.Currency, x.Locale, x.TimeZone,
+            x.ReceiptPrefix, x.ReceiptAddress, x.ReceiptPhone, x.ReceiptEmail, x.ReceiptFooter,
+            x.ReceiptShowLogo, x.ReceiptShowSignature, x.ReceiptAutoOpen,
             ParseCategories(x.IncomeCategoriesJson, ["Student Fees", "Registration", "Events", "Other Income"]),
-            ParseCategories(x.ExpenseCategoriesJson, ["Rent & Operations", "Instructor Salary", "Equipment", "Utilities", "Marketing", "Other Expense"]), x.NotificationsEnabled,
-            x.FeeReminderNotifications, x.PaymentNotifications, x.AttendanceNotifications);
+            ParseCategories(x.ExpenseCategoriesJson, ["Rent & Operations", "Instructor Salary", "Equipment", "Utilities", "Marketing", "Other Expense", "Refund"]),
+            x.NotificationsEnabled, x.FeeReminderNotifications, x.PaymentNotifications, x.AttendanceNotifications);
 
     private static void ApplySettings(OrganizationSettings x, UpdateSettingsRequest request)
     {
@@ -312,8 +352,6 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         x.LogoUrl = Clean(request.LogoUrl);
         x.ThemeColor = request.ThemeColor.Trim().ToLowerInvariant();
         x.DarkMode = request.DarkMode;
-        x.DefaultMonthlyFee = request.DefaultMonthlyFee;
-        x.FeeDueDay = request.FeeDueDay;
         x.Currency = request.Currency.Trim().ToUpperInvariant();
         x.Locale = request.Locale.Trim();
         x.TimeZone = request.TimeZone.Trim();
@@ -333,21 +371,32 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         x.AttendanceNotifications = request.AttendanceNotifications;
     }
 
-    private static void ValidateBatch(CreateBatchRequest request)
-    {
-        RequireText(request.Name, nameof(request.Name));
-        RequireText(request.Course, nameof(request.Course));
-        RequireText(request.Schedule, nameof(request.Schedule));
-        RequireText(request.Instructor, nameof(request.Instructor));
-        if (request.MonthlyFee <= 0) throw new AppValidationException(nameof(request.MonthlyFee));
-    }
-
-    private static void ValidateStudent(string name, decimal monthlyFee, decimal discountAmount, decimal balance)
+    private async Task ValidateBatchAsync(string name, Guid courseId, Guid staffId, IReadOnlyList<DayOfWeek> days,
+        TimeOnly startTime, TimeOnly endTime, DateOnly startDate, DateOnly? endDate, CancellationToken ct, Guid? excludingId = null)
     {
         RequireText(name, nameof(name));
-        if (monthlyFee < 0) throw new AppValidationException(nameof(monthlyFee));
-        if (discountAmount < 0) throw new AppValidationException(nameof(discountAmount));
-        if (balance < 0) throw new AppValidationException(nameof(balance));
+        if (days.Count == 0) throw new AppValidationException(nameof(days));
+        if (startTime >= endTime) throw new AppValidationException(nameof(endTime));
+        if (endDate.HasValue && endDate.Value < startDate) throw new AppValidationException(nameof(endDate));
+        if (!await db.Courses.AnyAsync(x => x.Id == courseId && x.IsActive, ct)) throw new AppValidationException(nameof(courseId));
+        if (!await db.Staff.AnyAsync(x => x.Id == staffId && x.IsActive, ct)) throw new AppValidationException(nameof(staffId));
+        var duplicate = await db.Batches.AnyAsync(x => x.CourseId == courseId
+            && x.Name.ToLower() == name.Trim().ToLower() && x.Id != (excludingId ?? Guid.Empty), ct);
+        if (duplicate) throw new ConflictException("A batch with this name already exists for the course.");
+    }
+
+    private static BatchDays ToBatchDays(IReadOnlyList<DayOfWeek> days)
+    {
+        var result = BatchDays.None;
+        foreach (var day in days)
+            result |= day switch
+            {
+                DayOfWeek.Monday => BatchDays.Monday, DayOfWeek.Tuesday => BatchDays.Tuesday,
+                DayOfWeek.Wednesday => BatchDays.Wednesday, DayOfWeek.Thursday => BatchDays.Thursday,
+                DayOfWeek.Friday => BatchDays.Friday, DayOfWeek.Saturday => BatchDays.Saturday,
+                DayOfWeek.Sunday => BatchDays.Sunday, _ => BatchDays.None
+            };
+        return result;
     }
 
     private static void ValidateSettings(UpdateSettingsRequest request)
@@ -360,8 +409,6 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         RequireText(request.TimeZone, nameof(request.TimeZone));
         RequireText(request.ReceiptPrefix, nameof(request.ReceiptPrefix));
         RequireText(request.ReceiptFooter, nameof(request.ReceiptFooter));
-        if (request.DefaultMonthlyFee <= 0) throw new AppValidationException(nameof(request.DefaultMonthlyFee));
-        if (request.FeeDueDay is < 1 or > 28) throw new AppValidationException(nameof(request.FeeDueDay));
         if (request.Currency.Trim().Length != 3) throw new AppValidationException(nameof(request.Currency));
         if (request.ReceiptPrefix.Trim().Length > 16) throw new AppValidationException(nameof(request.ReceiptPrefix));
         ValidateCategories(request.IncomeCategories, nameof(request.IncomeCategories));
@@ -395,6 +442,5 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             throw new AppValidationException(field);
     }
 
-    private Guid RequireTenant() => tenantContext.TenantId
-        ?? throw new AppValidationException("A tenant context is required.");
+    private Guid RequireTenant() => tenantContext.TenantId ?? throw new AppValidationException("A tenant context is required.");
 }

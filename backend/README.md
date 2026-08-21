@@ -35,11 +35,7 @@ Do not place production database passwords, JWT secrets, or bootstrap passwords 
 
 ## PostgreSQL scripts
 
-- database/full_schema.sql: complete idempotent schema for an empty database
-- database/multi_tenant_upgrade.sql: upgrade from the original single-academy schema
-- database/initial_schema.sql: retained original schema script
-
-Existing single-academy rows are preserved under a Legacy Academy tenant during the upgrade. A Super Admin can add a tenant user to that tenant using the Super Admin users endpoint.
+- database/full_schema.sql: complete idempotent schema for an empty database (regenerate with `dotnet ef migrations script -o database/full_schema.sql --idempotent` after adding a migration)
 
 EF alternative:
 
