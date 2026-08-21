@@ -1,4 +1,5 @@
-import { Batch, OrgSettings, Student, Transaction } from './types';
+import { Batch, Course, FeeDue, FeeDueStatus, FeeFrequency, FeePayment, FeeStructure, OrgSettings,
+  PaymentMethod, Receipt, Staff, Student, Transaction } from './types';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5101/api').replace(/\/$/, '');
 const SESSION_KEY = 'rhythaalaya_session';
@@ -33,14 +34,6 @@ export interface TenantUser {
   fullName: string;
   role: 'TenantAdmin' | 'Staff';
   isActive: boolean;
-}
-export interface PaymentResult {
-  id: string;
-  studentId: string;
-  amount: number;
-  method: string;
-  reference?: string;
-  occurredAt: string;
 }
 
 export class ApiError extends Error {
@@ -89,56 +82,103 @@ export const api = {
   login: (email: string, password: string) =>
     request<Session>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
 
-  batches: (token: string) => request<any[]>('/batches', {}, token).then(rows => rows.map(mapBatch)),
-  students: (token: string) => request<any[]>('/students', {}, token).then(rows => rows.map(mapStudent)),
-  settings: (token: string) => request<any>('/settings', {}, token).then(mapSettings),
-  finance: (token: string) =>
-    request<any>('/finance/summary?from=' + encodeURIComponent(isoStartOfYear()) +
-      '&to=' + encodeURIComponent(isoNextYear()), {}, token)
-      .then(result => result.transactions.map(mapTransaction)),
+  // Courses
+  courses: (token: string) => request<any[]>('/courses', {}, token).then(rows => rows.map(mapCourse)),
+  createCourse: (token: string, body: { name: string; description?: string }) =>
+    request<any>('/courses', { method: 'POST', body: JSON.stringify(body) }, token).then(mapCourse),
+  updateCourse: (token: string, id: string, body: { name: string; description?: string; isActive: boolean }) =>
+    request<any>('/courses/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapCourse),
 
-  createBatch: (token: string, batch: Batch) =>
-    request<any>('/batches', { method: 'POST', body: JSON.stringify({
-      name: batch.name, course: batch.course, schedule: batch.schedule,
-      instructor: batch.instructor, monthlyFee: batch.monthlyFee
-    }) }, token).then(mapBatch),
-  createStudent: (token: string, student: Student, batches: Batch[]) => {
-    const batch = batches.find(x => x.name === student.batch);
-    if (!batch) throw new ApiError('Select a valid batch.', 400);
-    return request<any>('/students', { method: 'POST', body: JSON.stringify({
-      name: student.name, batchId: batch.id, monthlyFee: student.feeAmount,
-      discountAmount: student.discountAmount || 0,
-      openingBalance: student.feeStatus === 'Pending' ? student.feeAmount : 0,
-      phone: student.phone, email: student.email, joinDate: student.joinDate
-    }) }, token).then(mapStudent);
-  },
+  // Staff
+  staff: (token: string) => request<any[]>('/staff', {}, token).then(rows => rows.map(mapStaff)),
+  createStaff: (token: string, body: { name: string; phone?: string; email?: string }) =>
+    request<any>('/staff', { method: 'POST', body: JSON.stringify(body) }, token).then(mapStaff),
+  updateStaff: (token: string, id: string, body: { name: string; phone?: string; email?: string; isActive: boolean }) =>
+    request<any>('/staff/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapStaff),
+
+  // Batches
+  batches: (token: string) => request<any[]>('/batches', {}, token).then(rows => rows.map(mapBatch)),
+  createBatch: (token: string, body: {
+    name: string; courseId: string; staffId: string; days: string[];
+    startTime: string; endTime: string; startDate: string; endDate?: string | null;
+  }) => request<any>('/batches', { method: 'POST', body: JSON.stringify(body) }, token).then(mapBatch),
+  updateBatch: (token: string, id: string, body: {
+    name: string; courseId: string; staffId: string; days: string[];
+    startTime: string; endTime: string; startDate: string; endDate?: string | null; isActive: boolean;
+  }) => request<any>('/batches/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapBatch),
+
+  // Students & enrollment
+  students: (token: string) => request<any[]>('/students', {}, token).then(rows => rows.map(mapStudent)),
+  student: (token: string, id: string) => request<any>('/students/' + id, {}, token).then(mapStudent),
+  createStudent: (token: string, body: {
+    name: string; dateOfBirth?: string | null; parentName?: string; phone?: string; email?: string;
+    address?: string; joinDate?: string | null;
+  }) => request<any>('/students', { method: 'POST', body: JSON.stringify(body) }, token).then(mapStudent),
+  updateStudent: (token: string, id: string, body: {
+    name: string; dateOfBirth?: string | null; parentName?: string; phone?: string; email?: string;
+    address?: string; isActive: boolean;
+  }) => request<any>('/students/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapStudent),
   archiveStudent: (token: string, id: string) =>
     request<void>('/students/' + id, { method: 'DELETE' }, token),
-  recordPayment: (token: string, studentId: string, amount: number, method: string) =>
-    request<PaymentResult>('/finance/payments', { method: 'POST', body: JSON.stringify({
-      studentId, amount, method: mapPaymentMethod(method), reference: null, occurredAt: null
-    }) }, token),
-  createTransaction: (token: string, item: Transaction) =>
-    request<any>('/finance/transactions', { method: 'POST', body: JSON.stringify({
-      title: item.title, type: item.type === 'income' ? 'Income' : 'Expense',
-      amount: item.amount, category: item.category, occurredAt: null
-    }) }, token).then(mapTransaction),
+  enrollStudent: (token: string, studentId: string, batchId: string, enrolledOn?: string) =>
+    request<any>('/students/enrollments', { method: 'POST', body: JSON.stringify({ studentId, batchId, enrolledOn: enrolledOn || null }) }, token).then(mapStudent),
+  endEnrollment: (token: string, enrollmentId: string, status: 'Completed' | 'Withdrawn', endedOn?: string) =>
+    request<any>(`/students/enrollments/${enrollmentId}/end`, { method: 'PUT', body: JSON.stringify({ status, endedOn: endedOn || null }) }, token).then(mapStudent),
+
+  // Attendance
   attendance: (token: string, date: string, batchId: string) =>
     request<any>('/attendance?date=' + encodeURIComponent(date) +
       '&batchId=' + encodeURIComponent(batchId), {}, token),
   submitAttendance: (token: string, date: string, batchId: string,
-    attendance: Record<string, 'P' | 'A' | 'L'>) =>
+    entries: { enrollmentId: string; status: 'P' | 'A' | 'L' }[]) =>
     request('/attendance', { method: 'PUT', body: JSON.stringify({
-      date, batchId, entries: Object.entries(attendance).map(([studentId, status]) => ({
-        studentId, status: status === 'P' ? 'Present' : status === 'A' ? 'Absent' : 'Leave'
+      date, batchId, entries: entries.map(({ enrollmentId, status }) => ({
+        enrollmentId, status: status === 'P' ? 'Present' : status === 'A' ? 'Absent' : 'Leave'
       }))
     }) }, token),
+
+  // Fee structures
+  feeStructures: (token: string, courseId?: string) =>
+    request<any[]>('/finance/fee-structures' + (courseId ? '?courseId=' + encodeURIComponent(courseId) : ''), {}, token)
+      .then(rows => rows.map(mapFeeStructure)),
+  createFeeStructure: (token: string, body: {
+    courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string; effectiveTo?: string | null;
+  }) => request<any>('/finance/fee-structures', { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeeStructure),
+  updateFeeStructure: (token: string, id: string, body: { name: string; effectiveTo?: string | null; isActive: boolean }) =>
+    request<any>('/finance/fee-structures/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapFeeStructure),
+
+  // Fee dues & payments
+  feeDues: (token: string, status?: FeeDueStatus) =>
+    request<any[]>('/finance/dues' + (status ? '?status=' + status : ''), {}, token).then(rows => rows.map(mapFeeDue)),
+  studentDues: (token: string, studentId: string) =>
+    request<any[]>(`/finance/students/${studentId}/dues`, {}, token).then(rows => rows.map(mapFeeDue)),
+  studentPayments: (token: string, studentId: string) =>
+    request<any[]>(`/finance/students/${studentId}/payments`, {}, token).then(rows => rows.map(mapFeePayment)),
+  recordPayment: (token: string, body: {
+    studentId: string; feeDueId?: string | null; amount: number; method: PaymentMethod;
+    referenceNumber?: string; remarks?: string; paymentDate?: string | null;
+  }) => request<any>('/finance/payments', { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeePayment),
+  refundPayment: (token: string, paymentId: string, body: { amount?: number | null; remarks?: string }) =>
+    request<any>(`/finance/payments/${paymentId}/refund`, { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeePayment),
+  receipt: (token: string, paymentId: string) =>
+    request<any>(`/finance/payments/${paymentId}/receipt`, {}, token).then(mapReceipt),
+
+  // General ledger
+  finance: (token: string) =>
+    request<any>('/finance/summary?from=' + encodeURIComponent(isoStartOfYear()) +
+      '&to=' + encodeURIComponent(isoNextYear()), {}, token)
+      .then(result => result.transactions.map(mapTransaction)),
+  createTransaction: (token: string, item: { title: string; type: 'income' | 'expense'; amount: number; category: string }) =>
+    request<any>('/finance/transactions', { method: 'POST', body: JSON.stringify({
+      title: item.title, type: item.type === 'income' ? 'Income' : 'Expense',
+      amount: item.amount, category: item.category, occurredAt: null
+    }) }, token).then(mapTransaction),
+
+  settings: (token: string) => request<any>('/settings', {}, token).then(mapSettings),
   updateSettings: (token: string, settings: OrgSettings) =>
     request<any>('/settings', { method: 'PUT', body: JSON.stringify({
       name: settings.name, type: settings.type, logoUrl: settings.logoUrl || null,
       themeColor: settings.themeColor, darkMode: settings.darkMode,
-      defaultMonthlyFee: settings.defaultMonthlyFee,
-      feeDueDay: Number.parseInt(settings.feeDueDate) || 5,
       currency: 'INR', locale: 'en-IN', timeZone: 'Asia/Kolkata',
       receiptPrefix: settings.receipt.prefix,
       receiptAddress: settings.receipt.address || null,
@@ -180,31 +220,75 @@ export const api = {
   }, token)
 };
 
+function mapCourse(x: any): Course {
+  return { id: x.id, name: x.name, description: x.description || undefined, isActive: x.isActive, batchCount: x.batchCount };
+}
+function mapStaff(x: any): Staff {
+  return { id: x.id, name: x.name, phone: x.phone || undefined, email: x.email || undefined, isActive: x.isActive, batchCount: x.batchCount };
+}
 function mapBatch(x: any): Batch {
-  return { id: x.id, name: x.name, course: x.course, schedule: x.schedule,
-    instructor: x.instructor, monthlyFee: x.monthlyFee, enrolledCount: x.enrolledCount };
+  return {
+    id: x.id, name: x.name, courseId: x.courseId, courseName: x.courseName, staffId: x.staffId, staffName: x.staffName,
+    days: x.days || [], startTime: x.startTime, endTime: x.endTime, startDate: x.startDate, endDate: x.endDate || undefined,
+    isActive: x.isActive, enrolledCount: x.enrolledCount
+  };
 }
 function mapStudent(x: any): Student {
   return {
-    id: x.id, studentNumber: x.studentNumber, name: x.name, batchId: x.batchId,
-    batch: x.batchName, course: x.course, feeAmount: x.outstandingBalance || x.monthlyFee,
-    monthlyFee: x.monthlyFee, discountAmount: x.discountAmount,
-    outstandingBalance: x.outstandingBalance,
-    feeStatus: x.feeStatus, overallAttendance: x.attendancePercentage,
-    phone: x.phone, email: x.email, joinDate: x.joinDate
+    id: x.id, studentNumber: x.studentNumber, name: x.name, dateOfBirth: x.dateOfBirth || undefined,
+    parentName: x.parentName || undefined, address: x.address || undefined, phone: x.phone || undefined,
+    email: x.email || undefined, joinDate: x.joinDate, isActive: x.isActive, outstandingBalance: x.outstandingBalance,
+    overallAttendance: x.attendancePercentage,
+    enrollments: (x.enrollments || []).map((e: any) => ({
+      id: e.id, batchId: e.batchId, batchName: e.batchName, courseId: e.courseId, courseName: e.courseName,
+      enrolledOn: e.enrolledOn, endedOn: e.endedOn || undefined, status: e.status, outstandingBalance: e.outstandingBalance
+    }))
+  };
+}
+function mapFeeStructure(x: any): FeeStructure {
+  return {
+    id: x.id, courseId: x.courseId, courseName: x.courseName, name: x.name, amount: x.amount,
+    frequency: x.frequency, effectiveFrom: x.effectiveFrom, effectiveTo: x.effectiveTo || undefined, isActive: x.isActive
+  };
+}
+function mapFeeDue(x: any): FeeDue {
+  return {
+    id: x.id, studentId: x.studentId, studentName: x.studentName, enrollmentId: x.enrollmentId, batchId: x.batchId,
+    batchName: x.batchName, courseName: x.courseName, feeStructureId: x.feeStructureId, dueDate: x.dueDate,
+    amount: x.amount, discountAmount: x.discountAmount, netAmount: x.netAmount, paidAmount: x.paidAmount,
+    balanceAmount: x.balanceAmount, status: x.status
+  };
+}
+function mapFeePayment(x: any): FeePayment {
+  return {
+    id: x.id, studentId: x.studentId, studentName: x.studentName, receiptNumber: x.receiptNumber, amount: x.amount,
+    paymentDate: x.paymentDate, method: x.method, referenceNumber: x.referenceNumber || undefined,
+    collectedByName: x.collectedByName, remarks: x.remarks || undefined, refundOfPaymentId: x.refundOfPaymentId || undefined,
+    allocations: (x.allocations || []).map((a: any) => ({
+      feeDueId: a.feeDueId, dueDate: a.dueDate, courseName: a.courseName, batchName: a.batchName, amount: a.amount
+    }))
+  };
+}
+function mapReceipt(x: any): Receipt {
+  return {
+    paymentId: x.paymentId, receiptNumber: x.receiptNumber, organizationName: x.organizationName,
+    organizationAddress: x.organizationAddress || undefined, organizationPhone: x.organizationPhone || undefined,
+    organizationEmail: x.organizationEmail || undefined, organizationLogoUrl: x.organizationLogoUrl || undefined,
+    showLogo: x.showLogo, showSignature: x.showSignature, receiptFooter: x.receiptFooter,
+    studentName: x.studentName, studentNumber: x.studentNumber, courseName: x.courseName, batchName: x.batchName,
+    amount: x.amount, paymentDate: x.paymentDate, method: x.method, collectedByName: x.collectedByName
   };
 }
 function mapTransaction(x: any): Transaction {
   const occurred = new Date(x.occurredAt);
   return { id: x.id, title: x.title, type: String(x.type).toLowerCase() as 'income' | 'expense',
     amount: x.amount, category: x.category, date: occurred.toLocaleDateString(),
-    occurredAt: x.occurredAt,
+    occurredAt: x.occurredAt, feePaymentId: x.feePaymentId || undefined,
     time: occurred.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
 }
 function mapSettings(x: any): OrgSettings {
   return { name: x.name, type: x.type, logoUrl: x.logoUrl || '', themeColor: x.themeColor,
-    darkMode: x.darkMode, defaultMonthlyFee: x.defaultMonthlyFee,
-    feeDueDate: String(x.feeDueDay),
+    darkMode: x.darkMode,
     receipt: {
       prefix: x.receiptPrefix || 'REC', address: x.receiptAddress || '',
       phone: x.receiptPhone || '', email: x.receiptEmail || '',
@@ -216,7 +300,7 @@ function mapSettings(x: any): OrgSettings {
     incomeCategories: Array.isArray(x.incomeCategories) && x.incomeCategories.length
       ? x.incomeCategories : ['Student Fees', 'Registration', 'Events', 'Other Income'],
     expenseCategories: Array.isArray(x.expenseCategories) && x.expenseCategories.length
-      ? x.expenseCategories : ['Rent & Operations', 'Instructor Salary', 'Equipment', 'Utilities', 'Marketing', 'Other Expense'],
+      ? x.expenseCategories : ['Rent & Operations', 'Instructor Salary', 'Equipment', 'Utilities', 'Marketing', 'Other Expense', 'Refund'],
     notifications: {
       enabled: x.notificationsEnabled ?? true,
       feeReminders: x.feeReminderNotifications ?? true,
@@ -224,10 +308,4 @@ function mapSettings(x: any): OrgSettings {
       attendanceAlerts: x.attendanceNotifications ?? true
     }
   };
-}
-function mapPaymentMethod(method: string) {
-  if (method === 'Card') return 'Card';
-  if (method === 'UPI') return 'Upi';
-  if (method === 'Bank Transfer') return 'BankTransfer';
-  return 'Cash';
 }

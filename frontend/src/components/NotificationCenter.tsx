@@ -78,9 +78,9 @@ export function NotificationCenter({ tenantKey, preferences, students, transacti
 function buildNotifications(preferences: NotificationSettings, students: Student[], transactions: Transaction[]): AppNotification[] {
   if (!preferences.enabled) return [];
   const items: AppNotification[] = [];
-  const pending = students.filter((student) => student.feeStatus === 'Pending');
+  const pending = students.filter((student) => student.outstandingBalance > 0);
   if (preferences.feeReminders && pending.length) {
-    const total = pending.reduce((sum, student) => sum + (student.outstandingBalance ?? student.feeAmount), 0);
+    const total = pending.reduce((sum, student) => sum + student.outstandingBalance, 0);
     items.push({ id: `fees-${pending.map((item) => item.id).sort().join('-')}-${total}`, title: 'Fee collection requires attention', message: `${pending.length} students have ₹${total.toLocaleString('en-IN')} outstanding.`, icon: 'pending_actions', tone: 'warning', tab: 'finance', time: 'Now' });
   }
   if (preferences.paymentUpdates) transactions.slice(0, 3).forEach((transaction) => {

@@ -18,17 +18,9 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   const [isEditingOrg, setIsEditingOrg] = useState(false);
   const [orgName, setOrgName] = useState(settings.name);
   const [orgType, setOrgType] = useState(settings.type);
-  const [feeDueDate, setFeeDueDate] = useState(settings.feeDueDate);
-  const [defaultFee, setDefaultFee] = useState(settings.defaultMonthlyFee);
 
   const handleSaveOrg = () => {
-    setSettings((prev) => ({
-      ...prev,
-      name: orgName,
-      type: orgType,
-      feeDueDate: feeDueDate,
-      defaultMonthlyFee: Number(defaultFee)
-    }));
+    setSettings((prev) => ({ ...prev, name: orgName, type: orgType }));
     setIsEditingOrg(false);
   };
 
@@ -245,49 +237,6 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
             </label>
           </div>
-        </div>
-      </section>
-
-      {/* Fee Settings Section */}
-      <section className="space-y-3">
-        <h3 className="font-heading text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs px-1">
-          Fee Settings
-        </h3>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
-          <div className="p-4 sm:px-6 flex items-center justify-between">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined">payments</span>
-              </div>
-              <div>
-                <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
-                  Default Monthly Fee
-                </div>
-                <div className="font-sans text-xs text-slate-500">Standard rate for new students</div>
-              </div>
-            </div>
-            <div className="font-heading font-extrabold text-base text-slate-900 dark:text-white">
-              ₹{settings.defaultMonthlyFee}.00
-            </div>
-          </div>
-
-          <div className="p-4 sm:px-6 flex items-center justify-between">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined">event_repeat</span>
-              </div>
-              <div>
-                <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
-                  Fee Due Date
-                </div>
-                <div className="font-sans text-xs text-slate-500">Monthly invoice dispatch day</div>
-              </div>
-            </div>
-            <div className="font-sans text-xs font-bold text-brand-500 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/80 px-3 py-1 rounded-full">
-              {settings.feeDueDate}
-            </div>
-          </div>
-
         </div>
       </section>
 

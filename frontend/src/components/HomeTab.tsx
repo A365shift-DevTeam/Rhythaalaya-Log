@@ -13,15 +13,24 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
-import { AppTab, Student, Batch, Transaction } from '../types';
+import { AppTab, Student, Batch, Transaction, FeeDue, WEEKDAY_SHORT } from '../types';
 
 const chartColors = ['#45b080', '#2e8d72', '#83cfa6', '#c7a35a', '#64748b'];
 const formatRupees = (value: number | null | undefined) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+const weekdayIndex = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const formatDays = (days: string[]) => days.map((d) => WEEKDAY_SHORT[weekdayIndex.indexOf(d)]).join('/');
+const formatTime = (value: string) => {
+  const [h, m] = value.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return `${hour}:${String(m).padStart(2, '0')} ${period}`;
+};
 
 interface HomeTabProps {
   students: Student[];
   batches: Batch[];
   transactions: Transaction[];
+  outstandingDues: FeeDue[];
   setCurrentTab: (tab: AppTab) => void;
   onOpenAddStudent: () => void;
   onOpenAddBatch: () => void;
@@ -32,6 +41,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   students,
   batches,
   transactions,
+  outstandingDues,
   setCurrentTab,
   onOpenAddStudent,
   onOpenAddBatch,
@@ -39,9 +49,9 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 }) => {
   const reduceMotion = typeof window !== 'undefined'
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const pendingStudents = students.filter((s) => s.feeStatus === 'Pending');
+  const pendingStudents = students.filter((s) => s.outstandingBalance > 0);
   const pendingCount = pendingStudents.length;
-  const pendingTotal = pendingStudents.reduce((acc, s) => acc + s.feeAmount, 0);
+  const pendingTotal = pendingStudents.reduce((acc, s) => acc + s.outstandingBalance, 0);
 
   const totalCollected = transactions
     .filter((t) => t.type === 'income')
@@ -96,15 +106,16 @@ export const HomeTab: React.FC<HomeTabProps> = ({
     ? Math.round(((students.length - pendingCount) / students.length) * 100)
     : 0;
 
-  const enrollmentEntries = Array.from(
-    students.reduce((result, student) => {
-      result.set(student.course, (result.get(student.course) || 0) + 1);
-      return result;
-    }, new Map<string, number>())
-  )
+  const enrollmentCounts = new Map<string, number>();
+  students.forEach((student) => {
+    student.enrollments.filter((e) => e.status === 'Active').forEach((enrollment) => {
+      enrollmentCounts.set(enrollment.courseName, (enrollmentCounts.get(enrollment.courseName) || 0) + 1);
+    });
+  });
+  const enrollmentEntries: [string, number][] = Array.from(enrollmentCounts.entries())
     .sort((a, b) => b[1] - a[1]);
   const topEnrollmentEntries = enrollmentEntries.slice(0, 4);
-  const otherEnrollment = enrollmentEntries.slice(4).reduce((sum, [, value]) => sum + value, 0);
+  const otherEnrollment: number = enrollmentEntries.slice(4).reduce((sum, entry) => sum + entry[1], 0);
   const enrollmentByCourse = [
     ...topEnrollmentEntries,
     ...(otherEnrollment ? [['Other courses', otherEnrollment] as [string, number]] : [])
@@ -114,9 +125,10 @@ export const HomeTab: React.FC<HomeTabProps> = ({
     value,
     color: chartColors[index % chartColors.length]
   }));
+  const totalEnrollments: number = enrollmentEntries.reduce((sum, entry) => sum + entry[1], 0);
   const leadingCourse = enrollmentEntries[0];
-  const leadingCourseShare = leadingCourse && students.length
-    ? Math.round((leadingCourse[1] / students.length) * 100)
+  const leadingCourseShare = leadingCourse && totalEnrollments
+    ? Math.round((leadingCourse[1] / totalEnrollments) * 100)
     : 0;
 
   return (
@@ -128,11 +140,6 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             <span className="font-sans text-xs font-semibold uppercase tracking-wider text-brand-500 dark:text-brand-400">
               {formattedDate}
             </span>
-            <span className="text-slate-300 dark:text-slate-700">•</span>
-            <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Studio Live
-            </span>
           </div>
           <h2 className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Academy Overview
@@ -143,117 +150,74 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-          <button
-            type="button"
-            onClick={onOpenAddStudent}
-            className="btn-brand min-h-11 flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2"
-          >
-            <span className="material-symbols-outlined text-[18px]">person_add</span>
-            <span>Add Student</span>
+          <button type="button" onClick={onOpenAddStudent}
+            className="btn-brand min-h-11 flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2">
+            <span className="material-symbols-outlined text-[18px]">person_add</span><span>Add Student</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setCurrentTab('log')}
-            className="min-h-11 flex-1 sm:flex-initial bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-95 border border-slate-200/80 dark:border-slate-700"
-          >
-            <span className="material-symbols-outlined text-[18px]">fact_check</span>
-            <span>Roll Call</span>
+          <button type="button" onClick={() => setCurrentTab('log')}
+            className="min-h-11 flex-1 sm:flex-initial bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-95 border border-slate-200/80 dark:border-slate-700">
+            <span className="material-symbols-outlined text-[18px]">fact_check</span><span>Roll Call</span>
           </button>
         </div>
       </div>
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
-        {/* Total Students */}
-        <button type="button"
-          onClick={() => setCurrentTab('students')}
-          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between text-left transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs"
-        >
+        <button type="button" onClick={() => setCurrentTab('students')}
+          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between text-left transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Active Students
-            </span>
+            <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Active Students</span>
             <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">group</span>
             </div>
           </div>
           <div className="mt-3">
-            <p className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              {students.length}
-            </p>
+            <p className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{students.length}</p>
             <p className="font-sans text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-semibold flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px]">person_add</span>
-              {newStudentsThisMonth} joined this month
+              <span className="material-symbols-outlined text-[14px]">person_add</span>{newStudentsThisMonth} joined this month
             </p>
           </div>
         </button>
 
-        {/* Active Batches */}
-        <button type="button"
-          onClick={() => setCurrentTab('batches')}
-          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between text-left transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs"
-        >
+        <button type="button" onClick={() => setCurrentTab('batches')}
+          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between text-left transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Batches
-            </span>
+            <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Batches</span>
             <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">calendar_view_week</span>
             </div>
           </div>
           <div className="mt-3">
-            <p className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              {batches.length}
-            </p>
-            <p className="font-sans text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">
-              Schedules active
-            </p>
+            <p className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{batches.length}</p>
+            <p className="font-sans text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">Schedules active</p>
           </div>
         </button>
 
-        {/* Revenue Collected */}
-        <button type="button"
-          onClick={() => setCurrentTab('finance')}
-          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between text-left transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs"
-        >
+        <button type="button" onClick={() => setCurrentTab('finance')}
+          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between text-left transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Fees Collected
-            </span>
+            <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Fees Collected</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">payments</span>
             </div>
           </div>
           <div className="mt-3">
-            <p className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              ₹{totalCollected.toLocaleString()}
-            </p>
-            <p className="font-sans text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">
-              This billing period
-            </p>
+            <p className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">₹{totalCollected.toLocaleString('en-IN')}</p>
+            <p className="font-sans text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">Year to date</p>
           </div>
         </button>
 
-        {/* Avg Attendance */}
-        <button type="button"
-          onClick={() => setCurrentTab('log')}
-          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between text-left transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs"
-        >
+        <button type="button" onClick={() => setCurrentTab('log')}
+          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between text-left transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Attendance Avg
-            </span>
+            <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Attendance Avg</span>
             <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
             </div>
           </div>
           <div className="mt-3">
-            <p className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              {averageAttendance}%
-            </p>
-            <p className="font-sans text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">
-              Overall student roll
-            </p>
+            <p className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{averageAttendance}%</p>
+            <p className="font-sans text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">Overall student roll</p>
           </div>
         </button>
       </div>
@@ -321,7 +285,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             <div>
               <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Enrollment portfolio</span>
               <h4 className="font-heading text-xl font-extrabold text-slate-950 dark:text-white mt-2">Course concentration</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Student distribution across the academy</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Active enrollments across the academy</p>
             </div>
             <span className="shrink-0 rounded-xl bg-brand-50 dark:bg-brand-950/60 border border-brand-100 dark:border-brand-800 px-3 py-2 text-right">
               <span className="block text-lg font-black text-brand-700 dark:text-brand-300 tabular-nums">{enrollmentEntries.length}</span>
@@ -332,7 +296,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           {enrollmentByCourse.length > 0 ? (
             <div className="px-4 md:px-6 pb-6">
               <div className="grid grid-cols-1 sm:grid-cols-[minmax(190px,1fr)_minmax(170px,0.9fr)] xl:grid-cols-1 2xl:grid-cols-[minmax(190px,1fr)_minmax(170px,0.9fr)] items-center">
-                <div className="relative h-[230px] min-w-0" role="img" aria-label={`Enrollment portfolio showing ${students.length} students. ${leadingCourse?.[0] || 'No course'} is the largest course at ${leadingCourseShare} percent.`}>
+                <div className="relative h-[230px] min-w-0" role="img" aria-label={`Enrollment portfolio showing ${totalEnrollments} active enrollments. ${leadingCourse?.[0] || 'No course'} is the largest at ${leadingCourseShare} percent.`}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Tooltip content={<EnrollmentTooltip />} />
@@ -342,8 +306,8 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
-                    <span className="text-3xl font-black text-slate-950 dark:text-white tabular-nums">{students.length}</span>
-                    <span className="text-[9px] uppercase tracking-[0.16em] font-bold text-slate-400 mt-1">Students</span>
+                    <span className="text-3xl font-black text-slate-950 dark:text-white tabular-nums">{totalEnrollments}</span>
+                    <span className="text-[9px] uppercase tracking-[0.16em] font-bold text-slate-400 mt-1">Enrollments</span>
                   </div>
                 </div>
 
@@ -356,7 +320,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                       </span>
                       <span role="cell" className="text-right">
                         <span className="block font-extrabold tabular-nums text-xs text-slate-950 dark:text-white">{item.value}</span>
-                        <span className="block text-[9px] text-slate-400 tabular-nums">{Math.round(item.value / students.length * 100)}%</span>
+                        <span className="block text-[9px] text-slate-400 tabular-nums">{totalEnrollments ? Math.round(item.value / totalEnrollments * 100) : 0}%</span>
                       </span>
                     </div>
                   ))}
@@ -367,7 +331,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                 <span className="material-symbols-outlined text-[19px] text-brand-600 dark:text-brand-400 mt-0.5">insights</span>
                 <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
                   <span className="font-bold text-slate-900 dark:text-white">Portfolio signal:</span>{' '}
-                  {leadingCourse ? `${leadingCourse[0]} leads enrollment with ${leadingCourse[1]} students (${leadingCourseShare}%).` : 'Enrollment data will appear after the first student is added.'}
+                  {leadingCourse ? `${leadingCourse[0]} leads enrollment with ${leadingCourse[1]} students (${leadingCourseShare}%).` : 'Enrollment data will appear after the first student is enrolled.'}
                 </p>
               </div>
             </div>
@@ -375,7 +339,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             <div className="min-h-[290px] flex flex-col items-center justify-center text-center px-6 text-slate-500 dark:text-slate-400">
               <span className="material-symbols-outlined text-3xl text-brand-400 mb-2">data_usage</span>
               <p className="text-sm font-semibold">No enrollment data yet</p>
-              <p className="text-xs mt-1">Add a student to populate the portfolio.</p>
+              <p className="text-xs mt-1">Enroll a student in a batch to populate the portfolio.</p>
             </div>
           )}
         </article>
@@ -383,58 +347,37 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 
       {/* Main Row: Batches Schedule & Overdue Alert */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's Batches (2 cols) */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-brand-200/60 dark:border-brand-800 shadow-xs flex flex-col justify-between">
           <div className="flex justify-between items-center mb-5">
             <div>
-              <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">
-                Active Batches
-              </h3>
-              <p className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Current studio courses & schedules
-              </p>
+              <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Active Batches</h3>
+              <p className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-0.5">Current academy courses & schedules</p>
             </div>
-            <button
-              type="button"
-              onClick={onOpenAddBatch}
-              className="min-h-11 rounded-xl px-2 text-brand-500 dark:text-brand-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-900/50 font-sans text-xs font-bold uppercase tracking-wider flex items-center gap-1"
-            >
-              <span className="material-symbols-outlined text-sm">add</span>
-              <span>New Batch</span>
+            <button type="button" onClick={onOpenAddBatch}
+              className="min-h-11 rounded-xl px-2 text-brand-500 dark:text-brand-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-900/50 font-sans text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+              <span className="material-symbols-outlined text-sm">add</span><span>New Batch</span>
             </button>
           </div>
 
           <div className="space-y-3">
+            {batches.length === 0 && <p className="text-xs text-slate-500">No batches yet.</p>}
             {batches.map((b, idx) => (
-              <div
-                key={b.id}
-                className="p-4 rounded-xl bg-brand-50/70 dark:bg-brand-900/40 border border-brand-200/50 dark:border-brand-700/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-brand-300 dark:hover:border-brand-600 transition-all"
-              >
+              <div key={b.id} className="p-4 rounded-xl bg-brand-50/70 dark:bg-brand-900/40 border border-brand-200/50 dark:border-brand-700/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-brand-300 dark:hover:border-brand-600 transition-all">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-500 dark:bg-brand-500/20 dark:text-brand-400 flex items-center justify-center font-bold text-sm shrink-0">
-                    {idx + 1}
-                  </div>
+                  <div className="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-500 dark:bg-brand-500/20 dark:text-brand-400 flex items-center justify-center font-bold text-sm shrink-0">{idx + 1}</div>
                   <div>
-                    <h4 className="font-heading text-sm font-bold text-slate-900 dark:text-white">
-                      {b.name}
-                    </h4>
+                    <h4 className="font-heading text-sm font-bold text-slate-900 dark:text-white">{b.name}</h4>
                     <p className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      {b.schedule} • <span className="text-slate-700 dark:text-slate-300 font-medium">{b.instructor}</span> • ₹{b.monthlyFee.toLocaleString('en-IN')}/month
+                      {formatDays(b.days)} {formatTime(b.startTime)} • <span className="text-slate-700 dark:text-slate-300 font-medium">{b.staffName}</span>
                     </p>
                   </div>
                 </div>
-
                 <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-700/60">
                   <span className="font-sans text-xs font-semibold bg-brand-50 dark:bg-slate-900 text-brand-600 dark:text-brand-300 px-2.5 py-1 rounded-lg border border-brand-100 dark:border-brand-800/50">
                     {b.enrolledCount} Enrolled
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentTab('log')}
-                    className="btn-brand min-h-11 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1"
-                  >
-                    <span className="material-symbols-outlined text-sm">fact_check</span>
-                    <span>Roll</span>
+                  <button type="button" onClick={() => setCurrentTab('log')} className="btn-brand min-h-11 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm">fact_check</span><span>Roll</span>
                   </button>
                 </div>
               </div>
@@ -442,40 +385,26 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           </div>
         </div>
 
-        {/* Pending Fee Banner Card */}
         <div className="bg-gradient-to-br from-brand-400 via-brand-500 to-[#63c06a] text-white rounded-2xl p-6 shadow-lg shadow-brand-500/15 flex flex-col justify-between relative overflow-hidden">
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
           <div>
             <div className="flex items-center justify-between mb-3">
               <span className="font-sans text-xs uppercase tracking-wider font-bold opacity-90 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
-                Pending Fees Alert
+                <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>Pending Fees Alert
               </span>
-              <span className="bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-xs font-bold">
-                {pendingCount} Overdue
-              </span>
+              <span className="bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-xs font-bold">{pendingCount} Overdue</span>
             </div>
-            <div className="font-heading text-3xl font-extrabold tracking-tight mt-1">
-              ₹{pendingTotal.toLocaleString()}
-            </div>
-            <p className="font-sans text-xs opacity-80 mt-1">
-              Outstanding fees requiring reminder action
-            </p>
+            <div className="font-heading text-3xl font-extrabold tracking-tight mt-1">₹{pendingTotal.toLocaleString('en-IN')}</div>
+            <p className="font-sans text-xs opacity-80 mt-1">Outstanding fees requiring reminder action</p>
           </div>
 
           <div className="mt-6 space-y-2.5">
-            <button
-              type="button"
-              onClick={() => setCurrentTab('finance')}
-              className="w-full min-h-11 bg-white text-brand-700 py-2.5 rounded-xl font-sans text-xs font-bold uppercase tracking-wider hover:bg-brand-50 transition-colors shadow-xs active:scale-[0.98]"
-            >
+            <button type="button" onClick={() => setCurrentTab('finance')}
+              className="w-full min-h-11 bg-white text-brand-700 py-2.5 rounded-xl font-sans text-xs font-bold uppercase tracking-wider hover:bg-brand-50 transition-colors shadow-xs active:scale-[0.98]">
               Manage Reminders
             </button>
-            <button
-              type="button"
-              onClick={() => onOpenRecordFee()}
-              className="w-full min-h-11 bg-black/25 text-white py-2 rounded-xl font-sans text-xs font-semibold hover:bg-black/35 transition-colors border border-white/20"
-            >
+            <button type="button" onClick={() => onOpenRecordFee()}
+              className="w-full min-h-11 bg-black/25 text-white py-2 rounded-xl font-sans text-xs font-semibold hover:bg-black/35 transition-colors border border-white/20">
               + Record Fee Payment
             </button>
           </div>
@@ -486,54 +415,30 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-brand-200/60 dark:border-brand-800 shadow-xs">
         <div className="flex justify-between items-center mb-5">
           <div>
-            <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">
-              Recent Studio Activity
-            </h3>
-            <p className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Live updates on payments and logs
-            </p>
+            <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Recent Academy Activity</h3>
+            <p className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-0.5">Live updates on payments and logs</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setCurrentTab('finance')}
-            className="min-h-11 rounded-xl px-2 font-sans text-xs font-bold text-brand-500 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 uppercase tracking-wider"
-          >
+          <button type="button" onClick={() => setCurrentTab('finance')}
+            className="min-h-11 rounded-xl px-2 font-sans text-xs font-bold text-brand-500 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 uppercase tracking-wider">
             View All
           </button>
         </div>
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          {transactions.length === 0 && <p className="py-4 text-xs text-slate-500">No activity recorded yet.</p>}
           {transactions.slice(0, 5).map((tx) => (
             <div key={tx.id} className="py-3.5 flex items-center justify-between">
               <div className="flex items-center gap-3.5">
-                <div
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                    tx.type === 'income'
-                      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40'
-                      : 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-100 dark:border-rose-900/40'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    {tx.type === 'income' ? 'arrow_downward' : 'arrow_upward'}
-                  </span>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tx.type === 'income' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-100 dark:border-rose-900/40'}`}>
+                  <span className="material-symbols-outlined text-[18px]">{tx.type === 'income' ? 'arrow_downward' : 'arrow_upward'}</span>
                 </div>
                 <div>
-                  <p className="font-sans text-sm font-bold text-slate-900 dark:text-white">
-                    {tx.title}
-                  </p>
-                  <p className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    {tx.date} • {tx.category}
-                  </p>
+                  <p className="font-sans text-sm font-bold text-slate-900 dark:text-white">{tx.title}</p>
+                  <p className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-0.5">{tx.date} • {tx.category}</p>
                 </div>
               </div>
-              <div
-                className={`font-sans text-sm font-extrabold ${
-                  tx.type === 'income'
-                    ? 'text-emerald-600 dark:text-emerald-400'
-                    : 'text-rose-600 dark:text-rose-400'
-                }`}
-              >
-                {tx.type === 'income' ? '+' : '-'}₹{tx.amount.toLocaleString()}
+              <div className={`font-sans text-sm font-extrabold ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                {tx.type === 'income' ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
               </div>
             </div>
           ))}

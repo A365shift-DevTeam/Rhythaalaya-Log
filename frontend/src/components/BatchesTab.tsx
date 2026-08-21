@@ -1,30 +1,42 @@
 import React, { useMemo, useState } from 'react';
-import { Batch } from '../types';
+import { Batch, Course, Staff, WEEKDAY_SHORT } from '../types';
 
 interface BatchesTabProps {
   batches: Batch[];
+  courses: Course[];
+  staff: Staff[];
   onOpenAddBatch: () => void;
+  onEditBatch: (batch: Batch) => void;
+  onOpenAddCourse: () => void;
+  onEditCourse: (course: Course) => void;
+  onOpenAddStaff: () => void;
+  onEditStaff: (member: Staff) => void;
 }
 
-export const BatchesTab: React.FC<BatchesTabProps> = ({ batches, onOpenAddBatch }) => {
+const formatTime = (value: string) => {
+  const [h, m] = value.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return `${hour}:${String(m).padStart(2, '0')} ${period}`;
+};
+const formatDays = (days: string[]) => days.map((d) => WEEKDAY_SHORT[['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(d)]).join(', ');
+
+export const BatchesTab: React.FC<BatchesTabProps> = ({
+  batches, courses, staff, onOpenAddBatch, onEditBatch, onOpenAddCourse, onEditCourse, onOpenAddStaff, onEditStaff
+}) => {
   const [search, setSearch] = useState('');
   const [courseFilter, setCourseFilter] = useState('All');
-
-  const courses = useMemo(() =>
-    Array.from(new Set(batches.map((batch) => batch.course))).sort(), [batches]);
 
   const filteredBatches = useMemo(() => batches.filter((batch) => {
     const term = search.trim().toLowerCase();
     const matchesSearch = !term
       || batch.name.toLowerCase().includes(term)
-      || batch.course.toLowerCase().includes(term)
-      || batch.instructor.toLowerCase().includes(term)
-      || batch.schedule.toLowerCase().includes(term);
-    return matchesSearch && (courseFilter === 'All' || batch.course === courseFilter);
+      || batch.courseName.toLowerCase().includes(term)
+      || batch.staffName.toLowerCase().includes(term);
+    return matchesSearch && (courseFilter === 'All' || batch.courseName === courseFilter);
   }), [batches, search, courseFilter]);
 
   const totalStudents = batches.reduce((sum, batch) => sum + batch.enrolledCount, 0);
-  const instructors = new Set(batches.map((batch) => batch.instructor)).size;
 
   return (
     <div className="space-y-6 md:space-y-8 pb-12">
@@ -36,9 +48,9 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({ batches, onOpenAddBatch 
               <span className="material-symbols-outlined text-[15px]">calendar_view_week</span>
               Class operations
             </div>
-            <h2 className="font-heading text-2xl md:text-3xl font-extrabold">Batches & schedules</h2>
+            <h2 className="font-heading text-2xl md:text-3xl font-extrabold">Courses, staff & batches</h2>
             <p className="text-xs md:text-sm text-brand-100/80 mt-2 max-w-xl">
-              Organize courses, class timings, instructors, and student capacity from one place.
+              Set up courses and mentors, then schedule batches with their days, timing, and enrollment window.
             </p>
           </div>
           <button type="button" onClick={onOpenAddBatch}
@@ -52,34 +64,81 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({ batches, onOpenAddBatch 
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <BatchStat icon="calendar_view_week" label="Total batches" value={batches.length} color="brand" />
         <BatchStat icon="school" label="Students enrolled" value={totalStudents} color="blue" />
-        <BatchStat icon="co_present" label="Instructors" value={instructors} color="violet" />
+        <BatchStat icon="co_present" label="Staff / mentors" value={staff.length} color="violet" />
         <BatchStat icon="menu_book" label="Courses" value={courses.length} color="amber" />
       </section>
+
+      {/* Courses & Staff side-by-side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <section className="rounded-3xl bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 shadow-sm overflow-hidden">
+          <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+            <h3 className="font-heading text-lg font-extrabold text-slate-900 dark:text-white">Courses</h3>
+            <button type="button" onClick={onOpenAddCourse} className="min-h-10 rounded-xl px-3 text-xs font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px]">add</span>New course
+            </button>
+          </div>
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
+            {courses.length === 0 && <p className="p-5 text-xs text-slate-500">No courses yet. Create one to start scheduling batches.</p>}
+            {courses.map((course) => (
+              <button key={course.id} type="button" onClick={() => onEditCourse(course)}
+                className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-slate-900 dark:text-white truncate">{course.name}</div>
+                  <div className="text-[11px] text-slate-500 truncate">{course.description || 'No description'}</div>
+                </div>
+                <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${course.isActive ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
+                  {course.batchCount} batch{course.batchCount === 1 ? '' : 'es'}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-3xl bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 shadow-sm overflow-hidden">
+          <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+            <h3 className="font-heading text-lg font-extrabold text-slate-900 dark:text-white">Staff & mentors</h3>
+            <button type="button" onClick={onOpenAddStaff} className="min-h-10 rounded-xl px-3 text-xs font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px]">add</span>New staff
+            </button>
+          </div>
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
+            {staff.length === 0 && <p className="p-5 text-xs text-slate-500">No staff yet. Add a mentor to assign to batches.</p>}
+            {staff.map((member) => (
+              <button key={member.id} type="button" onClick={() => onEditStaff(member)}
+                className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-slate-900 dark:text-white truncate">{member.name}</div>
+                  <div className="text-[11px] text-slate-500 truncate">{member.phone || member.email || 'No contact on file'}</div>
+                </div>
+                <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${member.isActive ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
+                  {member.batchCount} batch{member.batchCount === 1 ? '' : 'es'}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      </div>
 
       <section className="rounded-3xl bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 shadow-sm overflow-hidden">
         <div className="p-5 md:p-6 border-b border-slate-100 dark:border-slate-800">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
               <h3 className="font-heading text-xl font-extrabold text-slate-900 dark:text-white">All batches</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {filteredBatches.length} of {batches.length} batches shown
-              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{filteredBatches.length} of {batches.length} batches shown</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1 sm:w-72">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
-                <input value={search} onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search batch, course, instructor…"
+                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search batch, course, staff…"
                   className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 pl-10 pr-9 py-2.5 text-xs text-slate-900 dark:text-white outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/10" />
-                {search && <button type="button" onClick={() => setSearch('')} aria-label="Clear search"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+                {search && <button type="button" onClick={() => setSearch('')} aria-label="Clear search" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
                   <span className="material-symbols-outlined text-[17px]">close</span>
                 </button>}
               </div>
               <select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)}
                 className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:border-brand-400">
                 <option value="All">All courses</option>
-                {courses.map((course) => <option key={course} value={course}>{course}</option>)}
+                {courses.map((course) => <option key={course.id} value={course.name}>{course.name}</option>)}
               </select>
             </div>
           </div>
@@ -94,14 +153,13 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({ batches, onOpenAddBatch 
               {batches.length ? 'No batches match your filters' : 'Create your first batch'}
             </h4>
             <p className="text-xs text-slate-500 mt-1">
-              {batches.length ? 'Try a different search or course.' : 'Add a course schedule and assign its lead instructor.'}
+              {batches.length ? 'Try a different search or course.' : 'Add a course and a staff member, then schedule a batch.'}
             </p>
-            {!batches.length && <button type="button" onClick={onOpenAddBatch}
-              className="btn-brand rounded-xl px-4 py-2.5 text-xs font-bold mt-4">Create batch</button>}
+            {!batches.length && <button type="button" onClick={onOpenAddBatch} className="btn-brand rounded-xl px-4 py-2.5 text-xs font-bold mt-4">Create batch</button>}
           </div>
         ) : (
           <div className="p-4 md:p-6 grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredBatches.map((batch) => <BatchCard key={batch.id} batch={batch} />)}
+            {filteredBatches.map((batch) => <BatchCard key={batch.id} batch={batch} onEdit={onEditBatch} />)}
           </div>
         )}
       </section>
@@ -109,27 +167,33 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({ batches, onOpenAddBatch 
   );
 };
 
-function BatchCard({ batch }: { batch: Batch; key?: React.Key }) {
+function BatchCard({ batch, onEdit }: { batch: Batch; onEdit: (batch: Batch) => void; key?: React.Key }) {
   return (
     <article className="group rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 hover:border-brand-300 dark:hover:border-brand-600 hover:shadow-lg hover:shadow-brand-500/5 transition-all">
       <div className="flex items-start justify-between gap-3">
         <div className="w-11 h-11 rounded-xl bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 flex items-center justify-center shrink-0">
           <span className="material-symbols-outlined text-[22px]">calendar_view_week</span>
         </div>
-        <span className="rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 text-[10px] font-bold inline-flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Active
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold inline-flex items-center gap-1.5 ${batch.isActive ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${batch.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />{batch.isActive ? 'Active' : 'Inactive'}
+          </span>
+          <button type="button" onClick={() => onEdit(batch)} aria-label={`Edit ${batch.name}`}
+            className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-slate-800">
+            <span className="material-symbols-outlined text-[18px]">edit</span>
+          </button>
+        </div>
       </div>
 
       <div className="mt-4">
         <h4 className="font-heading font-extrabold text-base text-slate-900 dark:text-white leading-snug">{batch.name}</h4>
-        <p className="text-xs font-semibold text-brand-600 dark:text-brand-400 mt-1">{batch.course}</p>
+        <p className="text-xs font-semibold text-brand-600 dark:text-brand-400 mt-1">{batch.courseName}</p>
       </div>
 
       <div className="mt-4 space-y-2.5">
-        <BatchInfo icon="event" label="Schedule" value={batch.schedule} />
-        <BatchInfo icon="person" label="Instructor" value={batch.instructor} />
-        <BatchInfo icon="payments" label="Standard monthly fee" value={`₹${batch.monthlyFee.toLocaleString('en-IN')}`} />
+        <BatchInfo icon="event" label="Schedule" value={`${formatDays(batch.days)} · ${formatTime(batch.startTime)} – ${formatTime(batch.endTime)}`} />
+        <BatchInfo icon="person" label="Staff / mentor" value={batch.staffName} />
+        <BatchInfo icon="date_range" label="Runs" value={`${new Date(batch.startDate).toLocaleDateString('en-IN')}${batch.endDate ? ' – ' + new Date(batch.endDate).toLocaleDateString('en-IN') : ' onward'}`} />
       </div>
 
       <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">

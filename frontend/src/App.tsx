@@ -2,10 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
   Student,
   Batch,
+  Course,
+  Staff,
   Transaction,
+  FeeDue,
+  FeeStructure,
   OrgSettings,
   AppTab,
-  FeeReceipt
+  Receipt,
+  PaymentMethod
 } from './types';
 import {
   INITIAL_SETTINGS
@@ -26,6 +31,8 @@ import { RecordFeeModal } from './components/modals/RecordFeeModal';
 import { WhatsAppModal } from './components/modals/WhatsAppModal';
 import { AddTransactionModal } from './components/modals/AddTransactionModal';
 import { AddBatchModal } from './components/modals/AddBatchModal';
+import { AddCourseModal } from './components/modals/AddCourseModal';
+import { AddStaffModal } from './components/modals/AddStaffModal';
 import { StudentDetailsModal } from './components/modals/StudentDetailsModal';
 import { FeeReceiptModal } from './components/modals/FeeReceiptModal';
 import { NotificationCenter } from './components/NotificationCenter';
@@ -49,6 +56,10 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   const [currentTab, setCurrentTab] = useState<AppTab>('home');
   const [students, setStudents] = useState<Student[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
+  const [outstandingDues, setOutstandingDues] = useState<FeeDue[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [settings, setSettings] = useState<OrgSettings>(INITIAL_SETTINGS);
   const [loading, setLoading] = useState(true);
@@ -62,29 +73,35 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   const reload = async () => {
     setLoading(true);
     try {
-      const [studentRows, batchRows, transactionRows, org] = await Promise.all([
-        api.students(session.token), api.batches(session.token),
-        api.finance(session.token), api.settings(session.token)
+      const [studentRows, batchRows, courseRows, staffRows, structureRows, dueRows, transactionRows, org] = await Promise.all([
+        api.students(session.token), api.batches(session.token), api.courses(session.token), api.staff(session.token),
+        api.feeStructures(session.token), api.feeDues(session.token), api.finance(session.token), api.settings(session.token)
       ]);
-      setStudents(studentRows); setBatches(batchRows); setTransactions(transactionRows); setSettings(org);
+      setStudents(studentRows); setBatches(batchRows); setCourses(courseRows); setStaff(staffRows);
+      setFeeStructures(structureRows);
+      setOutstandingDues(dueRows.filter((due) => due.status === 'Pending' || due.status === 'Partial' || due.status === 'Overdue'));
+      setTransactions(transactionRows); setSettings(org);
       setLoadError('');
-    } catch (error) { showError(error); }
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) onLogout();
+      else setLoadError(error instanceof Error ? error.message : 'The request could not be completed.');
+    }
     finally { setLoading(false); }
   };
   useEffect(() => { void reload(); }, [session.token]);
 
-  // Dark mode effect
   useEffect(() => {
-    if (settings.darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.toggle('dark', settings.darkMode);
   }, [settings.darkMode]);
 
   // Modals state
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [isAddBatchOpen, setIsAddBatchOpen] = useState(false);
+  const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
+  const [isAddCourseOpen, setIsAddCourseOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [isRecordFeeOpen, setIsRecordFeeOpen] = useState(false);
   const [feeTargetStudent, setFeeTargetStudent] = useState<Student | undefined>(undefined);
 
@@ -94,42 +111,41 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [isStudentDetailsOpen, setIsStudentDetailsOpen] = useState(false);
   const [detailsTargetStudent, setDetailsTargetStudent] = useState<Student | null>(null);
-  const [lastReceipt, setLastReceipt] = useState<FeeReceipt | null>(null);
+  const [lastReceipt, setLastReceipt] = useState<Receipt | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   // Actions
-  const handleAddStudent = async (newStudent: Student) => {
-    try {
-      const created = await api.createStudent(session.token, newStudent, batches);
-      setStudents((prev) => [created, ...prev]);
-      setBatches((prev) => prev.map((b) =>
-        b.id === created.batchId ? { ...b, enrolledCount: b.enrolledCount + 1 } : b));
-    } catch (error) { showError(error); }
+  const handleAddStudent = async (payload: {
+    name: string; dateOfBirth: string | null; parentName: string; phone: string; email: string; address: string;
+  }, enrollBatchId: string | null) => {
+    const created = await api.createStudent(session.token, payload);
+    let finalStudent = created;
+    if (enrollBatchId) finalStudent = await api.enrollStudent(session.token, created.id, enrollBatchId);
+    setStudents((prev) => [finalStudent, ...prev]);
+    await reload();
   };
 
-  const handleRecordFee = async (studentId: string, amount: number, method: string) => {
-    try {
-      const payment = await api.recordPayment(session.token, studentId, amount, method);
-      const student = students.find((item) => item.id === studentId);
-      if (!student) throw new Error('Student details are unavailable for this receipt.');
-      const receipt: FeeReceipt = {
-        id: payment.id,
-        receiptNumber: `${settings.receipt.prefix}-${payment.id.slice(0, 8).toUpperCase()}`,
-        studentName: student.name,
-        studentNumber: student.studentNumber || student.id,
-        course: student.course,
-        amount: payment.amount,
-        paymentMethod: method,
-        occurredAt: payment.occurredAt
-      };
-      setLastReceipt(receipt);
-      if (settings.receipt.autoOpenAfterPayment) setIsReceiptOpen(true);
-      await reload();
-      return receipt;
-    } catch (error) {
-      showError(error);
-      throw error;
-    }
+  const handleEnroll = async (studentId: string, batchId: string) => {
+    const updated = await api.enrollStudent(session.token, studentId, batchId);
+    setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s));
+    setDetailsTargetStudent((prev) => prev && prev.id === updated.id ? updated : prev);
+    await reload();
+  };
+
+  const handleEndEnrollment = async (enrollmentId: string, status: 'Completed' | 'Withdrawn') => {
+    const updated = await api.endEnrollment(session.token, enrollmentId, status);
+    setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s));
+    setDetailsTargetStudent((prev) => prev && prev.id === updated.id ? updated : prev);
+    await reload();
+  };
+
+  const handleRecordFee = async (payload: { studentId: string; feeDueId: string | null; amount: number; method: PaymentMethod; remarks?: string }) => {
+    const payment = await api.recordPayment(session.token, payload);
+    const receipt = await api.receipt(session.token, payment.id);
+    setLastReceipt(receipt);
+    if (settings.receipt.autoOpenAfterPayment) setIsReceiptOpen(true);
+    await reload();
+    return payment;
   };
 
   const handleAddTransaction = async (newTx: Transaction) => {
@@ -139,11 +155,45 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
     } catch (error) { showError(error); }
   };
 
-  const handleAddBatch = async (newBatch: Batch) => {
-    try {
-      const created = await api.createBatch(session.token, newBatch);
+  const handleSaveBatch = async (payload: {
+    name: string; courseId: string; staffId: string; days: string[];
+    startTime: string; endTime: string; startDate: string; endDate: string | null; isActive: boolean;
+  }) => {
+    if (editingBatch) {
+      const updated = await api.updateBatch(session.token, editingBatch.id, payload);
+      setBatches((prev) => prev.map((b) => b.id === updated.id ? updated : b));
+    } else {
+      const created = await api.createBatch(session.token, payload);
       setBatches((prev) => [...prev, created]);
-    } catch (error) { showError(error); }
+    }
+  };
+
+  const handleSaveCourse = async (name: string, description: string, isActive: boolean) => {
+    if (editingCourse) {
+      const updated = await api.updateCourse(session.token, editingCourse.id, { name, description, isActive });
+      setCourses((prev) => prev.map((c) => c.id === updated.id ? updated : c));
+    } else {
+      const created = await api.createCourse(session.token, { name, description });
+      setCourses((prev) => [...prev, created]);
+    }
+  };
+
+  const handleSaveStaff = async (name: string, phone: string, email: string, isActive: boolean) => {
+    if (editingStaff) {
+      const updated = await api.updateStaff(session.token, editingStaff.id, { name, phone, email, isActive });
+      setStaff((prev) => prev.map((s) => s.id === updated.id ? updated : s));
+    } else {
+      const created = await api.createStaff(session.token, { name, phone, email });
+      setStaff((prev) => [...prev, created]);
+    }
+  };
+
+  const handleAddFeeStructure = async (payload: {
+    courseId: string; name: string; amount: number; frequency: FeeStructure['frequency']; effectiveFrom: string; effectiveTo?: string | null;
+  }) => {
+    const created = await api.createFeeStructure(session.token, payload);
+    setFeeStructures((prev) => [created, ...prev.filter((s) => s.courseId !== created.courseId || s.id !== created.id)]);
+    await reload();
   };
 
   const handleDeleteStudent = async (studentId: string) => {
@@ -162,18 +212,11 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   };
 
   const handleExportData = () => {
-    const backupData = {
-      students,
-      batches,
-      transactions,
-      settings,
-      exportDate: new Date().toISOString()
-    };
-
+    const backupData = { students, batches, courses, staff, transactions, settings, exportDate: new Date().toISOString() };
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `studiosync_backup_${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute('download', `rhythaalaya_backup_${new Date().toISOString().slice(0, 10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -183,6 +226,10 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
     e.target.value = '';
     setLoadError('Direct JSON import is disabled for tenant safety. Use the API migration workflow for bulk imports.');
   };
+
+  const openRecordFee = (student?: Student) => { setFeeTargetStudent(student); setIsRecordFeeOpen(true); };
+  const openWhatsApp = (student?: Student) => { setWhatsAppTargetStudent(student); setIsWhatsAppOpen(true); };
+  const openStudentDetails = (student: Student) => { setDetailsTargetStudent(student); setIsStudentDetailsOpen(true); };
 
   if (loading) return (
     <div className="min-h-screen bg-mint-50 dark:bg-brand-950 p-4 md:p-8" role="status" aria-live="polite">
@@ -200,7 +247,6 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   return (
     <div className="min-h-screen bg-mint-50 dark:bg-brand-950 text-slate-900 dark:text-brand-50 font-sans antialiased selection:bg-brand-500 selection:text-white">
       <a href="#main-content" className="skip-link">Skip to main content</a>
-      {/* Navigation Drawer (Desktop) & Bottom Nav Bar (Mobile) */}
       <Navigation
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
@@ -208,7 +254,6 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         settings={settings}
       />
 
-      {/* Main Content Viewport */}
       <main id="main-content" tabIndex={-1} className="md:ml-[270px] min-h-screen px-4 sm:px-6 lg:px-8 py-5 md:py-8 pb-28 md:pb-12">
         <div className="mx-auto w-full max-w-[1440px]">
         <header className="mb-5 flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-brand-200/60 bg-white/80 px-3 py-2.5 shadow-xs backdrop-blur-sm dark:border-brand-800 dark:bg-slate-900/80 sm:px-4">
@@ -242,13 +287,11 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
               students={students}
               batches={batches}
               transactions={transactions}
+              outstandingDues={outstandingDues}
               setCurrentTab={setCurrentTab}
               onOpenAddStudent={() => setIsAddStudentOpen(true)}
-              onOpenAddBatch={() => setIsAddBatchOpen(true)}
-              onOpenRecordFee={(student) => {
-                setFeeTargetStudent(student);
-                setIsRecordFeeOpen(true);
-              }}
+              onOpenAddBatch={() => { setEditingBatch(null); setIsAddBatchOpen(true); }}
+              onOpenRecordFee={openRecordFee}
             />
           </React.Suspense>
         )}
@@ -257,38 +300,37 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
           <StudentsTab
             students={students}
             onOpenAddStudent={() => setIsAddStudentOpen(true)}
-            onOpenRecordFee={(student) => {
-              setFeeTargetStudent(student);
-              setIsRecordFeeOpen(true);
-            }}
-            onViewStudent={(student) => {
-              setDetailsTargetStudent(student);
-              setIsStudentDetailsOpen(true);
-            }}
-            onSendMessage={(student) => {
-              setWhatsAppTargetStudent(student);
-              setIsWhatsAppOpen(true);
-            }}
+            onOpenRecordFee={openRecordFee}
+            onViewStudent={openStudentDetails}
+            onSendMessage={(student) => openWhatsApp(student)}
           />
         )}
 
         {currentTab === 'batches' && (
-          <BatchesTab batches={batches} onOpenAddBatch={() => setIsAddBatchOpen(true)} />
+          <BatchesTab
+            batches={batches}
+            courses={courses}
+            staff={staff}
+            onOpenAddBatch={() => { setEditingBatch(null); setIsAddBatchOpen(true); }}
+            onEditBatch={(batch) => { setEditingBatch(batch); setIsAddBatchOpen(true); }}
+            onOpenAddCourse={() => { setEditingCourse(null); setIsAddCourseOpen(true); }}
+            onEditCourse={(course) => { setEditingCourse(course); setIsAddCourseOpen(true); }}
+            onOpenAddStaff={() => { setEditingStaff(null); setIsAddStaffOpen(true); }}
+            onEditStaff={(member) => { setEditingStaff(member); setIsAddStaffOpen(true); }}
+          />
         )}
 
         {currentTab === 'finance' && (
           <FinanceTab
             students={students}
             transactions={transactions}
-            onOpenRecordFee={(student) => {
-              setFeeTargetStudent(student);
-              setIsRecordFeeOpen(true);
-            }}
-            onOpenWhatsAppAll={() => {
-              setWhatsAppTargetStudent(undefined);
-              setIsWhatsAppOpen(true);
-            }}
+            outstandingDues={outstandingDues}
+            courses={courses}
+            feeStructures={feeStructures}
+            onOpenRecordFee={openRecordFee}
+            onOpenWhatsAppAll={() => openWhatsApp(undefined)}
             onOpenAddTransaction={() => setIsAddTransactionOpen(true)}
+            onAddFeeStructure={handleAddFeeStructure}
           />
         )}
 
@@ -318,7 +360,6 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         onClose={() => setIsAddStudentOpen(false)}
         onAddStudent={handleAddStudent}
         batches={batches}
-        defaultMonthlyFee={settings.defaultMonthlyFee}
       />
 
       <RecordFeeModal
@@ -326,6 +367,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         onClose={() => setIsRecordFeeOpen(false)}
         students={students}
         initialStudent={feeTargetStudent}
+        token={session.token}
         onRecordFee={handleRecordFee}
       />
 
@@ -333,7 +375,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         isOpen={isWhatsAppOpen}
         onClose={() => setIsWhatsAppOpen(false)}
         student={whatsAppTargetStudent}
-        allOverdueStudents={students.filter((s) => s.feeStatus === 'Pending')}
+        allOverdueStudents={students.filter((s) => s.outstandingBalance > 0)}
       />
 
       <AddTransactionModal
@@ -347,25 +389,39 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
       <AddBatchModal
         isOpen={isAddBatchOpen}
         onClose={() => setIsAddBatchOpen(false)}
-        onAddBatch={handleAddBatch}
-        defaultMonthlyFee={settings.defaultMonthlyFee}
+        courses={courses}
+        staff={staff}
+        editingBatch={editingBatch}
+        onSave={handleSaveBatch}
+      />
+
+      <AddCourseModal
+        isOpen={isAddCourseOpen}
+        onClose={() => setIsAddCourseOpen(false)}
+        editingCourse={editingCourse}
+        onSave={handleSaveCourse}
+      />
+
+      <AddStaffModal
+        isOpen={isAddStaffOpen}
+        onClose={() => setIsAddStaffOpen(false)}
+        editingStaff={editingStaff}
+        onSave={handleSaveStaff}
       />
 
       <StudentDetailsModal
         isOpen={isStudentDetailsOpen}
         onClose={() => setIsStudentDetailsOpen(false)}
         student={detailsTargetStudent}
-        onRecordFee={(student) => {
-          setFeeTargetStudent(student);
-          setIsRecordFeeOpen(true);
-        }}
-        onSendMessage={(student) => {
-          setWhatsAppTargetStudent(student);
-          setIsWhatsAppOpen(true);
-        }}
+        batches={batches}
+        token={session.token}
+        onRecordFee={openRecordFee}
+        onSendMessage={(student) => openWhatsApp(student)}
         onDeleteStudent={handleDeleteStudent}
+        onEnroll={handleEnroll}
+        onEndEnrollment={handleEndEnrollment}
       />
-      <FeeReceiptModal isOpen={isReceiptOpen} onClose={() => setIsReceiptOpen(false)} receipt={lastReceipt} settings={settings} />
+      <FeeReceiptModal isOpen={isReceiptOpen} onClose={() => setIsReceiptOpen(false)} receipt={lastReceipt} />
     </div>
   );
 }
