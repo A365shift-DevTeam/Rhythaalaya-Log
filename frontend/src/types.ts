@@ -12,6 +12,7 @@ export interface Student {
   feeStatus: 'Paid' | 'Pending';
   feeAmount: number;
   monthlyFee?: number;
+  discountAmount?: number;
   outstandingBalance?: number;
   overallAttendance: number; // percentage e.g. 95
   phone?: string;
@@ -26,6 +27,7 @@ export interface Batch {
   course: string;
   schedule: string; // e.g., "Mon/Wed 5:00 PM"
   instructor: string;
+  monthlyFee: number;
   enrolledCount: number;
 }
 
@@ -43,6 +45,7 @@ export interface Transaction {
   amount: number;
   category: string; // 'Rent', 'Fees', 'Salary', 'Misc'
   date: string;
+  occurredAt?: string;
   time?: string;
 }
 

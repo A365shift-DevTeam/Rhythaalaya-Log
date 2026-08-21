@@ -129,6 +129,7 @@ function BatchCard({ batch }: { batch: Batch; key?: React.Key }) {
       <div className="mt-4 space-y-2.5">
         <BatchInfo icon="event" label="Schedule" value={batch.schedule} />
         <BatchInfo icon="person" label="Instructor" value={batch.instructor} />
+        <BatchInfo icon="payments" label="Standard monthly fee" value={`₹${batch.monthlyFee.toLocaleString('en-IN')}`} />
       </div>
 
       <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">

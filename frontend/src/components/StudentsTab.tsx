@@ -70,8 +70,9 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onOpenAddStudent}
-            className="btn-brand ml-auto md:ml-2 px-4 py-2 font-sans text-xs font-bold uppercase tracking-wider rounded-xl flex items-center gap-1.5"
+            className="btn-brand ml-auto min-h-11 md:ml-2 px-4 py-2 font-sans text-xs font-bold uppercase tracking-wider rounded-xl flex items-center gap-1.5"
           >
             <span className="material-symbols-outlined text-[18px]">person_add</span>
             <span>Add Student</span>
@@ -83,20 +84,24 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
+            <label htmlFor="student-search" className="sr-only">Search students</label>
             <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
               search
             </span>
             <input
+              id="student-search"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by student name, course, or batch ID..."
-              className="w-full pl-10 pr-10 py-2.5 bg-brand-50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-xl font-sans text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+              className="w-full min-h-11 pl-10 pr-16 py-2.5 bg-brand-50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-xl font-sans text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
             />
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-700"
+                aria-label="Clear student search"
+                className="absolute right-1 top-1/2 min-h-10 -translate-y-1/2 rounded-lg px-2 text-xs font-semibold text-slate-500 hover:bg-white hover:text-slate-800 dark:hover:bg-slate-800"
               >
                 Clear
               </button>
@@ -105,10 +110,12 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
 
           <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
             {/* Status Filter Pills */}
-            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
+            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0" role="group" aria-label="Filter by fee status">
               <button
+                type="button"
                 onClick={() => setFilterFeeStatus('All')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                aria-pressed={filterFeeStatus === 'All'}
+                className={`min-h-10 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   filterFeeStatus === 'All'
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
@@ -117,8 +124,10 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                 All
               </button>
               <button
+                type="button"
                 onClick={() => setFilterFeeStatus('Paid')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                aria-pressed={filterFeeStatus === 'Paid'}
+                className={`min-h-10 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   filterFeeStatus === 'Paid'
                     ? 'bg-emerald-600 text-white shadow-xs'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
@@ -127,8 +136,10 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                 Paid
               </button>
               <button
+                type="button"
                 onClick={() => setFilterFeeStatus('Pending')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                aria-pressed={filterFeeStatus === 'Pending'}
+                className={`min-h-10 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   filterFeeStatus === 'Pending'
                     ? 'bg-rose-600 text-white shadow-xs'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
@@ -140,18 +151,22 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
 
             {/* Sort Toggle */}
             <button
+              type="button"
               onClick={() => setSortBy(sortBy === 'name' ? 'attendance' : 'name')}
-              className="px-3 py-2 bg-brand-50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-xl font-sans text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 transition-colors flex items-center gap-1.5 shrink-0"
+              className="min-h-11 px-3 py-2 bg-brand-50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-xl font-sans text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 transition-colors flex items-center gap-1.5 shrink-0"
             >
               <span className="material-symbols-outlined text-[18px]">sort</span>
               <span>Sort: {sortBy === 'name' ? 'Name' : 'Attendance'}</span>
             </button>
 
             {/* View Switcher */}
-            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
+            <div className="hidden sm:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0" role="group" aria-label="Student view">
               <button
+                type="button"
                 onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg transition-all ${
+                aria-label="Grid view"
+                aria-pressed={viewMode === 'grid'}
+                className={`w-10 h-10 inline-flex items-center justify-center rounded-lg transition-all ${
                   viewMode === 'grid'
                     ? 'bg-white dark:bg-slate-900 text-brand-500 shadow-xs'
                     : 'text-slate-400 hover:text-slate-600'
@@ -161,8 +176,11 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                 <span className="material-symbols-outlined text-[18px]">grid_view</span>
               </button>
               <button
+                type="button"
                 onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-lg transition-all ${
+                aria-label="Table view"
+                aria-pressed={viewMode === 'table'}
+                className={`w-10 h-10 inline-flex items-center justify-center rounded-lg transition-all ${
                   viewMode === 'table'
                     ? 'bg-white dark:bg-slate-900 text-brand-500 shadow-xs'
                     : 'text-slate-400 hover:text-slate-600'
@@ -209,8 +227,10 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                           {student.name}
                         </h3>
                         <button
+                          type="button"
                           onClick={() => onViewStudent(student)}
-                          className="text-slate-400 hover:text-brand-500 p-0.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          aria-label={`Open actions for ${student.name}`}
+                          className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:text-brand-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                         >
                           <span className="material-symbols-outlined text-[18px]">more_vert</span>
                         </button>
@@ -263,18 +283,20 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                 {/* Actions */}
                 <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                   <button
+                    type="button"
                     onClick={() => onViewStudent(student)}
-                    className="py-1.5 px-2 flex items-center justify-center gap-1 text-slate-600 dark:text-slate-300 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-slate-800 rounded-lg transition-colors font-sans text-xs font-semibold"
+                    className="min-h-11 py-1.5 px-2 flex items-center justify-center gap-1 text-slate-600 dark:text-slate-300 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-slate-800 rounded-lg transition-colors font-sans text-xs font-semibold"
                   >
                     <span className="material-symbols-outlined text-[16px]">visibility</span>
                     <span>View</span>
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => onOpenRecordFee(student)}
                     disabled={student.feeStatus === 'Paid'}
                     title={student.feeStatus === 'Paid' ? 'No outstanding fee' : 'Record fee payment'}
-                    className={`py-1.5 px-2 flex items-center justify-center gap-1 rounded-lg transition-colors font-sans text-xs font-semibold ${
+                    className={`min-h-11 py-1.5 px-2 flex items-center justify-center gap-1 rounded-lg transition-colors font-sans text-xs font-semibold ${
                       student.feeStatus === 'Pending'
                         ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/60 font-bold'
                         : 'text-slate-400 bg-slate-50 dark:bg-slate-800 cursor-not-allowed'
@@ -285,8 +307,9 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => onSendMessage(student)}
-                    className="py-1.5 px-2 flex items-center justify-center gap-1 text-slate-600 dark:text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-800 rounded-lg transition-colors font-sans text-xs font-semibold"
+                    className="min-h-11 py-1.5 px-2 flex items-center justify-center gap-1 text-slate-600 dark:text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-800 rounded-lg transition-colors font-sans text-xs font-semibold"
                   >
                     <span className="material-symbols-outlined text-[16px]">forum</span>
                     <span>Msg</span>
@@ -356,19 +379,19 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                     <div className="flex items-center justify-end gap-2">
                       <button type="button" onClick={() => onViewStudent(student)}
                         title="View student" aria-label={`View ${student.name}`}
-                        className="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all">
+                        className="w-11 h-11 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all">
                         <span className="material-symbols-outlined text-[18px]">visibility</span>
                       </button>
                       <button type="button" onClick={() => onOpenRecordFee(student)}
                         disabled={student.feeStatus === 'Paid'}
                         title={student.feeStatus === 'Paid' ? 'No outstanding fee' : 'Record fee payment'}
                         aria-label={`Record fee for ${student.name}`}
-                        className="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-brand-200 dark:border-brand-700 bg-brand-50 dark:bg-brand-900/50 text-brand-600 dark:text-brand-300 hover:bg-brand-100 hover:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:bg-slate-50 disabled:text-slate-300 disabled:border-slate-200 disabled:cursor-not-allowed dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-all">
+                        className="w-11 h-11 inline-flex items-center justify-center rounded-xl border border-brand-200 dark:border-brand-700 bg-brand-50 dark:bg-brand-900/50 text-brand-600 dark:text-brand-300 hover:bg-brand-100 hover:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:bg-slate-50 disabled:text-slate-300 disabled:border-slate-200 disabled:cursor-not-allowed dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-all">
                         <span className="material-symbols-outlined text-[18px]">payments</span>
                       </button>
                       <button type="button" onClick={() => onSendMessage(student)}
                         title="Send WhatsApp message" aria-label={`Message ${student.name}`}
-                        className="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-100 hover:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all">
+                        className="w-11 h-11 inline-flex items-center justify-center rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-100 hover:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all">
                         <span className="material-symbols-outlined text-[18px]">chat</span>
                       </button>
                     </div>

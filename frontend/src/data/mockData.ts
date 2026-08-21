@@ -275,6 +275,7 @@ export const INITIAL_BATCHES: Batch[] = [
     course: 'Yoga 101',
     schedule: 'Mon, Wed, Fri 7:00 AM',
     instructor: 'Sarah Connor',
+    monthlyFee: 1500,
     enrolledCount: 20
   },
   {
@@ -283,6 +284,7 @@ export const INITIAL_BATCHES: Batch[] = [
     course: 'Pilates',
     schedule: 'Tue, Thu 2:00 PM',
     instructor: 'Mark Taylor',
+    monthlyFee: 1500,
     enrolledCount: 15
   },
   {
@@ -291,6 +293,7 @@ export const INITIAL_BATCHES: Batch[] = [
     course: 'Advanced HIIT',
     schedule: 'Mon, Wed 6:30 PM',
     instructor: 'Mark Taylor',
+    monthlyFee: 2000,
     enrolledCount: 18
   },
   {
@@ -299,6 +302,7 @@ export const INITIAL_BATCHES: Batch[] = [
     course: 'Western Dance',
     schedule: 'Mon, Wed 5:00 PM',
     instructor: 'Alex Rivera',
+    monthlyFee: 1600,
     enrolledCount: 22
   },
   {
@@ -307,6 +311,7 @@ export const INITIAL_BATCHES: Batch[] = [
     course: 'Contemporary',
     schedule: 'Tue, Thu 6:00 PM',
     instructor: 'Elena Vance',
+    monthlyFee: 1750,
     enrolledCount: 16
   },
   {
@@ -315,6 +320,7 @@ export const INITIAL_BATCHES: Batch[] = [
     course: 'Classical Ballet',
     schedule: 'Sat, Sun 10:00 AM',
     instructor: 'Clara Oswald',
+    monthlyFee: 1800,
     enrolledCount: 14
   }
 ];

@@ -2,9 +2,10 @@ using RhythaalayaLog.Domain;
 
 namespace RhythaalayaLog.Application;
 
-public sealed record BatchDto(Guid Id, string Name, string Course, string Schedule, string Instructor, bool IsActive, int EnrolledCount);
+public sealed record BatchDto(Guid Id, string Name, string Course, string Schedule, string Instructor,
+    decimal MonthlyFee, bool IsActive, int EnrolledCount);
 public sealed record StudentDto(Guid Id, string StudentNumber, string Name, Guid BatchId, string BatchName, string Course,
-    decimal MonthlyFee, decimal OutstandingBalance, string FeeStatus, decimal AttendancePercentage,
+    decimal MonthlyFee, decimal DiscountAmount, decimal OutstandingBalance, string FeeStatus, decimal AttendancePercentage,
     string? Phone, string? Email, DateOnly JoinDate, bool IsActive);
 public sealed record AttendanceEntryDto(Guid StudentId, AttendanceStatus Status);
 public sealed record AttendanceRecordDto(Guid StudentId, string StudentName, AttendanceStatus Status);

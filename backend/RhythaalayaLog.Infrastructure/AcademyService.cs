@@ -9,7 +9,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     public async Task<IReadOnlyList<BatchDto>> GetBatchesAsync(CancellationToken ct) =>
         await db.Batches.AsNoTracking().OrderBy(x => x.Name)
             .Select(x => new BatchDto(x.Id, x.Name, x.Course, x.Schedule, x.Instructor,
-                x.IsActive, x.Students.Count(s => s.IsActive)))
+                x.MonthlyFee, x.IsActive, x.Students.Count(s => s.IsActive)))
             .ToListAsync(ct);
 
     public async Task<BatchDto> CreateBatchAsync(CreateBatchRequest request, CancellationToken ct)
@@ -21,11 +21,13 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             Name = request.Name.Trim(),
             Course = request.Course.Trim(),
             Schedule = request.Schedule.Trim(),
-            Instructor = request.Instructor.Trim()
+            Instructor = request.Instructor.Trim(),
+            MonthlyFee = request.MonthlyFee
         };
         db.Batches.Add(batch);
         await db.SaveChangesAsync(ct);
-        return new BatchDto(batch.Id, batch.Name, batch.Course, batch.Schedule, batch.Instructor, true, 0);
+        return new BatchDto(batch.Id, batch.Name, batch.Course, batch.Schedule, batch.Instructor,
+            batch.MonthlyFee, true, 0);
     }
 
     public async Task<IReadOnlyList<StudentDto>> GetStudentsAsync(string? search, Guid? batchId,
@@ -53,7 +55,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 
     public async Task<StudentDto> CreateStudentAsync(CreateStudentRequest request, CancellationToken ct)
     {
-        ValidateStudent(request.Name, request.MonthlyFee, request.OpeningBalance);
+        ValidateStudent(request.Name, request.MonthlyFee, request.DiscountAmount, request.OpeningBalance);
         var tenantId = RequireTenant();
         var now = DateTimeOffset.UtcNow;
         var subscription = await db.TenantSubscriptions.AsNoTracking().Include(x => x.Plan)
@@ -66,8 +68,12 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         var activeStudents = await db.Students.CountAsync(x => x.IsActive, ct);
         if (activeStudents >= subscription.Plan.MaxStudents)
             throw new ConflictException("Subscription student limit reached.");
-        if (!await db.Batches.AnyAsync(x => x.Id == request.BatchId && x.IsActive, ct))
+        var batch = await db.Batches.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Id == request.BatchId && x.IsActive, ct);
+        if (batch is null)
             throw new AppValidationException(nameof(request.BatchId));
+        if (request.MonthlyFee + request.DiscountAmount != batch.MonthlyFee)
+            throw new AppValidationException("The student fee and discount must match the selected batch fee.");
         var student = NewStudent(request);
         db.Students.Add(student);
         await db.SaveChangesAsync(ct);
@@ -76,7 +82,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 
     public async Task<StudentDto> UpdateStudentAsync(Guid id, UpdateStudentRequest request, CancellationToken ct)
     {
-        ValidateStudent(request.Name, request.MonthlyFee, request.OutstandingBalance);
+        ValidateStudent(request.Name, request.MonthlyFee, request.DiscountAmount, request.OutstandingBalance);
         var student = await db.Students.FindAsync([id], ct);
         if (student is null) throw new NotFoundException(nameof(Student));
         if (!await db.Batches.AnyAsync(x => x.Id == request.BatchId && x.IsActive, ct))
@@ -84,6 +90,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         student.Name = request.Name.Trim();
         student.BatchId = request.BatchId;
         student.MonthlyFee = request.MonthlyFee;
+        student.DiscountAmount = request.DiscountAmount;
         student.OutstandingBalance = request.OutstandingBalance;
         student.Phone = Clean(request.Phone);
         student.Email = Clean(request.Email);
@@ -251,7 +258,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         var present = student.AttendanceRecords.Count(x => x.Status == AttendanceStatus.Present);
         var percentage = total == 0 ? 0 : Math.Round((decimal)present / total * 100, 1);
         return new StudentDto(student.Id, student.StudentNumber, student.Name, student.BatchId,
-            student.Batch.Name, student.Batch.Course, student.MonthlyFee, student.OutstandingBalance,
+            student.Batch.Name, student.Batch.Course, student.MonthlyFee, student.DiscountAmount, student.OutstandingBalance,
             student.OutstandingBalance > 0 ? "Pending" : "Paid", percentage, student.Phone,
             student.Email, student.JoinDate, student.IsActive);
     }
@@ -264,6 +271,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         Name = request.Name.Trim(),
         BatchId = request.BatchId,
         MonthlyFee = request.MonthlyFee,
+        DiscountAmount = request.DiscountAmount,
         OutstandingBalance = request.OpeningBalance,
         Phone = Clean(request.Phone),
         Email = Clean(request.Email),
@@ -311,12 +319,14 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         RequireText(request.Course, nameof(request.Course));
         RequireText(request.Schedule, nameof(request.Schedule));
         RequireText(request.Instructor, nameof(request.Instructor));
+        if (request.MonthlyFee <= 0) throw new AppValidationException(nameof(request.MonthlyFee));
     }
 
-    private static void ValidateStudent(string name, decimal monthlyFee, decimal balance)
+    private static void ValidateStudent(string name, decimal monthlyFee, decimal discountAmount, decimal balance)
     {
         RequireText(name, nameof(name));
-        if (monthlyFee <= 0) throw new AppValidationException(nameof(monthlyFee));
+        if (monthlyFee < 0) throw new AppValidationException(nameof(monthlyFee));
+        if (discountAmount < 0) throw new AppValidationException(nameof(discountAmount));
         if (balance < 0) throw new AppValidationException(nameof(balance));
     }
 

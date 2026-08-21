@@ -91,13 +91,15 @@ export const api = {
 
   createBatch: (token: string, batch: Batch) =>
     request<any>('/batches', { method: 'POST', body: JSON.stringify({
-      name: batch.name, course: batch.course, schedule: batch.schedule, instructor: batch.instructor
+      name: batch.name, course: batch.course, schedule: batch.schedule,
+      instructor: batch.instructor, monthlyFee: batch.monthlyFee
     }) }, token).then(mapBatch),
   createStudent: (token: string, student: Student, batches: Batch[]) => {
     const batch = batches.find(x => x.name === student.batch);
     if (!batch) throw new ApiError('Select a valid batch.', 400);
     return request<any>('/students', { method: 'POST', body: JSON.stringify({
       name: student.name, batchId: batch.id, monthlyFee: student.feeAmount,
+      discountAmount: student.discountAmount || 0,
       openingBalance: student.feeStatus === 'Pending' ? student.feeAmount : 0,
       phone: student.phone, email: student.email, joinDate: student.joinDate
     }) }, token).then(mapStudent);
@@ -158,13 +160,14 @@ export const api = {
 
 function mapBatch(x: any): Batch {
   return { id: x.id, name: x.name, course: x.course, schedule: x.schedule,
-    instructor: x.instructor, enrolledCount: x.enrolledCount };
+    instructor: x.instructor, monthlyFee: x.monthlyFee, enrolledCount: x.enrolledCount };
 }
 function mapStudent(x: any): Student {
   return {
     id: x.id, studentNumber: x.studentNumber, name: x.name, batchId: x.batchId,
     batch: x.batchName, course: x.course, feeAmount: x.outstandingBalance || x.monthlyFee,
-    monthlyFee: x.monthlyFee, outstandingBalance: x.outstandingBalance,
+    monthlyFee: x.monthlyFee, discountAmount: x.discountAmount,
+    outstandingBalance: x.outstandingBalance,
     feeStatus: x.feeStatus, overallAttendance: x.attendancePercentage,
     phone: x.phone, email: x.email, joinDate: x.joinDate
   };
@@ -173,6 +176,7 @@ function mapTransaction(x: any): Transaction {
   const occurred = new Date(x.occurredAt);
   return { id: x.id, title: x.title, type: String(x.type).toLowerCase() as 'income' | 'expense',
     amount: x.amount, category: x.category, date: occurred.toLocaleDateString(),
+    occurredAt: x.occurredAt,
     time: occurred.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
 }
 function mapSettings(x: any): OrgSettings {

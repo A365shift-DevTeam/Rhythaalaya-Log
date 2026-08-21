@@ -30,6 +30,8 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
 
   const netProfit = totalIncome - totalExpense;
   const marginPercentage = totalIncome > 0 ? Math.round((netProfit / totalIncome) * 100) : 0;
+  const isNetLoss = netProfit < 0;
+  const marginBarWidth = Math.min(100, Math.abs(marginPercentage));
 
   return (
     <div className="space-y-6 md:space-y-8 pb-12">
@@ -44,10 +46,10 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs">
+        <div className="flex max-w-full items-center gap-1 overflow-x-auto bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs" role="group" aria-label="Financial reporting period">
           <button
             onClick={() => setPeriod('month')}
-            className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all ${
+            type="button" aria-pressed={period === 'month'} className={`min-h-10 shrink-0 px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all ${
               period === 'month'
                 ? 'bg-brand-500 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
@@ -57,7 +59,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           </button>
           <button
             onClick={() => setPeriod('last_month')}
-            className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all ${
+            type="button" aria-pressed={period === 'last_month'} className={`min-h-10 shrink-0 px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all ${
               period === 'last_month'
                 ? 'bg-brand-500 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
@@ -67,7 +69,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           </button>
           <button
             onClick={() => setPeriod('year')}
-            className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all ${
+            type="button" aria-pressed={period === 'year'} className={`min-h-10 shrink-0 px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all ${
               period === 'year'
                 ? 'bg-brand-500 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
@@ -112,7 +114,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
             </div>
           </div>
           <div className="mt-4">
-            <div className="font-heading text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <div className="font-heading text-3xl md:text-4xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight tabular-nums">
               ₹{totalExpense.toLocaleString()}
             </div>
             <div className="mt-2 flex items-center gap-1 font-sans text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -123,26 +125,26 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
         </div>
 
         {/* Net Profit */}
-        <div className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6 flex flex-col justify-between relative overflow-hidden border-l-4 border-l-brand-500">
+        <div className={`bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6 flex flex-col justify-between relative overflow-hidden border-l-4 ${isNetLoss ? 'border-l-rose-500' : 'border-l-brand-500'}`}>
           <div className="flex justify-between items-start">
-            <span className="font-sans text-xs font-bold uppercase tracking-wider text-brand-500 dark:text-brand-400">
-              Net Profit
+            <span className={`font-sans text-xs font-bold uppercase tracking-wider ${isNetLoss ? 'text-rose-600 dark:text-rose-400' : 'text-brand-500 dark:text-brand-400'}`}>
+              {isNetLoss ? 'Net Loss' : 'Net Profit'}
             </span>
-            <div className="w-9 h-9 rounded-xl bg-brand-50 text-brand-500 dark:bg-brand-900/60 dark:text-brand-400 flex items-center justify-center">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isNetLoss ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400' : 'bg-brand-50 text-brand-500 dark:bg-brand-900/60 dark:text-brand-400'}`}>
               <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
             </div>
           </div>
           <div className="mt-4">
-            <div className="font-heading text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              ₹{netProfit.toLocaleString()}
+            <div className={`font-heading text-3xl md:text-4xl font-extrabold tracking-tight tabular-nums ${isNetLoss ? 'text-rose-600 dark:text-rose-400' : 'text-brand-600 dark:text-brand-400'}`}>
+              {isNetLoss ? '-' : ''}₹{Math.abs(netProfit).toLocaleString()}
             </div>
             <div className="mt-2 space-y-1.5">
               <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div className="bg-brand-500 h-2 rounded-full transition-all" style={{ width: `${marginPercentage}%` }}></div>
+                <div className={`${isNetLoss ? 'bg-rose-500' : 'bg-brand-500'} h-2 rounded-full transition-all`} style={{ width: `${marginBarWidth}%` }}></div>
               </div>
               <div className="font-sans text-[11px] text-slate-500 dark:text-slate-400 font-semibold flex justify-between">
                 <span>Profit Margin</span>
-                <span className="text-brand-500 dark:text-brand-400">{marginPercentage}%</span>
+                <span className={isNetLoss ? 'text-rose-600 dark:text-rose-400' : 'text-brand-500 dark:text-brand-400'}>{marginPercentage}%</span>
               </div>
             </div>
           </div>
@@ -314,7 +316,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           <div className="flex-1 flex flex-col items-center justify-center relative">
             <div className="w-32 h-32 rounded-full border-8 border-brand-500 border-t-rose-500 border-r-amber-500 flex flex-col items-center justify-center shadow-xs">
               <span className="font-sans text-[11px] text-slate-500 font-medium">Costs</span>
-              <span className="font-heading text-base font-extrabold text-slate-900 dark:text-white">
+              <span className="font-heading text-base font-extrabold text-rose-600 dark:text-rose-400 tabular-nums">
                 ₹{totalExpense.toLocaleString()}
               </span>
             </div>
@@ -392,7 +394,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                     className={`font-sans text-sm font-extrabold ${
                       item.type === 'income'
                         ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-slate-900 dark:text-white'
+                        : 'text-rose-600 dark:text-rose-400'
                     }`}
                   >
                     {item.type === 'income' ? '+' : '-'}₹{item.amount.toLocaleString()}
@@ -418,8 +420,10 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
 
               {/* WhatsApp All Button */}
               <button
+                type="button"
                 onClick={onOpenWhatsAppAll}
-                className="flex items-center gap-1.5 bg-emerald-600 text-white px-3.5 py-2 rounded-xl transition-all font-sans text-xs font-bold uppercase tracking-wider shadow-md shadow-emerald-600/20 active:scale-95"
+                disabled={pendingStudents.length === 0}
+                className="min-h-11 flex items-center gap-1.5 bg-emerald-700 text-white px-3.5 py-2 rounded-xl transition-all font-sans text-xs font-bold uppercase tracking-wider shadow-md shadow-emerald-600/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-[18px]">forum</span>
                 <span>WhatsApp All</span>
@@ -430,9 +434,9 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
               {pendingStudents.slice(0, 4).map((student) => (
                 <div
                   key={student.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-brand-50/70 dark:bg-brand-900/40 border border-brand-200/50 dark:border-brand-700/50"
+                  className="flex flex-col items-stretch justify-between gap-3 p-3 rounded-xl bg-brand-50/70 dark:bg-brand-900/40 border border-brand-200/50 dark:border-brand-700/50 sm:flex-row sm:items-center"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center font-bold text-xs">
                       {student.name.charAt(0)}
                     </div>
@@ -446,13 +450,14 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between gap-3 sm:justify-end">
                     <span className="font-sans text-xs font-extrabold text-slate-900 dark:text-white">
                       ₹{student.feeAmount}
                     </span>
                     <button
+                      type="button"
                       onClick={() => onOpenRecordFee(student)}
-                      className="px-2.5 py-1 bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-300 hover:bg-brand-500 hover:text-white rounded-lg text-xs font-bold transition-all"
+                      className="min-h-11 px-3.5 py-2 bg-white dark:bg-brand-900/60 text-brand-600 dark:text-brand-300 hover:bg-brand-500 hover:text-white rounded-xl border border-brand-200 dark:border-brand-700 text-xs font-bold transition-all"
                     >
                       Collect
                     </button>
@@ -462,11 +467,12 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
             </div>
           </div>
 
-          <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs text-slate-500">
+          <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col items-start justify-between gap-2 text-xs text-slate-500 sm:flex-row sm:items-center">
             <span>Automated notifications active</span>
             <button
+              type="button"
               onClick={() => onOpenRecordFee()}
-              className="text-brand-500 dark:text-brand-400 font-bold hover:underline"
+              className="min-h-11 rounded-xl px-2 text-brand-500 dark:text-brand-400 font-bold hover:bg-brand-50 dark:hover:bg-brand-900/50"
             >
               Manual Collect &rarr;
             </button>

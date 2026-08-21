@@ -14,7 +14,6 @@ import { LoginPage } from './components/LoginPage';
 import { SuperAdminPage } from './components/SuperAdminPage';
 
 import { Navigation } from './components/Navigation';
-import { HomeTab } from './components/HomeTab';
 import { StudentsTab } from './components/StudentsTab';
 import { FinanceTab } from './components/FinanceTab';
 import { LogTab } from './components/LogTab';
@@ -27,6 +26,10 @@ import { WhatsAppModal } from './components/modals/WhatsAppModal';
 import { AddTransactionModal } from './components/modals/AddTransactionModal';
 import { AddBatchModal } from './components/modals/AddBatchModal';
 import { StudentDetailsModal } from './components/modals/StudentDetailsModal';
+
+const HomeTab = React.lazy(() =>
+  import('./components/HomeTab').then((module) => ({ default: module.HomeTab }))
+);
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(() => authStore.get());
@@ -158,13 +161,25 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
 
   const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.target.value = '';
-    alert('Direct JSON import is disabled for tenant safety. Use the API migration workflow for bulk imports.');
+    setLoadError('Direct JSON import is disabled for tenant safety. Use the API migration workflow for bulk imports.');
   };
 
-  if (loading) return <div className="min-h-screen bg-mint-50 flex items-center justify-center font-bold text-brand-600">Loading academy…</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-mint-50 dark:bg-brand-950 p-4 md:p-8" role="status" aria-live="polite">
+      <span className="sr-only">Loading academy</span>
+      <div className="mx-auto max-w-6xl animate-pulse space-y-5 pt-16 md:pt-24">
+        <div className="h-8 w-56 rounded-xl bg-brand-100 dark:bg-brand-900" />
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((item) => <div key={item} className="h-32 rounded-2xl bg-white dark:bg-slate-900" />)}
+        </div>
+        <div className="h-80 rounded-3xl bg-white dark:bg-slate-900" />
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-mint-50 dark:bg-brand-950 text-slate-900 dark:text-brand-50 font-sans antialiased selection:bg-brand-500 selection:text-white">
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       {/* Navigation Drawer (Desktop) & Bottom Nav Bar (Mobile) */}
       <Navigation
         currentTab={currentTab}
@@ -174,29 +189,44 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
       />
 
       {/* Main Content Viewport */}
-      <main className="md:ml-[280px] min-h-screen px-4 md:px-10 py-6 md:py-8 max-w-[1440px] mx-auto pb-[80px] md:pb-12">
-        <div className="flex justify-end items-center gap-3 mb-4">
-          <span className="text-xs text-slate-500">{session.user.tenantName} · {session.user.fullName}</span>
-          <button onClick={onLogout} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold bg-white dark:bg-slate-900">
+      <main id="main-content" tabIndex={-1} className="md:ml-[270px] min-h-screen px-4 sm:px-6 lg:px-8 py-5 md:py-8 pb-28 md:pb-12">
+        <div className="mx-auto w-full max-w-[1440px]">
+        <header className="mb-5 flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-brand-200/60 bg-white/80 px-3 py-2.5 shadow-xs backdrop-blur-sm dark:border-brand-800 dark:bg-slate-900/80 sm:px-4">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-slate-800 dark:text-white">{session.user.tenantName}</p>
+            <p className="truncate text-xs text-slate-500 dark:text-slate-400">Signed in as {session.user.fullName}</p>
+          </div>
+          <button type="button" onClick={onLogout} className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3.5 text-xs font-bold bg-white text-slate-700 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-rose-950/40">
             Sign out
           </button>
-        </div>
-        {loadError && <div className="mb-4 rounded-xl bg-rose-50 text-rose-700 px-4 py-3 text-sm">
-          {loadError}<button onClick={() => setLoadError('')} className="float-right font-bold">×</button>
+        </header>
+        {loadError && <div role="alert" className="mb-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
+          <span className="material-symbols-outlined mt-0.5 text-[20px]" aria-hidden="true">error</span>
+          <span className="min-w-0 flex-1 py-1">{loadError}</span>
+          <button type="button" onClick={() => void reload()} className="min-h-9 rounded-lg px-2.5 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50">Retry</button>
+          <button type="button" onClick={() => setLoadError('')} aria-label="Dismiss error" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900/50">
+            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
+          </button>
         </div>}
         {currentTab === 'home' && (
-          <HomeTab
-            students={students}
-            batches={batches}
-            transactions={transactions}
-            setCurrentTab={setCurrentTab}
-            onOpenAddStudent={() => setIsAddStudentOpen(true)}
-            onOpenAddBatch={() => setIsAddBatchOpen(true)}
-            onOpenRecordFee={(student) => {
-              setFeeTargetStudent(student);
-              setIsRecordFeeOpen(true);
-            }}
-          />
+          <React.Suspense fallback={
+            <div className="min-h-[420px] rounded-3xl border border-brand-200/60 dark:border-brand-800 bg-white dark:bg-slate-900 flex items-center justify-center text-sm font-semibold text-brand-700 dark:text-brand-300">
+              Loading dashboard…
+            </div>
+          }>
+            <HomeTab
+              students={students}
+              batches={batches}
+              transactions={transactions}
+              setCurrentTab={setCurrentTab}
+              onOpenAddStudent={() => setIsAddStudentOpen(true)}
+              onOpenAddBatch={() => setIsAddBatchOpen(true)}
+              onOpenRecordFee={(student) => {
+                setFeeTargetStudent(student);
+                setIsRecordFeeOpen(true);
+              }}
+            />
+          </React.Suspense>
         )}
 
         {currentTab === 'students' && (
@@ -255,6 +285,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             onImportData={handleImportData}
           />
         )}
+        </div>
       </main>
 
       {/* Modals */}
@@ -263,6 +294,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         onClose={() => setIsAddStudentOpen(false)}
         onAddStudent={handleAddStudent}
         batches={batches}
+        defaultMonthlyFee={settings.defaultMonthlyFee}
       />
 
       <RecordFeeModal
@@ -290,6 +322,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         isOpen={isAddBatchOpen}
         onClose={() => setIsAddBatchOpen(false)}
         onAddBatch={handleAddBatch}
+        defaultMonthlyFee={settings.defaultMonthlyFee}
       />
 
       <StudentDetailsModal

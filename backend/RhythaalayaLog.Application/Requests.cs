@@ -2,12 +2,12 @@ using RhythaalayaLog.Domain;
 
 namespace RhythaalayaLog.Application;
 
-public sealed record CreateBatchRequest(string Name, string Course, string Schedule, string Instructor);
+public sealed record CreateBatchRequest(string Name, string Course, string Schedule, string Instructor, decimal MonthlyFee);
 
-public sealed record CreateStudentRequest(string Name, Guid BatchId, decimal MonthlyFee, decimal OpeningBalance,
+public sealed record CreateStudentRequest(string Name, Guid BatchId, decimal MonthlyFee, decimal DiscountAmount, decimal OpeningBalance,
     string? Phone, string? Email, DateOnly? JoinDate);
 
-public sealed record UpdateStudentRequest(string Name, Guid BatchId, decimal MonthlyFee, decimal OutstandingBalance,
+public sealed record UpdateStudentRequest(string Name, Guid BatchId, decimal MonthlyFee, decimal DiscountAmount, decimal OutstandingBalance,
     string? Phone, string? Email, bool IsActive);
 
 public sealed record SubmitAttendanceRequest(DateOnly Date, Guid BatchId, IReadOnlyList<AttendanceEntryDto> Entries);

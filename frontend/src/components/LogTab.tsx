@@ -118,7 +118,7 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, token, onOpen
             <select
               value={selectedBatch}
               onChange={(e) => setSelectedBatch(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 bg-brand-50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none appearance-none cursor-pointer"
+              aria-label="Select attendance batch" className="w-full min-h-11 pl-9 pr-8 py-2 bg-brand-50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none appearance-none cursor-pointer"
             >
               {batches.map((b) => (
                 <option key={b.id} value={b.name}>
@@ -132,8 +132,9 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, token, onOpen
           </div>
 
           <button
+            type="button"
             onClick={markAllPresent}
-            className="px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 font-sans text-xs font-bold rounded-xl border border-emerald-200 dark:border-emerald-900/50 transition-all flex items-center gap-1 shrink-0"
+            className="min-h-11 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 font-sans text-xs font-bold rounded-xl border border-emerald-200 dark:border-emerald-900/50 transition-all flex items-center gap-1 shrink-0"
           >
             <span className="material-symbols-outlined text-[16px]">done_all</span>
             <span>All Present</span>
@@ -195,11 +196,11 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, token, onOpen
                     </div>
 
                     {/* Status Segmented Buttons */}
-                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full sm:w-60">
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full sm:w-60" role="group" aria-label={`Attendance status for ${student.name}`}>
                       <button
                         type="button"
                         onClick={() => setStatus(student.id, 'P')}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${
+                        aria-pressed={currentStatus === 'P'} className={`min-h-11 flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${
                           currentStatus === 'P'
                             ? 'bg-emerald-600 text-white shadow-xs'
                             : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
@@ -211,7 +212,7 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, token, onOpen
                       <button
                         type="button"
                         onClick={() => setStatus(student.id, 'A')}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${
+                        aria-pressed={currentStatus === 'A'} className={`min-h-11 flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${
                           currentStatus === 'A'
                             ? 'bg-rose-600 text-white shadow-xs'
                             : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
@@ -223,7 +224,7 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, token, onOpen
                       <button
                         type="button"
                         onClick={() => setStatus(student.id, 'L')}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${
+                        aria-pressed={currentStatus === 'L'} className={`min-h-11 flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${
                           currentStatus === 'L'
                             ? 'bg-amber-500 text-white shadow-xs'
                             : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'

@@ -67,6 +67,7 @@ public sealed class Batch : ITenantOwned
     public required string Course { get; set; }
     public required string Schedule { get; set; }
     public required string Instructor { get; set; }
+    public decimal MonthlyFee { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<Student> Students { get; set; } = [];
@@ -81,6 +82,7 @@ public sealed class Student : ITenantOwned
     public Guid BatchId { get; set; }
     public Batch Batch { get; set; } = null!;
     public decimal MonthlyFee { get; set; }
+    public decimal DiscountAmount { get; set; }
     public decimal OutstandingBalance { get; set; }
     public string? Phone { get; set; }
     public string? Email { get; set; }

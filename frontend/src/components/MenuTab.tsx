@@ -60,8 +60,9 @@ export const MenuTab: React.FC<MenuTabProps> = ({
             Studio Profile
           </h3>
           <button
+            type="button"
             onClick={() => setIsEditingOrg(!isEditingOrg)}
-            className="text-xs font-bold text-brand-500 dark:text-brand-400 hover:underline flex items-center gap-1"
+            className="min-h-11 rounded-xl px-2 text-xs font-bold text-brand-500 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 flex items-center gap-1"
           >
             <span className="material-symbols-outlined text-[16px]">
               {isEditingOrg ? 'close' : 'edit'}
@@ -75,10 +76,11 @@ export const MenuTab: React.FC<MenuTabProps> = ({
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
+                  <label htmlFor="org-name" className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
                     Studio / Academy Name
                   </label>
                   <input
+                    id="org-name"
                     type="text"
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
@@ -86,10 +88,11 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
+                  <label htmlFor="org-type" className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
                     Category / Type
                   </label>
                   <input
+                    id="org-type"
                     type="text"
                     value={orgType}
                     onChange={(e) => setOrgType(e.target.value)}
@@ -98,8 +101,9 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 </div>
               </div>
               <button
+                type="button"
                 onClick={handleSaveOrg}
-                className="btn-brand px-5 py-2.5 rounded-xl text-xs font-bold"
+                className="btn-brand min-h-11 px-5 py-2.5 rounded-xl text-xs font-bold"
               >
                 Save Profile
               </button>
@@ -161,7 +165,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           Theme & Display
         </h3>
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
-          <div className="p-4 sm:px-6 flex items-center justify-between">
+          <div className="p-4 sm:px-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div className="flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined">palette</span>
@@ -175,32 +179,40 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
               <button
                 type="button"
                 onClick={() => setSettings((p) => ({ ...p, themeColor: 'blue' }))}
-                className={`w-7 h-7 rounded-full bg-blue-500 transition-all ${
+                aria-label="Use blue accent color"
+                aria-pressed={settings.themeColor === 'blue'}
+                className={`w-11 h-11 rounded-full border-[8px] border-white dark:border-slate-900 bg-blue-500 transition-all ${
                   settings.themeColor === 'blue' ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : ''
                 }`}
               />
               <button
                 type="button"
                 onClick={() => setSettings((p) => ({ ...p, themeColor: 'purple' }))}
-                className={`w-7 h-7 rounded-full bg-brand-500 transition-all ${
+                aria-label="Use purple accent color"
+                aria-pressed={settings.themeColor === 'purple'}
+                className={`w-11 h-11 rounded-full border-[8px] border-white dark:border-slate-900 bg-brand-500 transition-all ${
                   settings.themeColor === 'purple' ? 'ring-2 ring-offset-2 ring-brand-500 scale-110' : ''
                 }`}
               />
               <button
                 type="button"
                 onClick={() => setSettings((p) => ({ ...p, themeColor: 'emerald' }))}
-                className={`w-7 h-7 rounded-full bg-emerald-500 transition-all ${
+                aria-label="Use emerald accent color"
+                aria-pressed={settings.themeColor === 'emerald'}
+                className={`w-11 h-11 rounded-full border-[8px] border-white dark:border-slate-900 bg-emerald-500 transition-all ${
                   settings.themeColor === 'emerald' ? 'ring-2 ring-offset-2 ring-emerald-500 scale-110' : ''
                 }`}
               />
               <button
                 type="button"
                 onClick={() => setSettings((p) => ({ ...p, themeColor: 'rose' }))}
-                className={`w-7 h-7 rounded-full bg-rose-500 transition-all ${
+                aria-label="Use rose accent color"
+                aria-pressed={settings.themeColor === 'rose'}
+                className={`w-11 h-11 rounded-full border-[8px] border-white dark:border-slate-900 bg-rose-500 transition-all ${
                   settings.themeColor === 'rose' ? 'ring-2 ring-offset-2 ring-rose-500 scale-110' : ''
                 }`}
               />
@@ -221,9 +233,10 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 </div>
               </div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex min-h-11 items-center cursor-pointer">
               <input
                 type="checkbox"
+                aria-label="Toggle dark mode"
                 checked={settings.darkMode}
                 onChange={handleToggleDarkMode}
                 className="sr-only peer"
@@ -283,9 +296,9 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           Data Management
         </h3>
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
-          <div
+          <button type="button"
             onClick={onExportData}
-            className="p-4 sm:px-6 flex items-center justify-between hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"
+            className="w-full p-4 sm:px-6 flex items-center justify-between text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"
           >
             <div className="flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
@@ -301,9 +314,9 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               </div>
             </div>
             <span className="material-symbols-outlined text-slate-400">chevron_right</span>
-          </div>
+          </button>
 
-          <label className="p-4 sm:px-6 flex items-center justify-between hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors">
+          <label className="min-h-16 p-4 sm:px-6 flex items-center justify-between hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-brand-500">
             <div className="flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined">file_upload</span>

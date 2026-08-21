@@ -64,6 +64,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         entity.Property(x => x.Course).HasMaxLength(120);
         entity.Property(x => x.Schedule).HasMaxLength(160);
         entity.Property(x => x.Instructor).HasMaxLength(120);
+        entity.Property(x => x.MonthlyFee).HasPrecision(12, 2);
         entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
     }
 
@@ -76,6 +77,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         entity.Property(x => x.Email).HasMaxLength(254);
         entity.Property(x => x.Phone).HasMaxLength(32);
         entity.Property(x => x.MonthlyFee).HasPrecision(12, 2);
+        entity.Property(x => x.DiscountAmount).HasPrecision(12, 2);
         entity.Property(x => x.OutstandingBalance).HasPrecision(12, 2);
         entity.HasOne(x => x.Batch).WithMany(x => x.Students).HasForeignKey(x => x.BatchId).OnDelete(DeleteBehavior.Restrict);
         entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
