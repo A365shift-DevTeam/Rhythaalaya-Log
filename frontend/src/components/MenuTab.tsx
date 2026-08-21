@@ -143,8 +143,10 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                     </div>
                   </div>
                 </div>
-                <div className="w-9 h-9 rounded-xl overflow-hidden border border-brand-200 dark:border-brand-700 shrink-0">
-                  <img src={settings.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                <div className="w-9 h-9 rounded-xl overflow-hidden border border-brand-200 dark:border-brand-700 shrink-0 flex items-center justify-center bg-brand-50 dark:bg-brand-900/60">
+                  {settings.logoUrl
+                    ? <img src={settings.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                    : <span className="material-symbols-outlined text-brand-400 text-[18px]">image</span>}
                 </div>
               </div>
             </div>

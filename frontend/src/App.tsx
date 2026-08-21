@@ -119,22 +119,18 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
     name: string; dateOfBirth: string | null; parentName: string; phone: string; email: string; address: string;
   }, enrollBatchId: string | null) => {
     const created = await api.createStudent(session.token, payload);
-    let finalStudent = created;
-    if (enrollBatchId) finalStudent = await api.enrollStudent(session.token, created.id, enrollBatchId);
-    setStudents((prev) => [finalStudent, ...prev]);
+    if (enrollBatchId) await api.enrollStudent(session.token, created.id, enrollBatchId);
     await reload();
   };
 
   const handleEnroll = async (studentId: string, batchId: string) => {
     const updated = await api.enrollStudent(session.token, studentId, batchId);
-    setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s));
     setDetailsTargetStudent((prev) => prev && prev.id === updated.id ? updated : prev);
     await reload();
   };
 
   const handleEndEnrollment = async (enrollmentId: string, status: 'Completed' | 'Withdrawn') => {
     const updated = await api.endEnrollment(session.token, enrollmentId, status);
-    setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s));
     setDetailsTargetStudent((prev) => prev && prev.id === updated.id ? updated : prev);
     await reload();
   };
