@@ -92,7 +92,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           </div>
           <div className="mt-4">
             <div className="font-heading text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              ${totalIncome.toLocaleString()}
+              ₹{totalIncome.toLocaleString()}
             </div>
             <div className="mt-2 flex items-center gap-1 font-sans text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
               <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
@@ -113,7 +113,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           </div>
           <div className="mt-4">
             <div className="font-heading text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              ${totalExpense.toLocaleString()}
+              ₹{totalExpense.toLocaleString()}
             </div>
             <div className="mt-2 flex items-center gap-1 font-sans text-xs text-slate-500 dark:text-slate-400 font-medium">
               <span className="material-symbols-outlined text-[16px]">horizontal_rule</span>
@@ -134,7 +134,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           </div>
           <div className="mt-4">
             <div className="font-heading text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              ${netProfit.toLocaleString()}
+              ₹{netProfit.toLocaleString()}
             </div>
             <div className="mt-2 space-y-1.5">
               <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
@@ -209,10 +209,10 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                 <div className="relative flex-1 min-h-[160px]">
                   {/* Y-axis labels */}
                   <div className="absolute left-0 top-0 bottom-7 flex flex-col justify-between text-[10px] text-slate-400 font-mono w-9 select-none">
-                    <span>$15k</span>
-                    <span>$10k</span>
-                    <span>$5k</span>
-                    <span>$0</span>
+                    <span>₹15k</span>
+                    <span>₹10k</span>
+                    <span>₹5k</span>
+                    <span>₹0</span>
                   </div>
 
                   {/* Plot area */}
@@ -276,7 +276,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                           key={`in-${i}`}
                           className="absolute w-3 h-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white border-[2.5px] border-[#45b080] shadow-sm"
                           style={{ left: `${left}%`, top: `${top}%` }}
-                          title={`Income Week ${i + 1}: $${v}k`}
+                          title={`Income Week ${i + 1}: ₹${v}k`}
                         />
                       );
                     })}
@@ -288,7 +288,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                           key={`oh-${i}`}
                           className="absolute w-2 h-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#f43f5e] border border-white/80"
                           style={{ left: `${left}%`, top: `${top}%` }}
-                          title={`Overhead Week ${i + 1}: $${v}k`}
+                          title={`Overhead Week ${i + 1}: ₹${v}k`}
                         />
                       );
                     })}
@@ -315,7 +315,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
             <div className="w-32 h-32 rounded-full border-8 border-brand-500 border-t-rose-500 border-r-amber-500 flex flex-col items-center justify-center shadow-xs">
               <span className="font-sans text-[11px] text-slate-500 font-medium">Costs</span>
               <span className="font-heading text-base font-extrabold text-slate-900 dark:text-white">
-                ${totalExpense.toLocaleString()}
+                ₹{totalExpense.toLocaleString()}
               </span>
             </div>
 
@@ -395,7 +395,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                         : 'text-slate-900 dark:text-white'
                     }`}
                   >
-                    {item.type === 'income' ? '+' : '-'}${item.amount.toLocaleString()}
+                    {item.type === 'income' ? '+' : '-'}₹{item.amount.toLocaleString()}
                   </div>
                 </div>
               </div>
@@ -448,7 +448,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
 
                   <div className="flex items-center gap-3">
                     <span className="font-sans text-xs font-extrabold text-slate-900 dark:text-white">
-                      ${student.feeAmount}
+                      ₹{student.feeAmount}
                     </span>
                     <button
                       onClick={() => onOpenRecordFee(student)}
@@ -476,4 +476,3 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
     </div>
   );
 };
-

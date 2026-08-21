@@ -47,7 +47,9 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                 {student.name}
               </h3>
               <p className="font-sans text-xs text-[#565e74] dark:text-[#94a3b8]">
-                Student ID: <span className="font-mono font-bold text-[#0b1c30] dark:text-[#f8fafc]">{student.id}</span>
+                Student ID: <span className="font-mono font-bold text-[#0b1c30] dark:text-[#f8fafc]">
+                  {student.studentNumber || 'Not assigned'}
+                </span>
               </p>
               <div className="mt-1 flex items-center gap-2">
                 <span className="font-sans text-[11px] bg-[#e8f4ef] text-[#45b080] font-semibold px-2.5 py-0.5 rounded-full">
@@ -59,7 +61,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                   </span>
                 ) : (
                   <span className="font-sans text-[11px] bg-rose-100 text-rose-700 font-semibold px-2.5 py-0.5 rounded-full">
-                    Fee Pending (${student.feeAmount})
+                    Fee Pending (₹{student.feeAmount})
                   </span>
                 )}
               </div>

@@ -27,7 +27,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
         s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         s.course.toLowerCase().includes(searchQuery.toLowerCase()) ||
         s.batch.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.id.toLowerCase().includes(searchQuery.toLowerCase());
+        (s.studentNumber || '').toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesStatus =
         filterFeeStatus === 'All' ? true : s.feeStatus === filterFeeStatus;
@@ -231,12 +231,12 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                       {student.feeStatus === 'Paid' ? (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                          Paid (${student.feeAmount})
+                          Paid (₹{student.feeAmount})
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-[11px] font-bold">
                           <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
-                          Pending (${student.feeAmount})
+                          Pending (₹{student.feeAmount})
                         </span>
                       )}
                     </div>
@@ -272,10 +272,12 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
 
                   <button
                     onClick={() => onOpenRecordFee(student)}
+                    disabled={student.feeStatus === 'Paid'}
+                    title={student.feeStatus === 'Paid' ? 'No outstanding fee' : 'Record fee payment'}
                     className={`py-1.5 px-2 flex items-center justify-center gap-1 rounded-lg transition-colors font-sans text-xs font-semibold ${
                       student.feeStatus === 'Pending'
                         ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/60 font-bold'
-                        : 'text-slate-600 dark:text-slate-300 hover:text-brand-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        : 'text-slate-400 bg-slate-50 dark:bg-slate-800 cursor-not-allowed'
                     }`}
                   >
                     <span className="material-symbols-outlined text-[16px]">receipt_long</span>
@@ -321,7 +323,9 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                       )}
                       <div>
                         <div className="font-bold text-slate-900 dark:text-white">{student.name}</div>
-                        <div className="text-[10px] text-slate-400">{student.id}</div>
+                        <div className="text-[10px] text-slate-400">
+                          {student.studentNumber || 'Student number pending'}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -332,11 +336,11 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                   <td className="p-4">
                     {student.feeStatus === 'Paid' ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold">
-                        Paid (${student.feeAmount})
+                        Paid (₹{student.feeAmount})
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-[11px] font-bold">
-                        Pending (${student.feeAmount})
+                        Pending (₹{student.feeAmount})
                       </span>
                     )}
                   </td>
@@ -348,25 +352,26 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                       </div>
                     </div>
                   </td>
-                  <td className="p-4 text-right space-x-2">
-                    <button
-                      onClick={() => onViewStudent(student)}
-                      className="text-slate-600 hover:text-brand-500 font-semibold"
-                    >
-                      View
-                    </button>
-                    <button
-                      onClick={() => onOpenRecordFee(student)}
-                      className="text-brand-500 font-bold hover:underline"
-                    >
-                      Record Fee
-                    </button>
-                    <button
-                      onClick={() => onSendMessage(student)}
-                      className="text-emerald-600 font-semibold hover:underline"
-                    >
-                      Msg
-                    </button>
+                  <td className="p-4">
+                    <div className="flex items-center justify-end gap-2">
+                      <button type="button" onClick={() => onViewStudent(student)}
+                        title="View student" aria-label={`View ${student.name}`}
+                        className="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all">
+                        <span className="material-symbols-outlined text-[18px]">visibility</span>
+                      </button>
+                      <button type="button" onClick={() => onOpenRecordFee(student)}
+                        disabled={student.feeStatus === 'Paid'}
+                        title={student.feeStatus === 'Paid' ? 'No outstanding fee' : 'Record fee payment'}
+                        aria-label={`Record fee for ${student.name}`}
+                        className="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-brand-200 dark:border-brand-700 bg-brand-50 dark:bg-brand-900/50 text-brand-600 dark:text-brand-300 hover:bg-brand-100 hover:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:bg-slate-50 disabled:text-slate-300 disabled:border-slate-200 disabled:cursor-not-allowed dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-all">
+                        <span className="material-symbols-outlined text-[18px]">payments</span>
+                      </button>
+                      <button type="button" onClick={() => onSendMessage(student)}
+                        title="Send WhatsApp message" aria-label={`Message ${student.name}`}
+                        className="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-100 hover:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all">
+                        <span className="material-symbols-outlined text-[18px]">chat</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -389,4 +394,3 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
     </div>
   );
 };
-

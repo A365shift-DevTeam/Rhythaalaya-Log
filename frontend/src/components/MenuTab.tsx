@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { OrgSettings, Batch } from '../types';
+import { OrgSettings } from '../types';
 
 interface MenuTabProps {
   settings: OrgSettings;
   setSettings: React.Dispatch<React.SetStateAction<OrgSettings>>;
-  batches: Batch[];
-  onOpenAddBatch: () => void;
   onExportData: () => void;
   onImportData: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
@@ -13,8 +11,6 @@ interface MenuTabProps {
 export const MenuTab: React.FC<MenuTabProps> = ({
   settings,
   setSettings,
-  batches,
-  onOpenAddBatch,
   onExportData,
   onImportData
 }) => {
@@ -53,7 +49,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           Academy Settings
         </h2>
         <p className="font-sans text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Configure organization profile, fee structure, batch schedules, themes, and data backup
+          Configure organization profile, fee structure, appearance, and data backup
         </p>
       </div>
 
@@ -238,10 +234,10 @@ export const MenuTab: React.FC<MenuTabProps> = ({
         </div>
       </section>
 
-      {/* Fees & Courses Section */}
+      {/* Fee Settings Section */}
       <section className="space-y-3">
         <h3 className="font-heading text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs px-1">
-          Fees & Courses
+          Fee Settings
         </h3>
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
           <div className="p-4 sm:px-6 flex items-center justify-between">
@@ -257,7 +253,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               </div>
             </div>
             <div className="font-heading font-extrabold text-base text-slate-900 dark:text-white">
-              ${settings.defaultMonthlyFee}.00
+              ₹{settings.defaultMonthlyFee}.00
             </div>
           </div>
 
@@ -278,26 +274,6 @@ export const MenuTab: React.FC<MenuTabProps> = ({
             </div>
           </div>
 
-          <div
-            onClick={onOpenAddBatch}
-            className="p-4 sm:px-6 flex items-center justify-between hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined">school</span>
-              </div>
-              <div>
-                <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
-                  Batches & Schedule ({batches.length})
-                </div>
-                <div className="font-sans text-xs text-slate-500">Manage class timings and instructors</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-1 font-sans text-xs font-bold text-brand-500 dark:text-brand-400">
-              <span className="material-symbols-outlined text-[18px]">add_circle</span>
-              <span>New Batch</span>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -349,4 +325,3 @@ export const MenuTab: React.FC<MenuTabProps> = ({
     </div>
   );
 };
-

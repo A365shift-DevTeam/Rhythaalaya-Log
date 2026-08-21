@@ -113,7 +113,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-[#565e74] dark:text-[#cbd5e1] mb-1">
-                Monthly Fee ($)
+                Monthly Fee (₹)
               </label>
               <input
                 type="number"

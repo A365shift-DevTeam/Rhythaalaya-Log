@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Student, Batch, AttendanceStatus } from '../types';
+import { api } from '../api';
 
 interface LogTabProps {
   students: Student[];
   batches: Batch[];
+  token: string;
   onOpenAddStudent: () => void;
 }
 
-export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStudent }) => {
+export const LogTab: React.FC<LogTabProps> = ({ students, batches, token, onOpenAddStudent }) => {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
@@ -16,22 +18,25 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStud
   );
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Local attendance state
-  const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>(() => {
-    const initial: Record<string, AttendanceStatus> = {};
-    students.forEach((s, idx) => {
-      if (idx === 1) initial[s.id] = 'A';
-      else if (idx === 2) initial[s.id] = 'L';
-      else initial[s.id] = 'P';
-    });
-    return initial;
-  });
+  const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
 
   const filteredStudents = students.filter(
-    (s) => s.batch === selectedBatch || selectedBatch === 'All Batches'
+    (s) => s.batch === selectedBatch
   );
 
-  const displayList = filteredStudents.length > 0 ? filteredStudents : students;
+  const displayList = filteredStudents;
+
+  useEffect(() => {
+    const batch = batches.find(x => x.name === selectedBatch);
+    if (!batch) return;
+    void api.attendance(token, selectedDate, batch.id).then(result => {
+      const next: Record<string, AttendanceStatus> = {};
+      result.entries.forEach((entry: any) => {
+        next[entry.studentId] = entry.status === 'Present' ? 'P' : entry.status === 'Absent' ? 'A' : 'L';
+      });
+      setAttendance(next);
+    }).catch(error => setToastMessage(error instanceof Error ? error.message : 'Unable to load attendance.'));
+  }, [token, selectedDate, selectedBatch, batches]);
 
   const setStatus = (studentId: string, status: AttendanceStatus) => {
     setAttendance((prev) => ({
@@ -56,8 +61,17 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStud
   const totalStudents = displayList.length || 1;
   const presentPct = Math.round((presentCount / totalStudents) * 100);
 
-  const handleSubmitAttendance = () => {
-    setToastMessage(`Roll call submitted for ${selectedBatch} (${selectedDate})!`);
+  const handleSubmitAttendance = async () => {
+    const batch = batches.find(x => x.name === selectedBatch);
+    if (!batch || displayList.length === 0) return;
+    const entries = { ...attendance };
+    displayList.forEach(student => { if (!entries[student.id]) entries[student.id] = 'P'; });
+    try {
+      await api.submitAttendance(token, selectedDate, batch.id, entries);
+      setToastMessage('Attendance saved successfully.');
+    } catch (error) {
+      setToastMessage(error instanceof Error ? error.message : 'Unable to save attendance.');
+    }
     setTimeout(() => setToastMessage(null), 3500);
   };
 
@@ -111,7 +125,6 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStud
                   {b.name}
                 </option>
               ))}
-              <option value="All Batches">All Batches</option>
             </select>
             <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">
               expand_more
@@ -322,4 +335,3 @@ export const LogTab: React.FC<LogTabProps> = ({ students, batches, onOpenAddStud
     </div>
   );
 };
-

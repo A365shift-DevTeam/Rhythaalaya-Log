@@ -1,9 +1,9 @@
 import React from 'react';
-import { OrgSettings } from '../types';
+import { AppTab, OrgSettings } from '../types';
 
 interface NavigationProps {
-  currentTab: 'home' | 'students' | 'finance' | 'log' | 'menu';
-  setCurrentTab: (tab: 'home' | 'students' | 'finance' | 'log' | 'menu') => void;
+  currentTab: AppTab;
+  setCurrentTab: (tab: AppTab) => void;
   onOpenAddStudent: () => void;
   settings: OrgSettings;
 }
@@ -17,6 +17,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   const navItems = [
     { id: 'home', label: 'Dashboard', icon: 'dashboard' },
     { id: 'students', label: 'Students', icon: 'group' },
+    { id: 'batches', label: 'Batches', icon: 'calendar_view_week' },
     { id: 'finance', label: 'Finance', icon: 'payments' },
     { id: 'log', label: 'Attendance', icon: 'fact_check' },
     { id: 'menu', label: 'Settings', icon: 'settings' },
@@ -122,14 +123,14 @@ export const Navigation: React.FC<NavigationProps> = ({
       </header>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 w-full h-[60px] z-50 flex justify-around items-center px-2 bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl border-t border-brand-200/70 dark:border-brand-800 shadow-lg">
+      <nav className="md:hidden fixed bottom-0 left-0 w-full h-[60px] z-50 flex justify-start sm:justify-around items-center px-2 overflow-x-auto bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl border-t border-brand-200/70 dark:border-brand-800 shadow-lg">
         {navItems.map((item) => {
           const isActive = currentTab === item.id;
           return (
             <button
               key={item.id}
               onClick={() => setCurrentTab(item.id)}
-              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+              className={`flex flex-col items-center justify-center min-w-[58px] py-1 transition-all ${
                 isActive
                   ? 'text-brand-500 dark:text-brand-400 font-bold'
                   : 'text-slate-500 dark:text-brand-200/70 hover:text-brand-700'
@@ -148,4 +149,3 @@ export const Navigation: React.FC<NavigationProps> = ({
     </>
   );
 };
-

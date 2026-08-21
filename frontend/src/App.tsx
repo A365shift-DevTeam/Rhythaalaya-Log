@@ -3,14 +3,15 @@ import {
   Student,
   Batch,
   Transaction,
-  OrgSettings
+  OrgSettings,
+  AppTab
 } from './types';
 import {
-  INITIAL_STUDENTS,
-  INITIAL_BATCHES,
-  INITIAL_TRANSACTIONS,
   INITIAL_SETTINGS
 } from './data/mockData';
+import { ApiError, api, authStore, Session } from './api';
+import { LoginPage } from './components/LoginPage';
+import { SuperAdminPage } from './components/SuperAdminPage';
 
 import { Navigation } from './components/Navigation';
 import { HomeTab } from './components/HomeTab';
@@ -18,6 +19,7 @@ import { StudentsTab } from './components/StudentsTab';
 import { FinanceTab } from './components/FinanceTab';
 import { LogTab } from './components/LogTab';
 import { MenuTab } from './components/MenuTab';
+import { BatchesTab } from './components/BatchesTab';
 
 import { AddStudentModal } from './components/modals/AddStudentModal';
 import { RecordFeeModal } from './components/modals/RecordFeeModal';
@@ -27,45 +29,43 @@ import { AddBatchModal } from './components/modals/AddBatchModal';
 import { StudentDetailsModal } from './components/modals/StudentDetailsModal';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'home' | 'students' | 'finance' | 'log' | 'menu'>('home');
+  const [session, setSession] = useState<Session | null>(() => authStore.get());
+  const login = (value: Session) => { authStore.set(value); setSession(value); };
+  const logout = () => { authStore.clear(); setSession(null); };
 
-  // Local storage state initialization
-  const [students, setStudents] = useState<Student[]>(() => {
-    const saved = localStorage.getItem('studiosync_students');
-    return saved ? JSON.parse(saved) : INITIAL_STUDENTS;
-  });
+  if (!session) return <LoginPage onLogin={login} />;
+  if (session.user.role === 'SuperAdmin')
+    return <SuperAdminPage session={session} onLogout={logout} />;
+  return <TenantApplication session={session} onLogout={logout} />;
+}
 
-  const [batches, setBatches] = useState<Batch[]>(() => {
-    const saved = localStorage.getItem('studiosync_batches');
-    return saved ? JSON.parse(saved) : INITIAL_BATCHES;
-  });
+function TenantApplication({ session, onLogout }: { session: Session; onLogout: () => void }) {
+  const [currentTab, setCurrentTab] = useState<AppTab>('home');
+  const [students, setStudents] = useState<Student[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [settings, setSettings] = useState<OrgSettings>(INITIAL_SETTINGS);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem('studiosync_transactions');
-    return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
-  });
+  const showError = (error: unknown) => {
+    if (error instanceof ApiError && error.status === 401) onLogout();
+    else setLoadError(error instanceof Error ? error.message : 'The request could not be completed.');
+  };
 
-  const [settings, setSettings] = useState<OrgSettings>(() => {
-    const saved = localStorage.getItem('studiosync_settings');
-    return saved ? JSON.parse(saved) : INITIAL_SETTINGS;
-  });
-
-  // Sync to localStorage
-  useEffect(() => {
-    localStorage.setItem('studiosync_students', JSON.stringify(students));
-  }, [students]);
-
-  useEffect(() => {
-    localStorage.setItem('studiosync_batches', JSON.stringify(batches));
-  }, [batches]);
-
-  useEffect(() => {
-    localStorage.setItem('studiosync_transactions', JSON.stringify(transactions));
-  }, [transactions]);
-
-  useEffect(() => {
-    localStorage.setItem('studiosync_settings', JSON.stringify(settings));
-  }, [settings]);
+  const reload = async () => {
+    setLoading(true);
+    try {
+      const [studentRows, batchRows, transactionRows, org] = await Promise.all([
+        api.students(session.token), api.batches(session.token),
+        api.finance(session.token), api.settings(session.token)
+      ]);
+      setStudents(studentRows); setBatches(batchRows); setTransactions(transactionRows); setSettings(org);
+      setLoadError('');
+    } catch (error) { showError(error); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void reload(); }, [session.token]);
 
   // Dark mode effect
   useEffect(() => {
@@ -90,43 +90,52 @@ export default function App() {
   const [detailsTargetStudent, setDetailsTargetStudent] = useState<Student | null>(null);
 
   // Actions
-  const handleAddStudent = (newStudent: Student) => {
-    setStudents((prev) => [newStudent, ...prev]);
-    // update batch count
-    setBatches((prev) =>
-      prev.map((b) => (b.name === newStudent.batch ? { ...b, enrolledCount: b.enrolledCount + 1 } : b))
-    );
+  const handleAddStudent = async (newStudent: Student) => {
+    try {
+      const created = await api.createStudent(session.token, newStudent, batches);
+      setStudents((prev) => [created, ...prev]);
+      setBatches((prev) => prev.map((b) =>
+        b.id === created.batchId ? { ...b, enrolledCount: b.enrolledCount + 1 } : b));
+    } catch (error) { showError(error); }
   };
 
-  const handleRecordFee = (studentId: string, amount: number, method: string) => {
-    setStudents((prev) =>
-      prev.map((s) => (s.id === studentId ? { ...s, feeStatus: 'Paid', overdueDays: undefined } : s))
-    );
-
-    const targetStudent = students.find((s) => s.id === studentId);
-    const newTx: Transaction = {
-      id: `tx-${Date.now()}`,
-      title: `Fee Collection - ${targetStudent?.name || studentId}`,
-      type: 'income',
-      amount,
-      category: 'Fees',
-      date: 'Today',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
-    setTransactions((prev) => [newTx, ...prev]);
+  const handleRecordFee = async (studentId: string, amount: number, method: string) => {
+    try {
+      await api.recordPayment(session.token, studentId, amount, method);
+      await reload();
+    } catch (error) {
+      showError(error);
+      throw error;
+    }
   };
 
-  const handleAddTransaction = (newTx: Transaction) => {
-    setTransactions((prev) => [newTx, ...prev]);
+  const handleAddTransaction = async (newTx: Transaction) => {
+    try {
+      const created = await api.createTransaction(session.token, newTx);
+      setTransactions((prev) => [created, ...prev]);
+    } catch (error) { showError(error); }
   };
 
-  const handleAddBatch = (newBatch: Batch) => {
-    setBatches((prev) => [...prev, newBatch]);
+  const handleAddBatch = async (newBatch: Batch) => {
+    try {
+      const created = await api.createBatch(session.token, newBatch);
+      setBatches((prev) => [...prev, created]);
+    } catch (error) { showError(error); }
   };
 
-  const handleDeleteStudent = (studentId: string) => {
-    setStudents((prev) => prev.filter((s) => s.id !== studentId));
+  const handleDeleteStudent = async (studentId: string) => {
+    try {
+      await api.archiveStudent(session.token, studentId);
+      setStudents((prev) => prev.filter((s) => s.id !== studentId));
+    } catch (error) { showError(error); }
+  };
+
+  const handleSettings: React.Dispatch<React.SetStateAction<OrgSettings>> = (action) => {
+    setSettings(previous => {
+      const next = typeof action === 'function' ? action(previous) : action;
+      void api.updateSettings(session.token, next).then(setSettings).catch(showError);
+      return next;
+    });
   };
 
   const handleExportData = () => {
@@ -148,23 +157,11 @@ export default function App() {
   };
 
   const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const fileReader = new FileReader();
-    if (e.target.files && e.target.files[0]) {
-      fileReader.readAsText(e.target.files[0], 'UTF-8');
-      fileReader.onload = (event) => {
-        try {
-          const parsed = JSON.parse(event.target?.result as string);
-          if (parsed.students) setStudents(parsed.students);
-          if (parsed.batches) setBatches(parsed.batches);
-          if (parsed.transactions) setTransactions(parsed.transactions);
-          if (parsed.settings) setSettings(parsed.settings);
-          alert('StudioSync academy data successfully imported!');
-        } catch (err) {
-          alert('Invalid JSON backup file.');
-        }
-      };
-    }
+    e.target.value = '';
+    alert('Direct JSON import is disabled for tenant safety. Use the API migration workflow for bulk imports.');
   };
+
+  if (loading) return <div className="min-h-screen bg-mint-50 flex items-center justify-center font-bold text-brand-600">Loading academy…</div>;
 
   return (
     <div className="min-h-screen bg-mint-50 dark:bg-brand-950 text-slate-900 dark:text-brand-50 font-sans antialiased selection:bg-brand-500 selection:text-white">
@@ -178,6 +175,15 @@ export default function App() {
 
       {/* Main Content Viewport */}
       <main className="md:ml-[280px] min-h-screen px-4 md:px-10 py-6 md:py-8 max-w-[1440px] mx-auto pb-[80px] md:pb-12">
+        <div className="flex justify-end items-center gap-3 mb-4">
+          <span className="text-xs text-slate-500">{session.user.tenantName} · {session.user.fullName}</span>
+          <button onClick={onLogout} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold bg-white dark:bg-slate-900">
+            Sign out
+          </button>
+        </div>
+        {loadError && <div className="mb-4 rounded-xl bg-rose-50 text-rose-700 px-4 py-3 text-sm">
+          {loadError}<button onClick={() => setLoadError('')} className="float-right font-bold">×</button>
+        </div>}
         {currentTab === 'home' && (
           <HomeTab
             students={students}
@@ -212,6 +218,10 @@ export default function App() {
           />
         )}
 
+        {currentTab === 'batches' && (
+          <BatchesTab batches={batches} onOpenAddBatch={() => setIsAddBatchOpen(true)} />
+        )}
+
         {currentTab === 'finance' && (
           <FinanceTab
             students={students}
@@ -232,6 +242,7 @@ export default function App() {
           <LogTab
             students={students}
             batches={batches}
+            token={session.token}
             onOpenAddStudent={() => setIsAddStudentOpen(true)}
           />
         )}
@@ -239,9 +250,7 @@ export default function App() {
         {currentTab === 'menu' && (
           <MenuTab
             settings={settings}
-            setSettings={setSettings}
-            batches={batches}
-            onOpenAddBatch={() => setIsAddBatchOpen(true)}
+            setSettings={handleSettings}
             onExportData={handleExportData}
             onImportData={handleImportData}
           />

@@ -1,13 +1,18 @@
 export type AttendanceStatus = 'P' | 'A' | 'L';
+export type AppTab = 'home' | 'students' | 'batches' | 'finance' | 'log' | 'menu';
 
 export interface Student {
-  id: string; // STU-001
+  id: string;
+  studentNumber?: string;
+  batchId?: string;
   name: string;
   avatar?: string;
   course: string;
   batch: string; // e.g. 'Morning Batch - Yoga 101' or 'Mon/Wed 5pm'
   feeStatus: 'Paid' | 'Pending';
   feeAmount: number;
+  monthlyFee?: number;
+  outstandingBalance?: number;
   overallAttendance: number; // percentage e.g. 95
   phone?: string;
   email?: string;

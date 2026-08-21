@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Batch } from '../../types';
 
 interface AddBatchModalProps {
@@ -16,18 +16,28 @@ export const AddBatchModal: React.FC<AddBatchModalProps> = ({
   const [course, setCourse] = useState('');
   const [schedule, setSchedule] = useState('');
   const [instructor, setInstructor] = useState('Sarah Connor');
+  const schedulePickerRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !schedule) return;
+
+    const formattedSchedule = new Date(schedule).toLocaleString('en-IN', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
 
     const newBatch: Batch = {
       id: `b-${Date.now()}`,
       name,
       course: course || name,
-      schedule: schedule || 'Mon, Wed 5:00 PM',
+      schedule: formattedSchedule,
       instructor,
       enrolledCount: 0
     };
@@ -81,15 +91,30 @@ export const AddBatchModal: React.FC<AddBatchModalProps> = ({
 
           <div>
             <label className="block text-xs font-semibold text-[#565e74] dark:text-[#cbd5e1] mb-1">
-              Schedule & Timing
+              Schedule Date & Time *
             </label>
-            <input
-              type="text"
-              placeholder="e.g. Tue, Thu 7:00 PM"
-              value={schedule}
-              onChange={(e) => setSchedule(e.target.value)}
-              className="w-full p-2.5 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
-            />
+            <div className="relative">
+              <input
+                ref={schedulePickerRef}
+                type="datetime-local"
+                required
+                value={schedule}
+                onChange={(e) => setSchedule(e.target.value)}
+                className="w-full py-2.5 pl-3 pr-14 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc] [&::-webkit-calendar-picker-indicator]:opacity-0"
+              />
+              <button
+                type="button"
+                aria-label="Open calendar and time picker"
+                title="Choose date and time"
+                onClick={() => {
+                  schedulePickerRef.current?.focus();
+                  schedulePickerRef.current?.showPicker?.();
+                }}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-9 rounded-lg bg-[#45b080] hover:bg-[#36946a] text-white flex items-center justify-center transition-colors shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[20px]">calendar_month</span>
+              </button>
+            </div>
           </div>
 
           <div>

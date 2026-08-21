@@ -19,7 +19,7 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
 
   const defaultMsg = isBulk
     ? `Dear Students / Parents,\nThis is a friendly reminder from StudioSync that your academy fee for this month is currently due. Please complete the payment at your earliest convenience.\nThank you!`
-    : `Hi ${student?.name},\nThis is a friendly reminder from StudioSync regarding your monthly fee of $${student?.feeAmount || 150}. It is currently overdue by ${student?.overdueDays || 3} days. Please let us know if you have any questions!\nThank you.`;
+    : `Hi ${student?.name},\nThis is a friendly reminder from Rhythaalaya regarding your monthly fee of ₹${student?.feeAmount || 150}. It is currently overdue by ${student?.overdueDays || 3} days. Please let us know if you have any questions!\nThank you.`;
 
   const [message, setMessage] = useState(defaultMsg);
 

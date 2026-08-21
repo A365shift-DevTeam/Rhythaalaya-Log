@@ -1,11 +1,11 @@
 import React from 'react';
-import { Student, Batch, Transaction } from '../types';
+import { AppTab, Student, Batch, Transaction } from '../types';
 
 interface HomeTabProps {
   students: Student[];
   batches: Batch[];
   transactions: Transaction[];
-  setCurrentTab: (tab: 'home' | 'students' | 'finance' | 'log' | 'menu') => void;
+  setCurrentTab: (tab: AppTab) => void;
   onOpenAddStudent: () => void;
   onOpenAddBatch: () => void;
   onOpenRecordFee: (student?: Student) => void;
@@ -107,7 +107,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 
         {/* Active Batches */}
         <div
-          onClick={() => setCurrentTab('menu')}
+          onClick={() => setCurrentTab('batches')}
           className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-5 cursor-pointer flex flex-col justify-between transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs"
         >
           <div className="flex items-center justify-between">
@@ -143,7 +143,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           </div>
           <div className="mt-3">
             <p className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              ${totalCollected.toLocaleString()}
+              ₹{totalCollected.toLocaleString()}
             </p>
             <p className="font-sans text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">
               This billing period
@@ -248,7 +248,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
               </span>
             </div>
             <div className="font-heading text-3xl font-extrabold tracking-tight mt-1">
-              ${pendingTotal.toLocaleString()}
+              ₹{pendingTotal.toLocaleString()}
             </div>
             <p className="font-sans text-xs opacity-80 mt-1">
               Outstanding fees requiring reminder action
@@ -320,7 +320,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                   tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
                 }`}
               >
-                {tx.type === 'income' ? '+' : '-'}${tx.amount.toLocaleString()}
+                {tx.type === 'income' ? '+' : '-'}₹{tx.amount.toLocaleString()}
               </div>
             </div>
           ))}
@@ -329,4 +329,3 @@ export const HomeTab: React.FC<HomeTabProps> = ({
     </div>
   );
 };
-
