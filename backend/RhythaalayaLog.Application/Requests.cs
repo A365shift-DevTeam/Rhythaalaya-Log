@@ -19,4 +19,9 @@ public sealed record CreateTransactionRequest(string Title, TransactionType Type
     string Category, DateTimeOffset? OccurredAt);
 
 public sealed record UpdateSettingsRequest(string Name, string Type, string? LogoUrl, string ThemeColor,
-    bool DarkMode, decimal DefaultMonthlyFee, int FeeDueDay, string Currency, string Locale, string TimeZone);
+    bool DarkMode, decimal DefaultMonthlyFee, int FeeDueDay, string Currency, string Locale, string TimeZone,
+    string ReceiptPrefix, string? ReceiptAddress, string? ReceiptPhone, string? ReceiptEmail,
+    string ReceiptFooter, bool ReceiptShowLogo, bool ReceiptShowSignature, bool ReceiptAutoOpen,
+    IReadOnlyList<string> IncomeCategories, IReadOnlyList<string> ExpenseCategories,
+    bool NotificationsEnabled, bool FeeReminderNotifications, bool PaymentNotifications,
+    bool AttendanceNotifications);

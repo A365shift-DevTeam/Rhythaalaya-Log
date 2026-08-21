@@ -34,6 +34,14 @@ export interface TenantUser {
   role: 'TenantAdmin' | 'Staff';
   isActive: boolean;
 }
+export interface PaymentResult {
+  id: string;
+  studentId: string;
+  amount: number;
+  method: string;
+  reference?: string;
+  occurredAt: string;
+}
 
 export class ApiError extends Error {
   constructor(message: string, public status: number) { super(message); }
@@ -107,7 +115,7 @@ export const api = {
   archiveStudent: (token: string, id: string) =>
     request<void>('/students/' + id, { method: 'DELETE' }, token),
   recordPayment: (token: string, studentId: string, amount: number, method: string) =>
-    request('/finance/payments', { method: 'POST', body: JSON.stringify({
+    request<PaymentResult>('/finance/payments', { method: 'POST', body: JSON.stringify({
       studentId, amount, method: mapPaymentMethod(method), reference: null, occurredAt: null
     }) }, token),
   createTransaction: (token: string, item: Transaction) =>
@@ -131,7 +139,21 @@ export const api = {
       themeColor: settings.themeColor, darkMode: settings.darkMode,
       defaultMonthlyFee: settings.defaultMonthlyFee,
       feeDueDay: Number.parseInt(settings.feeDueDate) || 5,
-      currency: 'INR', locale: 'en-IN', timeZone: 'Asia/Kolkata'
+      currency: 'INR', locale: 'en-IN', timeZone: 'Asia/Kolkata',
+      receiptPrefix: settings.receipt.prefix,
+      receiptAddress: settings.receipt.address || null,
+      receiptPhone: settings.receipt.phone || null,
+      receiptEmail: settings.receipt.email || null,
+      receiptFooter: settings.receipt.footer,
+      receiptShowLogo: settings.receipt.showLogo,
+      receiptShowSignature: settings.receipt.showSignature,
+      receiptAutoOpen: settings.receipt.autoOpenAfterPayment,
+      incomeCategories: settings.incomeCategories,
+      expenseCategories: settings.expenseCategories,
+      notificationsEnabled: settings.notifications.enabled,
+      feeReminderNotifications: settings.notifications.feeReminders,
+      paymentNotifications: settings.notifications.paymentUpdates,
+      attendanceNotifications: settings.notifications.attendanceAlerts
     }) }, token).then(mapSettings),
 
   plans: (token: string) => request<Plan[]>('/superadmin/plans', {}, token),
@@ -182,7 +204,26 @@ function mapTransaction(x: any): Transaction {
 function mapSettings(x: any): OrgSettings {
   return { name: x.name, type: x.type, logoUrl: x.logoUrl || '', themeColor: x.themeColor,
     darkMode: x.darkMode, defaultMonthlyFee: x.defaultMonthlyFee,
-    feeDueDate: String(x.feeDueDay) };
+    feeDueDate: String(x.feeDueDay),
+    receipt: {
+      prefix: x.receiptPrefix || 'REC', address: x.receiptAddress || '',
+      phone: x.receiptPhone || '', email: x.receiptEmail || '',
+      footer: x.receiptFooter || 'Thank you for your payment.',
+      showLogo: x.receiptShowLogo ?? true,
+      showSignature: x.receiptShowSignature ?? false,
+      autoOpenAfterPayment: x.receiptAutoOpen ?? true
+    },
+    incomeCategories: Array.isArray(x.incomeCategories) && x.incomeCategories.length
+      ? x.incomeCategories : ['Student Fees', 'Registration', 'Events', 'Other Income'],
+    expenseCategories: Array.isArray(x.expenseCategories) && x.expenseCategories.length
+      ? x.expenseCategories : ['Rent & Operations', 'Instructor Salary', 'Equipment', 'Utilities', 'Marketing', 'Other Expense'],
+    notifications: {
+      enabled: x.notificationsEnabled ?? true,
+      feeReminders: x.feeReminderNotifications ?? true,
+      paymentUpdates: x.paymentNotifications ?? true,
+      attendanceAlerts: x.attendanceNotifications ?? true
+    }
+  };
 }
 function mapPaymentMethod(method: string) {
   if (method === 'Card') return 'Card';

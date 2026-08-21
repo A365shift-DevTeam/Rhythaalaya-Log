@@ -15,4 +15,9 @@ public sealed record TransactionDto(Guid Id, string Title, TransactionType Type,
 public sealed record FinanceSummaryDto(DateTimeOffset From, DateTimeOffset To, decimal Income, decimal Expenses, decimal Net, IReadOnlyList<TransactionDto> Transactions);
 public sealed record DashboardDto(int ActiveStudents, int ActiveBatches, decimal OutstandingFees, decimal CollectedFees, decimal AttendancePercentage);
 public sealed record SettingsDto(Guid Id, string Name, string Type, string? LogoUrl, string ThemeColor, bool DarkMode,
-    decimal DefaultMonthlyFee, int FeeDueDay, string Currency, string Locale, string TimeZone);
+    decimal DefaultMonthlyFee, int FeeDueDay, string Currency, string Locale, string TimeZone,
+    string ReceiptPrefix, string? ReceiptAddress, string? ReceiptPhone, string? ReceiptEmail,
+    string ReceiptFooter, bool ReceiptShowLogo, bool ReceiptShowSignature, bool ReceiptAutoOpen,
+    IReadOnlyList<string> IncomeCategories, IReadOnlyList<string> ExpenseCategories,
+    bool NotificationsEnabled, bool FeeReminderNotifications, bool PaymentNotifications,
+    bool AttendanceNotifications);

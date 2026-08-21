@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { OrgSettings } from '../types';
+import { FinancialSettings } from './FinancialSettings';
 
 interface MenuTabProps {
   settings: OrgSettings;
@@ -289,6 +290,8 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
         </div>
       </section>
+
+      <FinancialSettings settings={settings} setSettings={setSettings} />
 
       {/* Data Backup Section */}
       <section className="space-y-3">

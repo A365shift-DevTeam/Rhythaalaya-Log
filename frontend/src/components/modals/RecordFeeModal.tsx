@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Student } from '../../types';
+import { FeeReceipt, Student } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
 
 interface RecordFeeModalProps {
@@ -7,7 +7,7 @@ interface RecordFeeModalProps {
   onClose: () => void;
   students: Student[];
   initialStudent?: Student;
-  onRecordFee: (studentId: string, amount: number, paymentMethod: string) => Promise<void>;
+  onRecordFee: (studentId: string, amount: number, paymentMethod: string) => Promise<FeeReceipt>;
 }
 
 type PaymentMethod = 'Cash' | 'Card' | 'UPI' | 'Bank Transfer';

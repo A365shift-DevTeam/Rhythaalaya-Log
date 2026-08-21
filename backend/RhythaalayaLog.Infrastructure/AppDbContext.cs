@@ -116,6 +116,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     {
         var entity = modelBuilder.Entity<OrganizationSettings>();
         entity.Property(x => x.DefaultMonthlyFee).HasPrecision(12, 2);
+        entity.Property(x => x.ReceiptPrefix).HasMaxLength(16);
+        entity.Property(x => x.ReceiptAddress).HasMaxLength(300);
+        entity.Property(x => x.ReceiptPhone).HasMaxLength(32);
+        entity.Property(x => x.ReceiptEmail).HasMaxLength(254);
+        entity.Property(x => x.ReceiptFooter).HasMaxLength(300);
+        entity.Property(x => x.IncomeCategoriesJson).HasColumnType("text");
+        entity.Property(x => x.ExpenseCategoriesJson).HasColumnType("text");
         entity.HasIndex(x => x.TenantId).IsUnique();
         entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
     }

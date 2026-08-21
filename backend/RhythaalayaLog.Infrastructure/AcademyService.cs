@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RhythaalayaLog.Application;
 using RhythaalayaLog.Domain;
@@ -297,7 +298,12 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 
     private static SettingsDto MapSettings(OrganizationSettings x) =>
         new(x.Id, x.Name, x.Type, x.LogoUrl, x.ThemeColor, x.DarkMode, x.DefaultMonthlyFee,
-            x.FeeDueDay, x.Currency, x.Locale, x.TimeZone);
+            x.FeeDueDay, x.Currency, x.Locale, x.TimeZone, x.ReceiptPrefix, x.ReceiptAddress,
+            x.ReceiptPhone, x.ReceiptEmail, x.ReceiptFooter, x.ReceiptShowLogo,
+            x.ReceiptShowSignature, x.ReceiptAutoOpen,
+            ParseCategories(x.IncomeCategoriesJson, ["Student Fees", "Registration", "Events", "Other Income"]),
+            ParseCategories(x.ExpenseCategoriesJson, ["Rent & Operations", "Instructor Salary", "Equipment", "Utilities", "Marketing", "Other Expense"]), x.NotificationsEnabled,
+            x.FeeReminderNotifications, x.PaymentNotifications, x.AttendanceNotifications);
 
     private static void ApplySettings(OrganizationSettings x, UpdateSettingsRequest request)
     {
@@ -311,6 +317,20 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         x.Currency = request.Currency.Trim().ToUpperInvariant();
         x.Locale = request.Locale.Trim();
         x.TimeZone = request.TimeZone.Trim();
+        x.ReceiptPrefix = request.ReceiptPrefix.Trim().ToUpperInvariant();
+        x.ReceiptAddress = Clean(request.ReceiptAddress);
+        x.ReceiptPhone = Clean(request.ReceiptPhone);
+        x.ReceiptEmail = Clean(request.ReceiptEmail);
+        x.ReceiptFooter = request.ReceiptFooter.Trim();
+        x.ReceiptShowLogo = request.ReceiptShowLogo;
+        x.ReceiptShowSignature = request.ReceiptShowSignature;
+        x.ReceiptAutoOpen = request.ReceiptAutoOpen;
+        x.IncomeCategoriesJson = SerializeCategories(request.IncomeCategories);
+        x.ExpenseCategoriesJson = SerializeCategories(request.ExpenseCategories);
+        x.NotificationsEnabled = request.NotificationsEnabled;
+        x.FeeReminderNotifications = request.FeeReminderNotifications;
+        x.PaymentNotifications = request.PaymentNotifications;
+        x.AttendanceNotifications = request.AttendanceNotifications;
     }
 
     private static void ValidateBatch(CreateBatchRequest request)
@@ -338,9 +358,14 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         RequireText(request.Currency, nameof(request.Currency));
         RequireText(request.Locale, nameof(request.Locale));
         RequireText(request.TimeZone, nameof(request.TimeZone));
+        RequireText(request.ReceiptPrefix, nameof(request.ReceiptPrefix));
+        RequireText(request.ReceiptFooter, nameof(request.ReceiptFooter));
         if (request.DefaultMonthlyFee <= 0) throw new AppValidationException(nameof(request.DefaultMonthlyFee));
         if (request.FeeDueDay is < 1 or > 28) throw new AppValidationException(nameof(request.FeeDueDay));
         if (request.Currency.Trim().Length != 3) throw new AppValidationException(nameof(request.Currency));
+        if (request.ReceiptPrefix.Trim().Length > 16) throw new AppValidationException(nameof(request.ReceiptPrefix));
+        ValidateCategories(request.IncomeCategories, nameof(request.IncomeCategories));
+        ValidateCategories(request.ExpenseCategories, nameof(request.ExpenseCategories));
     }
 
     private static void RequireText(string? value, string field)
@@ -349,6 +374,26 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static IReadOnlyList<string> ParseCategories(string json, IReadOnlyList<string> fallback)
+    {
+        try
+        {
+            var values = JsonSerializer.Deserialize<List<string>>(json);
+            return values is { Count: > 0 } ? values : fallback;
+        }
+        catch (JsonException) { return fallback; }
+    }
+
+    private static string SerializeCategories(IReadOnlyList<string> categories) =>
+        JsonSerializer.Serialize(categories.Select(x => x.Trim()).Where(x => x.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList());
+
+    private static void ValidateCategories(IReadOnlyList<string> categories, string field)
+    {
+        if (categories.Count is < 1 or > 20 || categories.Any(x => string.IsNullOrWhiteSpace(x) || x.Trim().Length > 80))
+            throw new AppValidationException(field);
+    }
 
     private Guid RequireTenant() => tenantContext.TenantId
         ?? throw new AppValidationException("A tenant context is required.");

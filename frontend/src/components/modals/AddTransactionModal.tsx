@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Transaction } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
 
@@ -6,18 +6,27 @@ interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddTransaction: (transaction: Transaction) => void;
+  incomeCategories: string[];
+  expenseCategories: string[];
 }
 
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   isOpen,
   onClose,
-  onAddTransaction
+  onAddTransaction,
+  incomeCategories,
+  expenseCategories
 }) => {
   const [title, setTitle] = useState('');
   const [type, setType] = useState<'income' | 'expense'>('income');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('Fees');
+  const [category, setCategory] = useState(incomeCategories[0] || 'Other Income');
   const dialogRef = useDialogLifecycle(isOpen, onClose);
+
+  const availableCategories = type === 'income' ? incomeCategories : expenseCategories;
+  useEffect(() => {
+    if (isOpen) setCategory(availableCategories[0] || (type === 'income' ? 'Other Income' : 'Other Expense'));
+  }, [type, isOpen, incomeCategories, expenseCategories]);
 
   if (!isOpen) return null;
 
@@ -113,10 +122,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               onChange={(e) => setCategory(e.target.value)}
               className="w-full min-h-11 p-2.5 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
             >
-              <option value="Fees">Student Fees</option>
-              <option value="Rent">Rent & Operations</option>
-              <option value="Salary">Instructor Salary</option>
-              <option value="Misc">Misc Expense</option>
+              {availableCategories.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </div>
 

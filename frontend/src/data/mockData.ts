@@ -389,5 +389,15 @@ export const INITIAL_SETTINGS: OrgSettings = {
   themeColor: 'purple',
   darkMode: false,
   defaultMonthlyFee: 150,
-  feeDueDate: '5th of Month'
+  feeDueDate: '5th of Month',
+  receipt: {
+    prefix: 'REC', address: '', phone: '', email: '',
+    footer: 'Thank you for your payment.', showLogo: true,
+    showSignature: false, autoOpenAfterPayment: true
+  },
+  incomeCategories: ['Student Fees', 'Registration', 'Events', 'Other Income'],
+  expenseCategories: ['Rent & Operations', 'Instructor Salary', 'Equipment', 'Utilities', 'Marketing', 'Other Expense'],
+  notifications: {
+    enabled: true, feeReminders: true, paymentUpdates: true, attendanceAlerts: true
+  }
 };

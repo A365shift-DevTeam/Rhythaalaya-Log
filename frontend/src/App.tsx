@@ -4,7 +4,8 @@ import {
   Batch,
   Transaction,
   OrgSettings,
-  AppTab
+  AppTab,
+  FeeReceipt
 } from './types';
 import {
   INITIAL_SETTINGS
@@ -26,6 +27,8 @@ import { WhatsAppModal } from './components/modals/WhatsAppModal';
 import { AddTransactionModal } from './components/modals/AddTransactionModal';
 import { AddBatchModal } from './components/modals/AddBatchModal';
 import { StudentDetailsModal } from './components/modals/StudentDetailsModal';
+import { FeeReceiptModal } from './components/modals/FeeReceiptModal';
+import { NotificationCenter } from './components/NotificationCenter';
 
 const HomeTab = React.lazy(() =>
   import('./components/HomeTab').then((module) => ({ default: module.HomeTab }))
@@ -91,6 +94,8 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [isStudentDetailsOpen, setIsStudentDetailsOpen] = useState(false);
   const [detailsTargetStudent, setDetailsTargetStudent] = useState<Student | null>(null);
+  const [lastReceipt, setLastReceipt] = useState<FeeReceipt | null>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   // Actions
   const handleAddStudent = async (newStudent: Student) => {
@@ -104,8 +109,23 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
 
   const handleRecordFee = async (studentId: string, amount: number, method: string) => {
     try {
-      await api.recordPayment(session.token, studentId, amount, method);
+      const payment = await api.recordPayment(session.token, studentId, amount, method);
+      const student = students.find((item) => item.id === studentId);
+      if (!student) throw new Error('Student details are unavailable for this receipt.');
+      const receipt: FeeReceipt = {
+        id: payment.id,
+        receiptNumber: `${settings.receipt.prefix}-${payment.id.slice(0, 8).toUpperCase()}`,
+        studentName: student.name,
+        studentNumber: student.studentNumber || student.id,
+        course: student.course,
+        amount: payment.amount,
+        paymentMethod: method,
+        occurredAt: payment.occurredAt
+      };
+      setLastReceipt(receipt);
+      if (settings.receipt.autoOpenAfterPayment) setIsReceiptOpen(true);
       await reload();
+      return receipt;
     } catch (error) {
       showError(error);
       throw error;
@@ -196,9 +216,13 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             <p className="truncate text-sm font-bold text-slate-800 dark:text-white">{session.user.tenantName}</p>
             <p className="truncate text-xs text-slate-500 dark:text-slate-400">Signed in as {session.user.fullName}</p>
           </div>
-          <button type="button" onClick={onLogout} className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3.5 text-xs font-bold bg-white text-slate-700 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-rose-950/40">
-            Sign out
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <NotificationCenter tenantKey={session.user.tenantId || session.user.email} preferences={settings.notifications}
+              students={students} transactions={transactions} onNavigate={setCurrentTab} />
+            <button type="button" onClick={onLogout} className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3.5 text-xs font-bold bg-white text-slate-700 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-rose-950/40">
+              Sign out
+            </button>
+          </div>
         </header>
         {loadError && <div role="alert" className="mb-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
           <span className="material-symbols-outlined mt-0.5 text-[20px]" aria-hidden="true">error</span>
@@ -316,6 +340,8 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         isOpen={isAddTransactionOpen}
         onClose={() => setIsAddTransactionOpen(false)}
         onAddTransaction={handleAddTransaction}
+        incomeCategories={settings.incomeCategories}
+        expenseCategories={settings.expenseCategories}
       />
 
       <AddBatchModal
@@ -339,6 +365,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         }}
         onDeleteStudent={handleDeleteStudent}
       />
+      <FeeReceiptModal isOpen={isReceiptOpen} onClose={() => setIsReceiptOpen(false)} receipt={lastReceipt} settings={settings} />
     </div>
   );
 }

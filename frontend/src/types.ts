@@ -49,6 +49,35 @@ export interface Transaction {
   time?: string;
 }
 
+export interface ReceiptSettings {
+  prefix: string;
+  address: string;
+  phone: string;
+  email: string;
+  footer: string;
+  showLogo: boolean;
+  showSignature: boolean;
+  autoOpenAfterPayment: boolean;
+}
+
+export interface NotificationSettings {
+  enabled: boolean;
+  feeReminders: boolean;
+  paymentUpdates: boolean;
+  attendanceAlerts: boolean;
+}
+
+export interface FeeReceipt {
+  id: string;
+  receiptNumber: string;
+  studentName: string;
+  studentNumber: string;
+  course: string;
+  amount: number;
+  paymentMethod: string;
+  occurredAt: string;
+}
+
 export interface OrgSettings {
   name: string;
   type: string;
@@ -57,4 +86,8 @@ export interface OrgSettings {
   darkMode: boolean;
   defaultMonthlyFee: number;
   feeDueDate: string; // '5th of Month'
+  receipt: ReceiptSettings;
+  incomeCategories: string[];
+  expenseCategories: string[];
+  notifications: NotificationSettings;
 }

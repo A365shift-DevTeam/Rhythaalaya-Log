@@ -146,4 +146,18 @@ public sealed class OrganizationSettings : ITenantOwned
     public string Currency { get; set; } = "INR";
     public string Locale { get; set; } = "en-IN";
     public string TimeZone { get; set; } = "Asia/Kolkata";
+    public string ReceiptPrefix { get; set; } = "REC";
+    public string? ReceiptAddress { get; set; }
+    public string? ReceiptPhone { get; set; }
+    public string? ReceiptEmail { get; set; }
+    public string ReceiptFooter { get; set; } = "Thank you for your payment.";
+    public bool ReceiptShowLogo { get; set; } = true;
+    public bool ReceiptShowSignature { get; set; }
+    public bool ReceiptAutoOpen { get; set; } = true;
+    public string IncomeCategoriesJson { get; set; } = "[\"Student Fees\",\"Registration\",\"Events\",\"Other Income\"]";
+    public string ExpenseCategoriesJson { get; set; } = "[\"Rent & Operations\",\"Instructor Salary\",\"Equipment\",\"Utilities\",\"Marketing\",\"Other Expense\"]";
+    public bool NotificationsEnabled { get; set; } = true;
+    public bool FeeReminderNotifications { get; set; } = true;
+    public bool PaymentNotifications { get; set; } = true;
+    public bool AttendanceNotifications { get; set; } = true;
 }
