@@ -68,6 +68,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
       const problem = await response.json();
       message = problem.detail || problem.title || message;
     } catch { /* response has no JSON body */ }
+    if (response.status === 403) message = 'You don\'t have permission to do that. Ask your academy admin.';
     if (response.status === 401) authStore.clear();
     throw new ApiError(message, response.status);
   }

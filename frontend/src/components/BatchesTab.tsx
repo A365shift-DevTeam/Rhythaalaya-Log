@@ -5,6 +5,7 @@ interface BatchesTabProps {
   batches: Batch[];
   courses: Course[];
   staff: Staff[];
+  canManage: boolean;
   onOpenAddBatch: () => void;
   onEditBatch: (batch: Batch) => void;
   onOpenAddCourse: () => void;
@@ -22,7 +23,7 @@ const formatTime = (value: string) => {
 const formatDays = (days: string[]) => days.map((d) => WEEKDAY_SHORT[['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(d)]).join(', ');
 
 export const BatchesTab: React.FC<BatchesTabProps> = ({
-  batches, courses, staff, onOpenAddBatch, onEditBatch, onOpenAddCourse, onEditCourse, onOpenAddStaff, onEditStaff
+  batches, courses, staff, canManage, onOpenAddBatch, onEditBatch, onOpenAddCourse, onEditCourse, onOpenAddStaff, onEditStaff
 }) => {
   const [search, setSearch] = useState('');
   const [courseFilter, setCourseFilter] = useState('All');
@@ -53,11 +54,11 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
               Set up courses and mentors, then schedule batches with their days, timing, and enrollment window.
             </p>
           </div>
-          <button type="button" onClick={onOpenAddBatch}
+          {canManage && <button type="button" onClick={onOpenAddBatch}
             className="btn-brand rounded-xl px-5 py-3 text-sm font-bold flex items-center justify-center gap-2 shrink-0">
             <span className="material-symbols-outlined text-[20px]">add</span>
             Create batch
-          </button>
+          </button>}
         </div>
       </section>
 
@@ -73,15 +74,15 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
         <section className="rounded-3xl bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 shadow-sm overflow-hidden">
           <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
             <h3 className="font-heading text-lg font-extrabold text-slate-900 dark:text-white">Courses</h3>
-            <button type="button" onClick={onOpenAddCourse} className="min-h-10 rounded-xl px-3 text-xs font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 flex items-center gap-1">
+            {canManage && <button type="button" onClick={onOpenAddCourse} className="min-h-10 rounded-xl px-3 text-xs font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 flex items-center gap-1">
               <span className="material-symbols-outlined text-[16px]">add</span>New course
-            </button>
+            </button>}
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
-            {courses.length === 0 && <p className="p-5 text-xs text-slate-500">No courses yet. Create one to start scheduling batches.</p>}
+            {courses.length === 0 && <p className="p-5 text-xs text-slate-500">No courses yet. {canManage ? 'Create one to start scheduling batches.' : 'Ask your admin to add one.'}</p>}
             {courses.map((course) => (
-              <button key={course.id} type="button" onClick={() => onEditCourse(course)}
-                className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50">
+              <button key={course.id} type="button" onClick={() => canManage && onEditCourse(course)} disabled={!canManage}
+                className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:cursor-default disabled:hover:bg-transparent">
                 <div className="min-w-0">
                   <div className="text-sm font-bold text-slate-900 dark:text-white truncate">{course.name}</div>
                   <div className="text-[11px] text-slate-500 truncate">{course.description || 'No description'}</div>
@@ -97,15 +98,15 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
         <section className="rounded-3xl bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 shadow-sm overflow-hidden">
           <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
             <h3 className="font-heading text-lg font-extrabold text-slate-900 dark:text-white">Staff & mentors</h3>
-            <button type="button" onClick={onOpenAddStaff} className="min-h-10 rounded-xl px-3 text-xs font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 flex items-center gap-1">
+            {canManage && <button type="button" onClick={onOpenAddStaff} className="min-h-10 rounded-xl px-3 text-xs font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 flex items-center gap-1">
               <span className="material-symbols-outlined text-[16px]">add</span>New staff
-            </button>
+            </button>}
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
-            {staff.length === 0 && <p className="p-5 text-xs text-slate-500">No staff yet. Add a mentor to assign to batches.</p>}
+            {staff.length === 0 && <p className="p-5 text-xs text-slate-500">No staff yet. {canManage ? 'Add a mentor to assign to batches.' : 'Ask your admin to add one.'}</p>}
             {staff.map((member) => (
-              <button key={member.id} type="button" onClick={() => onEditStaff(member)}
-                className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50">
+              <button key={member.id} type="button" onClick={() => canManage && onEditStaff(member)} disabled={!canManage}
+                className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:cursor-default disabled:hover:bg-transparent">
                 <div className="min-w-0">
                   <div className="text-sm font-bold text-slate-900 dark:text-white truncate">{member.name}</div>
                   <div className="text-[11px] text-slate-500 truncate">{member.phone || member.email || 'No contact on file'}</div>
@@ -153,13 +154,13 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
               {batches.length ? 'No batches match your filters' : 'Create your first batch'}
             </h4>
             <p className="text-xs text-slate-500 mt-1">
-              {batches.length ? 'Try a different search or course.' : 'Add a course and a staff member, then schedule a batch.'}
+              {batches.length ? 'Try a different search or course.' : canManage ? 'Add a course and a staff member, then schedule a batch.' : 'Ask your admin to schedule one.'}
             </p>
-            {!batches.length && <button type="button" onClick={onOpenAddBatch} className="btn-brand rounded-xl px-4 py-2.5 text-xs font-bold mt-4">Create batch</button>}
+            {!batches.length && canManage && <button type="button" onClick={onOpenAddBatch} className="btn-brand rounded-xl px-4 py-2.5 text-xs font-bold mt-4">Create batch</button>}
           </div>
         ) : (
           <div className="p-4 md:p-6 grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredBatches.map((batch) => <BatchCard key={batch.id} batch={batch} onEdit={onEditBatch} />)}
+            {filteredBatches.map((batch) => <BatchCard key={batch.id} batch={batch} canManage={canManage} onEdit={onEditBatch} />)}
           </div>
         )}
       </section>
@@ -167,7 +168,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
   );
 };
 
-function BatchCard({ batch, onEdit }: { batch: Batch; onEdit: (batch: Batch) => void; key?: React.Key }) {
+function BatchCard({ batch, canManage, onEdit }: { batch: Batch; canManage: boolean; onEdit: (batch: Batch) => void; key?: React.Key }) {
   return (
     <article className="group rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 hover:border-brand-300 dark:hover:border-brand-600 hover:shadow-lg hover:shadow-brand-500/5 transition-all">
       <div className="flex items-start justify-between gap-3">
@@ -178,10 +179,10 @@ function BatchCard({ batch, onEdit }: { batch: Batch; onEdit: (batch: Batch) => 
           <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold inline-flex items-center gap-1.5 ${batch.isActive ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${batch.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />{batch.isActive ? 'Active' : 'Inactive'}
           </span>
-          <button type="button" onClick={() => onEdit(batch)} aria-label={`Edit ${batch.name}`}
+          {canManage && <button type="button" onClick={() => onEdit(batch)} aria-label={`Edit ${batch.name}`}
             className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-slate-800">
             <span className="material-symbols-outlined text-[18px]">edit</span>
-          </button>
+          </button>}
         </div>
       </div>
 

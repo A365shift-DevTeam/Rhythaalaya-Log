@@ -53,6 +53,7 @@ export default function App() {
 }
 
 function TenantApplication({ session, onLogout }: { session: Session; onLogout: () => void }) {
+  const isAdmin = session.user.role === 'TenantAdmin';
   const [currentTab, setCurrentTab] = useState<AppTab>('home');
   const [students, setStudents] = useState<Student[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -307,6 +308,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             batches={batches}
             courses={courses}
             staff={staff}
+            canManage={isAdmin}
             onOpenAddBatch={() => { setEditingBatch(null); setIsAddBatchOpen(true); }}
             onEditBatch={(batch) => { setEditingBatch(batch); setIsAddBatchOpen(true); }}
             onOpenAddCourse={() => { setEditingCourse(null); setIsAddCourseOpen(true); }}
@@ -323,6 +325,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             outstandingDues={outstandingDues}
             courses={courses}
             feeStructures={feeStructures}
+            canManage={isAdmin}
             onOpenRecordFee={openRecordFee}
             onOpenWhatsAppAll={() => openWhatsApp(undefined)}
             onOpenAddTransaction={() => setIsAddTransactionOpen(true)}

@@ -7,6 +7,7 @@ interface FinanceTabProps {
   outstandingDues: FeeDue[];
   courses: Course[];
   feeStructures: FeeStructure[];
+  canManage: boolean;
   onOpenRecordFee: (student?: Student) => void;
   onOpenWhatsAppAll: () => void;
   onOpenAddTransaction: () => void;
@@ -16,7 +17,7 @@ interface FinanceTabProps {
 }
 
 export const FinanceTab: React.FC<FinanceTabProps> = ({
-  students, transactions, outstandingDues, courses, feeStructures,
+  students, transactions, outstandingDues, courses, feeStructures, canManage,
   onOpenRecordFee, onOpenWhatsAppAll, onOpenAddTransaction, onAddFeeStructure
 }) => {
   const pendingStudents = students.filter((s) => s.outstandingBalance > 0);
@@ -96,14 +97,14 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
       </div>
 
       {/* Fee structures */}
-      <FeeStructuresPanel courses={courses} feeStructures={feeStructures} onAdd={onAddFeeStructure} />
+      <FeeStructuresPanel courses={courses} feeStructures={feeStructures} canManage={canManage} onAdd={onAddFeeStructure} />
 
       {/* Bottom Row: Recent Transactions & Pending Fee Reminders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6">
           <div className="flex justify-between items-center mb-5">
             <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Financial Logs</h3>
-            <button onClick={onOpenAddTransaction} className="font-sans text-xs font-bold text-brand-500 dark:text-brand-400 hover:underline uppercase tracking-wider">+ Record Entry</button>
+            {canManage && <button onClick={onOpenAddTransaction} className="font-sans text-xs font-bold text-brand-500 dark:text-brand-400 hover:underline uppercase tracking-wider">+ Record Entry</button>}
           </div>
           <div className="space-y-3">
             {transactions.length === 0 && <p className="text-xs text-slate-500">No transactions recorded yet.</p>}
@@ -179,8 +180,8 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
   );
 };
 
-function FeeStructuresPanel({ courses, feeStructures, onAdd }: {
-  courses: Course[]; feeStructures: FeeStructure[];
+function FeeStructuresPanel({ courses, feeStructures, canManage, onAdd }: {
+  courses: Course[]; feeStructures: FeeStructure[]; canManage: boolean;
   onAdd: (payload: { courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string; effectiveTo?: string | null }) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
@@ -225,10 +226,10 @@ function FeeStructuresPanel({ courses, feeStructures, onAdd }: {
           <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Fee structures</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Define what each course charges and how often</p>
         </div>
-        <button type="button" onClick={handleOpen} disabled={courses.length === 0}
+        {canManage && <button type="button" onClick={handleOpen} disabled={courses.length === 0}
           className="btn-brand min-h-10 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:opacity-50">
           <span className="material-symbols-outlined text-[16px]">add</span>Add
-        </button>
+        </button>}
       </div>
 
       {open && (
@@ -256,7 +257,7 @@ function FeeStructuresPanel({ courses, feeStructures, onAdd }: {
       )}
 
       {feeStructures.length === 0 ? (
-        <p className="text-xs text-slate-500">No fee structures yet. {courses.length === 0 ? 'Create a course first.' : 'Add one to start generating dues.'}</p>
+        <p className="text-xs text-slate-500">No fee structures yet. {!canManage ? 'Ask your admin to add one.' : courses.length === 0 ? 'Create a course first.' : 'Add one to start generating dues.'}</p>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {feeStructures.map((structure) => (
