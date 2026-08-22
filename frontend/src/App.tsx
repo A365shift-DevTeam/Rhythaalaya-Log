@@ -71,8 +71,12 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
     else setLoadError(error instanceof Error ? error.message : 'The request could not be completed.');
   };
 
-  const reload = async () => {
-    setLoading(true);
+  // showLoader only blanks the whole page for the initial load (nothing on screen yet) or a
+  // manual retry after a failed load. Every reload after a save/add is silent — the modal that
+  // triggered it already has its own submitting state, and the page shouldn't blank out from
+  // under the user just to refresh a list.
+  const reload = async (showLoader = false) => {
+    if (showLoader) setLoading(true);
     try {
       const [studentRows, batchRows, courseRows, staffRows, structureRows, dueRows, transactionRows, org] = await Promise.all([
         api.students(session.token), api.batches(session.token), api.courses(session.token), api.staff(session.token),
@@ -87,9 +91,9 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
       if (error instanceof ApiError && error.status === 401) onLogout();
       else setLoadError(error instanceof Error ? error.message : 'The request could not be completed.');
     }
-    finally { setLoading(false); }
+    finally { if (showLoader) setLoading(false); }
   };
-  useEffect(() => { void reload(); }, [session.token]);
+  useEffect(() => { void reload(true); }, [session.token]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', settings.darkMode);
@@ -299,18 +303,19 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         settings={settings}
       />
 
-      <main id="main-content" tabIndex={-1} className="md:ml-[270px] min-h-screen px-4 sm:px-6 lg:px-8 py-5 md:py-8 pb-28 md:pb-12">
+      <main id="main-content" tabIndex={-1} className="md:ml-[270px] min-h-screen px-3 sm:px-6 lg:px-8 py-3 sm:py-6 md:py-8 pb-28 md:pb-12">
         <div className="mx-auto w-full max-w-[1440px]">
-        <header className="relative z-30 mb-5 flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-brand-200/60 bg-white/80 px-3 py-2.5 shadow-xs backdrop-blur-sm dark:border-brand-800 dark:bg-slate-900/80 sm:px-4">
+        <header className="relative z-30 mb-4 sm:mb-5 flex min-w-0 items-center justify-between gap-2.5 rounded-2xl border border-brand-200/60 bg-white/80 px-3 py-2 sm:py-2.5 shadow-xs backdrop-blur-sm dark:border-brand-800 dark:bg-slate-900/80 sm:px-4">
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-slate-800 dark:text-white">{session.user.tenantName}</p>
-            <p className="truncate text-xs text-slate-500 dark:text-slate-400">Signed in as {session.user.fullName}</p>
+            <p className="truncate text-xs sm:text-sm font-bold text-slate-800 dark:text-white">{session.user.tenantName}</p>
+            <p className="truncate text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">Signed in as {session.user.fullName}</p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <NotificationCenter tenantKey={session.user.tenantId || session.user.email} preferences={settings.notifications}
               students={students} transactions={transactions} onNavigate={setCurrentTab} />
-            <button type="button" onClick={onLogout} className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3.5 text-xs font-bold bg-white text-slate-700 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-rose-950/40">
-              Sign out
+            <button type="button" onClick={onLogout} aria-label="Sign out" className="min-h-9 sm:min-h-11 shrink-0 rounded-xl border border-slate-200 px-2.5 sm:px-3.5 text-xs font-bold bg-white text-slate-700 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-rose-950/40 flex items-center gap-1">
+              <span className="hidden sm:inline">Sign out</span>
+              <span className="material-symbols-outlined text-[17px] sm:hidden">logout</span>
             </button>
           </div>
         </header>

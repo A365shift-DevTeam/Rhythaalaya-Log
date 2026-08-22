@@ -38,11 +38,25 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="student-details-title" className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-brand-200/50 bg-white p-4 shadow-2xl dark:bg-slate-900 sm:rounded-2xl sm:p-6 space-y-5">
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="student-details-title" className="relative max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-brand-200/50 bg-white p-4 shadow-2xl dark:bg-slate-900 sm:rounded-2xl sm:p-6 space-y-5">
+        {/* Floating Actions (Edit & Close) */}
+        <div className="sticky top-0 z-30 flex justify-end pointer-events-none -mb-10 sm:-mb-12">
+          <div className="pointer-events-auto flex items-center gap-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-slate-200/80 dark:border-slate-700/80">
+            <button type="button" onClick={() => { onClose(); onEdit(student); }} aria-label="Edit student details" title="Edit details"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95">
+              <span className="material-symbols-outlined text-[19px]">edit</span>
+            </button>
+            <button type="button" onClick={onClose} aria-label="Close student details" title="Close"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95">
+              <span className="material-symbols-outlined text-[19px]">close</span>
+            </button>
+          </div>
+        </div>
+
         {/* Header */}
-        <div className="flex justify-between items-start gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
-          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-brand-500 text-white flex items-center justify-center font-heading font-bold text-xl sm:text-2xl shrink-0">
+        <div className="flex justify-between items-start gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 pt-1">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4 pr-24">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-brand-500 text-white flex items-center justify-center font-heading font-bold text-xl sm:text-2xl shrink-0 shadow-md shadow-brand-500/20">
               {initials}
             </div>
             <div className="min-w-0">
@@ -62,15 +76,6 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                 )}
               </div>
             </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <button type="button" onClick={() => { onClose(); onEdit(student); }} aria-label="Edit student details" title="Edit details"
-              className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
-              <span className="material-symbols-outlined">edit</span>
-            </button>
-            <button type="button" onClick={onClose} aria-label="Close student details" className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
-              <span className="material-symbols-outlined">close</span>
-            </button>
           </div>
         </div>
 

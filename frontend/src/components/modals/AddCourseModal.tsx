@@ -164,12 +164,14 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-5">
       <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="add-course-title" className="max-h-[92dvh] w-full max-w-2xl overflow-hidden rounded-3xl border border-brand-200/70 bg-white shadow-2xl dark:border-brand-800 dark:bg-slate-900">
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 px-5 py-5 dark:border-slate-800 sm:px-7">
-          <h3 id="add-course-title" className="font-heading text-xl font-bold text-slate-900 dark:text-white">
+          <h3 id="add-course-title" className="font-heading text-xl font-bold text-slate-900 dark:text-white pr-10">
             {editingCourse ? 'Edit course' : 'New course'}
           </h3>
-          <button type="button" onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
-            <span className="material-symbols-outlined">close</span>
-          </button>
+          <div className="flex items-center shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-slate-200/80 dark:border-slate-700/80">
+            <button type="button" onClick={onClose} aria-label="Close" title="Close" className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95">
+              <span className="material-symbols-outlined text-[19px]">close</span>
+            </button>
+          </div>
         </div>
         <form onSubmit={handleSubmit} className="flex min-h-0 max-h-[calc(92dvh-86px)] flex-col font-sans text-sm">
           <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-7 space-y-4">

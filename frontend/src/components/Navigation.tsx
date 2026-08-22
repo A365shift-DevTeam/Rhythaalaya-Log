@@ -38,45 +38,30 @@ export const Navigation: React.FC<NavigationProps> = ({
     <>
       {/* Desktop Sidebar Drawer */}
       <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-[270px] p-5 border-r border-brand-200/70 dark:border-brand-800 bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl z-50">
-        {/* Brand Header */}
+        {/* Academy Profile Header Card */}
         <button
           type="button"
-          className="flex w-full items-center gap-3 mb-6 px-1 rounded-xl text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+          className="flex w-full items-center gap-3 mb-6 p-3 bg-brand-50/90 dark:bg-brand-900/50 border border-brand-200/70 dark:border-brand-700/50 rounded-2xl text-left group hover:border-brand-400 dark:hover:border-brand-600 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           onClick={() => navigate('home')}
           aria-label="Go to dashboard"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-400 to-[#63c06a] text-white flex items-center justify-center shadow-md shadow-brand-500/25 group-hover:scale-105 transition-transform">
-            <span className="material-symbols-outlined text-2xl filled">auto_awesome</span>
-          </div>
-          <div>
-            <span className="font-heading text-xl font-extrabold text-slate-900 dark:text-white tracking-tight block">
-              StudioSync
-            </span>
-            <span className="font-sans text-[11px] font-semibold text-brand-500 dark:text-brand-400 uppercase tracking-widest block -mt-1">
-              Studio OS
-            </span>
-          </div>
-        </button>
-
-        {/* Studio Profile Card */}
-        <div className="flex items-center gap-3 p-3 mb-6 bg-brand-50/90 dark:bg-brand-900/50 border border-brand-200/70 dark:border-brand-700/50 rounded-2xl">
-          <div className="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center font-bold text-sm overflow-hidden shrink-0 border border-brand-400/30 shadow-inner">
+          <div className="w-11 h-11 rounded-xl bg-brand-500 text-white flex items-center justify-center font-bold text-base overflow-hidden shrink-0 border border-brand-400/30 shadow-inner group-hover:scale-105 transition-transform">
             {settings.logoUrl ? (
               <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover" />
             ) : (
-              settings.name.charAt(0) || 'S'
+              settings.name.charAt(0) || 'R'
             )}
           </div>
           <div className="overflow-hidden flex-1 min-w-0">
-            <p className="font-sans text-xs font-bold text-slate-900 dark:text-brand-50 truncate">
+            <p className="font-heading text-sm font-extrabold text-slate-900 dark:text-brand-50 truncate">
               {settings.name}
             </p>
-            <p className="font-sans text-[11px] text-slate-500 dark:text-brand-200/80 truncate flex items-center gap-1">
+            <p className="font-sans text-[11px] text-slate-500 dark:text-brand-200/80 truncate flex items-center gap-1 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
               {settings.type}
             </p>
           </div>
-        </div>
+        </button>
 
         {/* Navigation Items */}
         <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
@@ -120,19 +105,23 @@ export const Navigation: React.FC<NavigationProps> = ({
       </aside>
 
       {/* Mobile Top Header */}
-      <header className="md:hidden sticky top-0 z-40 flex justify-between items-center px-4 py-3 bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl border-b border-brand-200/70 dark:border-brand-800 shadow-xs">
-        <button type="button" className="flex min-h-11 items-center gap-2.5 rounded-xl text-left" onClick={() => navigate('home')} aria-label="Go to dashboard">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-400 to-[#63c06a] text-white flex items-center justify-center shadow-xs">
-            <span className="material-symbols-outlined text-lg filled">auto_awesome</span>
+      <header className="md:hidden sticky top-0 z-40 flex justify-between items-center px-4 py-2.5 bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl border-b border-brand-200/70 dark:border-brand-800 shadow-xs">
+        <button type="button" className="flex min-h-11 items-center gap-2.5 rounded-xl text-left min-w-0 flex-1 pr-2" onClick={() => navigate('home')} aria-label="Go to dashboard">
+          <div className="w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center font-bold text-xs overflow-hidden shrink-0 border border-brand-400/30 shadow-xs">
+            {settings.logoUrl ? (
+              <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover" />
+            ) : (
+              settings.name.charAt(0) || 'R'
+            )}
           </div>
-          <h1 className="font-heading text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
-            StudioSync
+          <h1 className="font-heading text-base font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
+            {settings.name}
           </h1>
         </button>
         <button
           type="button"
           onClick={onOpenAddStudent}
-          className="btn-brand min-h-11 px-3.5 py-2 rounded-xl font-sans text-xs font-semibold flex items-center gap-1.5"
+          className="btn-brand min-h-10 px-3.5 py-1.5 rounded-xl font-sans text-xs font-semibold flex items-center gap-1.5 shrink-0"
         >
           <span className="material-symbols-outlined text-[16px]">add</span>
           <span>Student</span>

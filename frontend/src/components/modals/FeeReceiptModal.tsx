@@ -9,8 +9,17 @@ export function FeeReceiptModal({ isOpen, onClose, receipt }: { isOpen: boolean;
 
   return <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
     <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="fee-receipt-title" className="max-h-[94dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-slate-100 p-3 shadow-2xl dark:bg-slate-950 sm:rounded-3xl sm:p-5">
-      <div className="mb-3 flex items-center justify-between print:hidden"><div><h2 id="fee-receipt-title" className="text-base font-extrabold text-slate-900 dark:text-white">Payment receipt</h2><p className="text-xs text-slate-500">Ready to print or save as PDF</p></div>
-        <button type="button" onClick={onClose} aria-label="Close receipt" className="flex h-11 w-11 items-center justify-center rounded-xl hover:bg-white dark:hover:bg-slate-800"><span className="material-symbols-outlined">close</span></button></div>
+      <div className="mb-3 flex items-center justify-between print:hidden">
+        <div>
+          <h2 id="fee-receipt-title" className="text-base font-extrabold text-slate-900 dark:text-white">Payment receipt</h2>
+          <p className="text-xs text-slate-500">Ready to print or save as PDF</p>
+        </div>
+        <div className="flex items-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-slate-200/80 dark:border-slate-700/80">
+          <button type="button" onClick={onClose} aria-label="Close receipt" title="Close" className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95">
+            <span className="material-symbols-outlined text-[19px]">close</span>
+          </button>
+        </div>
+      </div>
 
       <article className="fee-receipt-print rounded-2xl border border-slate-200 bg-white p-5 text-slate-900 shadow-sm sm:p-7">
         <header className="flex items-start justify-between gap-4 border-b border-dashed border-slate-300 pb-5">

@@ -87,7 +87,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     >
       <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full max-h-[92dvh] overflow-hidden shadow-2xl border border-brand-200/70 dark:border-brand-800">
         <div className="flex justify-between items-start gap-4 px-5 sm:px-7 py-5 border-b border-slate-100 dark:border-slate-800">
-          <div>
+          <div className="pr-10">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-brand-600 dark:text-brand-400">
               <span className="material-symbols-outlined text-[16px]">{editingStudent ? 'edit' : 'person_add'}</span>
               {editingStudent ? 'Edit student' : 'New student'}
@@ -96,14 +96,17 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
               {editingStudent ? editingStudent.name : 'Enroll a student'}
             </h3>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="w-11 h-11 shrink-0 inline-flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
-          >
-            <span className="material-symbols-outlined">close</span>
-          </button>
+          <div className="flex items-center shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-slate-200/80 dark:border-slate-700/80">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              title="Close"
+              className="flex h-9 w-9 items-center justify-center text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all active:scale-95"
+            >
+              <span className="material-symbols-outlined text-[19px]">close</span>
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(92dvh-118px)]">
