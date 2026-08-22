@@ -1,17 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Batch } from '../../types';
+import { Batch, Student } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
+
+export interface StudentFields {
+  name: string; dateOfBirth: string | null; parentName: string; phone: string; email: string; address: string;
+}
 
 interface AddStudentModalProps {
   isOpen: boolean;
   onClose: () => void;
   batches: Batch[];
-  onAddStudent: (student: {
-    name: string; dateOfBirth: string | null; parentName: string; phone: string; email: string; address: string;
-  }, enrollBatchId: string | null) => Promise<void>;
+  editingStudent?: Student | null;
+  onAddStudent: (student: StudentFields, enrollBatchId: string | null) => Promise<void>;
+  onUpdateStudent: (studentId: string, student: StudentFields) => Promise<void>;
 }
 
-export const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, batches, onAddStudent }) => {
+export const AddStudentModal: React.FC<AddStudentModalProps> = ({
+  isOpen, onClose, batches, editingStudent, onAddStudent, onUpdateStudent
+}) => {
   const activeBatches = useMemo(() => batches.filter((b) => b.isActive), [batches]);
 
   const [name, setName] = useState('');
@@ -28,12 +34,17 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClos
 
   useEffect(() => {
     if (!isOpen) return;
-    setName(''); setDateOfBirth(''); setParentName(''); setPhone(''); setEmail(''); setAddress('');
+    setName(editingStudent?.name || '');
+    setDateOfBirth(editingStudent?.dateOfBirth || '');
+    setParentName(editingStudent?.parentName || '');
+    setPhone(editingStudent?.phone || '');
+    setEmail(editingStudent?.email || '');
+    setAddress(editingStudent?.address || '');
     setEnrollNow(activeBatches.length > 0);
     setBatchId(activeBatches[0]?.id || '');
     setError('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, editingStudent]);
 
   if (!isOpen) return null;
 
@@ -42,11 +53,13 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClos
     if (!name.trim()) return;
     setSubmitting(true);
     setError('');
+    const fields: StudentFields = {
+      name: name.trim(), dateOfBirth: dateOfBirth || null, parentName: parentName.trim(),
+      phone: phone.trim(), email: email.trim(), address: address.trim()
+    };
     try {
-      await onAddStudent({
-        name: name.trim(), dateOfBirth: dateOfBirth || null, parentName: parentName.trim(),
-        phone: phone.trim(), email: email.trim(), address: address.trim()
-      }, enrollNow && batchId ? batchId : null);
+      if (editingStudent) await onUpdateStudent(editingStudent.id, fields);
+      else await onAddStudent(fields, enrollNow && batchId ? batchId : null);
       onClose();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not save the student.');
@@ -68,17 +81,17 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClos
         <div className="flex justify-between items-start gap-4 px-5 sm:px-7 py-5 border-b border-slate-100 dark:border-slate-800">
           <div>
             <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-brand-600 dark:text-brand-400">
-              <span className="material-symbols-outlined text-[16px]">person_add</span>
-              New student
+              <span className="material-symbols-outlined text-[16px]">{editingStudent ? 'edit' : 'person_add'}</span>
+              {editingStudent ? 'Edit student' : 'New student'}
             </span>
             <h3 id="add-student-title" className="font-heading text-xl sm:text-2xl font-extrabold text-slate-950 dark:text-white mt-1">
-              Enroll a student
+              {editingStudent ? editingStudent.name : 'Enroll a student'}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close enrollment form"
+            aria-label="Close"
             className="w-11 h-11 shrink-0 inline-flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
           >
             <span className="material-symbols-outlined">close</span>
@@ -88,10 +101,12 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClos
         <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(92dvh-118px)]">
           <div className="p-5 sm:p-7 space-y-6">
             <section aria-labelledby="student-information-heading">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="w-7 h-7 rounded-lg bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 inline-flex items-center justify-center text-xs font-extrabold">1</span>
-                <h4 id="student-information-heading" className="font-heading text-sm font-bold text-slate-900 dark:text-white">Student details</h4>
-              </div>
+              {!editingStudent && (
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="w-7 h-7 rounded-lg bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 inline-flex items-center justify-center text-xs font-extrabold">1</span>
+                  <h4 id="student-information-heading" className="font-heading text-sm font-bold text-slate-900 dark:text-white">Student details</h4>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
@@ -134,35 +149,39 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClos
               </div>
             </section>
 
-            <div className="h-px bg-slate-100 dark:bg-slate-800" />
+            {!editingStudent && (
+              <>
+                <div className="h-px bg-slate-100 dark:bg-slate-800" />
 
-            <section aria-labelledby="enrollment-details-heading">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="w-7 h-7 rounded-lg bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 inline-flex items-center justify-center text-xs font-extrabold">2</span>
-                <h4 id="enrollment-details-heading" className="font-heading text-sm font-bold text-slate-900 dark:text-white">Enroll in a batch (optional)</h4>
-              </div>
+                <section aria-labelledby="enrollment-details-heading">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="w-7 h-7 rounded-lg bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 inline-flex items-center justify-center text-xs font-extrabold">2</span>
+                    <h4 id="enrollment-details-heading" className="font-heading text-sm font-bold text-slate-900 dark:text-white">Enroll in a batch (optional)</h4>
+                  </div>
 
-              {activeBatches.length === 0 ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900" role="alert">
-                  No active batches yet. You can save the student now and enroll them from the Students tab once a batch exists.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    <input type="checkbox" checked={enrollNow} onChange={(event) => setEnrollNow(event.target.checked)} className="h-4 w-4 accent-emerald-600" />
-                    Enroll this student in a batch right away
-                  </label>
-                  {enrollNow && (
-                    <select value={batchId} onChange={(event) => setBatchId(event.target.value)}
-                      className="w-full min-h-11 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-950 dark:text-white">
-                      {activeBatches.map((batch) => (
-                        <option key={batch.id} value={batch.id}>{batch.name} — {batch.courseName}</option>
-                      ))}
-                    </select>
+                  {activeBatches.length === 0 ? (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900" role="alert">
+                      No active batches yet. You can save the student now and enroll them from the Students tab once a batch exists.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        <input type="checkbox" checked={enrollNow} onChange={(event) => setEnrollNow(event.target.checked)} className="h-4 w-4 accent-emerald-600" />
+                        Enroll this student in a batch right away
+                      </label>
+                      {enrollNow && (
+                        <select value={batchId} onChange={(event) => setBatchId(event.target.value)}
+                          className="w-full min-h-11 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-950 dark:text-white">
+                          {activeBatches.map((batch) => (
+                            <option key={batch.id} value={batch.id}>{batch.name} — {batch.courseName}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                   )}
-                </div>
-              )}
-            </section>
+                </section>
+              </>
+            )}
 
             {error && <div role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs">{error}</div>}
           </div>
@@ -175,7 +194,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClos
             <button type="submit" disabled={submitting || !name.trim()}
               className="btn-brand min-h-11 px-6 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-45">
               <span className="material-symbols-outlined text-[18px]">check_circle</span>
-              {submitting ? 'Saving…' : 'Save student'}
+              {submitting ? 'Saving…' : editingStudent ? 'Save changes' : 'Save student'}
             </button>
           </div>
         </form>

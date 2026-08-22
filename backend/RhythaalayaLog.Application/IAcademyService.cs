@@ -5,14 +5,17 @@ public interface IAcademyService
     Task<IReadOnlyList<CourseDto>> GetCoursesAsync(CancellationToken ct);
     Task<CourseDto> CreateCourseAsync(CreateCourseRequest request, CancellationToken ct);
     Task<CourseDto> UpdateCourseAsync(Guid id, UpdateCourseRequest request, CancellationToken ct);
+    Task ArchiveCourseAsync(Guid id, CancellationToken ct);
 
     Task<IReadOnlyList<StaffDto>> GetStaffAsync(CancellationToken ct);
     Task<StaffDto> CreateStaffAsync(CreateStaffRequest request, CancellationToken ct);
     Task<StaffDto> UpdateStaffAsync(Guid id, UpdateStaffRequest request, CancellationToken ct);
+    Task ArchiveStaffAsync(Guid id, CancellationToken ct);
 
     Task<IReadOnlyList<BatchDto>> GetBatchesAsync(CancellationToken ct);
     Task<BatchDto> CreateBatchAsync(CreateBatchRequest request, CancellationToken ct);
     Task<BatchDto> UpdateBatchAsync(Guid id, UpdateBatchRequest request, CancellationToken ct);
+    Task ArchiveBatchAsync(Guid id, CancellationToken ct);
 
     Task<IReadOnlyList<StudentDto>> GetStudentsAsync(string? search, Guid? batchId, bool includeInactive, CancellationToken ct);
     Task<StudentDto> GetStudentAsync(Guid id, CancellationToken ct);
@@ -47,6 +50,8 @@ public interface IFinanceService
 
     Task<FinanceSummaryDto> GetFinanceAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken ct);
     Task<TransactionDto> CreateTransactionAsync(CreateTransactionRequest request, CancellationToken ct);
+    Task<TransactionDto> UpdateTransactionAsync(Guid id, UpdateTransactionRequest request, CancellationToken ct);
+    Task DeleteTransactionAsync(Guid id, CancellationToken ct);
 }
 
 public sealed class AppValidationException(string message) : Exception(message);

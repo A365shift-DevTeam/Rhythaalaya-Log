@@ -71,7 +71,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
 
       {/* Courses & Staff side-by-side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <section className="rounded-3xl bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 shadow-sm overflow-hidden">
+        <section className="premium-card rounded-3xl overflow-hidden">
           <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
             <h3 className="font-heading text-lg font-extrabold text-slate-900 dark:text-white">Courses</h3>
             {canManage && <button type="button" onClick={onOpenAddCourse} className="min-h-10 rounded-xl px-3 text-xs font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 flex items-center gap-1">
@@ -95,7 +95,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
           </div>
         </section>
 
-        <section className="rounded-3xl bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 shadow-sm overflow-hidden">
+        <section className="premium-card rounded-3xl overflow-hidden">
           <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
             <h3 className="font-heading text-lg font-extrabold text-slate-900 dark:text-white">Staff & mentors</h3>
             {canManage && <button type="button" onClick={onOpenAddStaff} className="min-h-10 rounded-xl px-3 text-xs font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 flex items-center gap-1">
@@ -120,7 +120,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
         </section>
       </div>
 
-      <section className="rounded-3xl bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 shadow-sm overflow-hidden">
+      <section className="premium-card rounded-3xl overflow-hidden">
         <div className="p-5 md:p-6 border-b border-slate-100 dark:border-slate-800">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
@@ -170,7 +170,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
 
 function BatchCard({ batch, canManage, onEdit }: { batch: Batch; canManage: boolean; onEdit: (batch: Batch) => void; key?: React.Key }) {
   return (
-    <article className="group rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 hover:border-brand-300 dark:hover:border-brand-600 hover:shadow-lg hover:shadow-brand-500/5 transition-all">
+    <article className="premium-card-interactive group p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="w-11 h-11 rounded-xl bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 flex items-center justify-center shrink-0">
           <span className="material-symbols-outlined text-[22px]">calendar_view_week</span>
@@ -199,7 +199,7 @@ function BatchCard({ batch, canManage, onEdit }: { batch: Batch; canManage: bool
 
       <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
         <div className="text-[11px] text-slate-500">Enrollment</div>
-        <div className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 px-2.5 py-1 text-xs font-bold">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 px-2.5 py-1 text-xs font-bold">
           <span className="material-symbols-outlined text-[16px]">groups</span>
           {batch.enrolledCount} student{batch.enrolledCount === 1 ? '' : 's'}
         </div>
@@ -225,7 +225,7 @@ function BatchStat({ icon, label, value, color }: {
     violet: 'bg-violet-100 text-violet-700',
     amber: 'bg-amber-100 text-amber-700'
   };
-  return <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+  return <div className="premium-card p-4">
     <div className={'w-9 h-9 rounded-xl flex items-center justify-center ' + colors[color]}>
       <span className="material-symbols-outlined text-[20px]">{icon}</span>
     </div>

@@ -82,7 +82,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
       </div>
 
       {/* Toolbar: Search, Filters & View Toggle */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs space-y-3">
+      <div className="premium-card p-4 space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <label htmlFor="student-search" className="sr-only">Search students</label>
@@ -153,7 +153,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
             const isPending = student.outstandingBalance > 0;
 
             return (
-              <div key={student.id} className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-5 flex flex-col justify-between group hover:border-brand-300 dark:hover:border-brand-600 transition-all shadow-xs">
+              <div key={student.id} className="premium-card-interactive p-5 flex flex-col justify-between group">
                 <div>
                   <div className="flex gap-3.5 items-start mb-4">
                     <div className="w-12 h-12 rounded-xl bg-brand-500 text-white flex items-center justify-center font-heading font-bold text-base shrink-0 shadow-xs">
@@ -176,12 +176,12 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-slate-500 dark:text-slate-400 font-medium">Fee Status:</span>
                       {!isPending ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                           Paid
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-[11px] font-bold">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-[11px] font-bold">
                           <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
                           Pending (₹{student.outstandingBalance.toLocaleString('en-IN')})
                         </span>
@@ -220,7 +220,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
           })}
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs overflow-x-auto">
+        <div className="premium-card overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -250,9 +250,9 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                     </td>
                     <td className="p-4">
                       {!isPending ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold">Paid</span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold">Paid</span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-[11px] font-bold">Pending (₹{student.outstandingBalance.toLocaleString('en-IN')})</span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-[11px] font-bold">Pending (₹{student.outstandingBalance.toLocaleString('en-IN')})</span>
                       )}
                     </td>
                     <td className="p-4">
@@ -289,7 +289,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
       )}
 
       {filteredStudents.length === 0 && (
-        <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs">
+        <div className="premium-card text-center py-12">
           <span className="material-symbols-outlined text-4xl text-slate-400">group_off</span>
           <p className="font-heading text-lg font-bold text-slate-900 dark:text-white mt-2">No students match query</p>
           <p className="font-sans text-xs text-slate-500 mt-1">Try adjusting your search keywords or status filter.</p>

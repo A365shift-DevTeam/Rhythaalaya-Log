@@ -89,6 +89,7 @@ export const api = {
     request<any>('/courses', { method: 'POST', body: JSON.stringify(body) }, token).then(mapCourse),
   updateCourse: (token: string, id: string, body: { name: string; description?: string; isActive: boolean }) =>
     request<any>('/courses/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapCourse),
+  archiveCourse: (token: string, id: string) => request<void>('/courses/' + id, { method: 'DELETE' }, token),
 
   // Staff
   staff: (token: string) => request<any[]>('/staff', {}, token).then(rows => rows.map(mapStaff)),
@@ -96,6 +97,7 @@ export const api = {
     request<any>('/staff', { method: 'POST', body: JSON.stringify(body) }, token).then(mapStaff),
   updateStaff: (token: string, id: string, body: { name: string; phone?: string; email?: string; isActive: boolean }) =>
     request<any>('/staff/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapStaff),
+  archiveStaff: (token: string, id: string) => request<void>('/staff/' + id, { method: 'DELETE' }, token),
 
   // Batches
   batches: (token: string) => request<any[]>('/batches', {}, token).then(rows => rows.map(mapBatch)),
@@ -107,6 +109,7 @@ export const api = {
     name: string; courseId: string; staffId: string; days: string[];
     startTime: string; endTime: string; startDate: string; endDate?: string | null; isActive: boolean;
   }) => request<any>('/batches/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapBatch),
+  archiveBatch: (token: string, id: string) => request<void>('/batches/' + id, { method: 'DELETE' }, token),
 
   // Students & enrollment
   students: (token: string) => request<any[]>('/students', {}, token).then(rows => rows.map(mapStudent)),
@@ -174,6 +177,12 @@ export const api = {
       title: item.title, type: item.type === 'income' ? 'Income' : 'Expense',
       amount: item.amount, category: item.category, occurredAt: null
     }) }, token).then(mapTransaction),
+  updateTransaction: (token: string, id: string, item: { title: string; type: 'income' | 'expense'; amount: number; category: string }) =>
+    request<any>('/finance/transactions/' + id, { method: 'PUT', body: JSON.stringify({
+      title: item.title, type: item.type === 'income' ? 'Income' : 'Expense',
+      amount: item.amount, category: item.category, occurredAt: null
+    }) }, token).then(mapTransaction),
+  deleteTransaction: (token: string, id: string) => request<void>('/finance/transactions/' + id, { method: 'DELETE' }, token),
 
   settings: (token: string) => request<any>('/settings', {}, token).then(mapSettings),
   updateSettings: (token: string, settings: OrgSettings) =>

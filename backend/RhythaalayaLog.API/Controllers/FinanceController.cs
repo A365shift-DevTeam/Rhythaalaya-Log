@@ -23,6 +23,19 @@ public sealed class FinanceController(IFinanceService service) : ControllerBase
         return Created($"/api/finance/transactions/{result.Id}", result);
     }
 
+    [HttpPut("transactions/{id:guid}")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<ActionResult<TransactionDto>> UpdateTransaction(Guid id, UpdateTransactionRequest request, CancellationToken ct) =>
+        Ok(await service.UpdateTransactionAsync(id, request, ct));
+
+    [HttpDelete("transactions/{id:guid}")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<IActionResult> DeleteTransaction(Guid id, CancellationToken ct)
+    {
+        await service.DeleteTransactionAsync(id, ct);
+        return NoContent();
+    }
+
     [HttpGet("fee-structures")]
     public async Task<ActionResult<IReadOnlyList<FeeStructureDto>>> GetFeeStructures(
         [FromQuery] Guid? courseId, CancellationToken ct) =>

@@ -7,14 +7,16 @@ interface AddStaffModalProps {
   onClose: () => void;
   editingStaff?: Staff | null;
   onSave: (name: string, phone: string, email: string, isActive: boolean) => Promise<void>;
+  onArchive?: (staffId: string) => Promise<void>;
 }
 
-export const AddStaffModal: React.FC<AddStaffModalProps> = ({ isOpen, onClose, editingStaff, onSave }) => {
+export const AddStaffModal: React.FC<AddStaffModalProps> = ({ isOpen, onClose, editingStaff, onSave, onArchive }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState('');
   const dialogRef = useDialogLifecycle(isOpen, onClose);
 
@@ -28,6 +30,21 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({ isOpen, onClose, e
   }, [isOpen, editingStaff]);
 
   if (!isOpen) return null;
+
+  const handleArchive = async () => {
+    if (!editingStaff || !onArchive) return;
+    if (!confirm(`Archive "${editingStaff.name}"? They'll be hidden from new batch assignments, but existing batches and history are kept.`)) return;
+    setArchiving(true);
+    setError('');
+    try {
+      await onArchive(editingStaff.id);
+      onClose();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Could not archive the staff member.');
+    } finally {
+      setArchiving(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -81,11 +98,20 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({ isOpen, onClose, e
             </label>
           )}
           {error && <div role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs">{error}</div>}
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-            <button type="button" onClick={onClose} disabled={submitting} className="min-h-11 px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800">Cancel</button>
-            <button type="submit" disabled={submitting || !name.trim()} className="btn-brand min-h-11 px-5 py-2 rounded-xl text-xs font-semibold disabled:opacity-50">
-              {submitting ? 'Saving…' : editingStaff ? 'Save changes' : 'Add staff member'}
-            </button>
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
+            {editingStaff && onArchive ? (
+              <button type="button" onClick={handleArchive} disabled={submitting || archiving}
+                className="min-h-11 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 disabled:opacity-50 flex items-center justify-center gap-1.5 sm:justify-start">
+                <span className="material-symbols-outlined text-[16px]">archive</span>
+                {archiving ? 'Archiving…' : 'Archive staff'}
+              </button>
+            ) : <span />}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <button type="button" onClick={onClose} disabled={submitting || archiving} className="min-h-11 px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800">Cancel</button>
+              <button type="submit" disabled={submitting || archiving || !name.trim()} className="btn-brand min-h-11 px-5 py-2 rounded-xl text-xs font-semibold disabled:opacity-50">
+                {submitting ? 'Saving…' : editingStaff ? 'Save changes' : 'Add staff member'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

@@ -25,4 +25,12 @@ public sealed class BatchesController(IAcademyService service) : ControllerBase
     [Authorize(Roles = "TenantAdmin")]
     public async Task<ActionResult<BatchDto>> Update(Guid id, UpdateBatchRequest request, CancellationToken ct) =>
         Ok(await service.UpdateBatchAsync(id, request, ct));
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<IActionResult> Archive(Guid id, CancellationToken ct)
+    {
+        await service.ArchiveBatchAsync(id, ct);
+        return NoContent();
+    }
 }

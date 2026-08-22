@@ -31,7 +31,7 @@ import { RecordFeeModal } from './components/modals/RecordFeeModal';
 import { WhatsAppModal } from './components/modals/WhatsAppModal';
 import { AddTransactionModal } from './components/modals/AddTransactionModal';
 import { AddBatchModal } from './components/modals/AddBatchModal';
-import { AddCourseModal } from './components/modals/AddCourseModal';
+import { AddCourseModal, NewCourseFee } from './components/modals/AddCourseModal';
 import { AddStaffModal } from './components/modals/AddStaffModal';
 import { StudentDetailsModal } from './components/modals/StudentDetailsModal';
 import { FeeReceiptModal } from './components/modals/FeeReceiptModal';
@@ -97,6 +97,9 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
 
   // Modals state
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const openAddStudent = () => { setEditingStudent(null); setIsAddStudentOpen(true); };
+  const openEditStudent = (targetStudent: Student) => { setEditingStudent(targetStudent); setIsAddStudentOpen(true); };
   const [isAddBatchOpen, setIsAddBatchOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
   const [isAddCourseOpen, setIsAddCourseOpen] = useState(false);
@@ -110,6 +113,9 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   const [whatsAppTargetStudent, setWhatsAppTargetStudent] = useState<Student | undefined>(undefined);
 
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const openAddTransaction = () => { setEditingTransaction(null); setIsAddTransactionOpen(true); };
+  const openEditTransaction = (transaction: Transaction) => { setEditingTransaction(transaction); setIsAddTransactionOpen(true); };
   const [isStudentDetailsOpen, setIsStudentDetailsOpen] = useState(false);
   const [detailsTargetStudent, setDetailsTargetStudent] = useState<Student | null>(null);
   const [lastReceipt, setLastReceipt] = useState<Receipt | null>(null);
@@ -124,17 +130,15 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
     await reload();
   };
 
-  const handleEnroll = async (studentId: string, batchId: string) => {
-    const updated = await api.enrollStudent(session.token, studentId, batchId);
+  const handleUpdateStudent = async (studentId: string, payload: {
+    name: string; dateOfBirth: string | null; parentName: string; phone: string; email: string; address: string;
+  }) => {
+    const existing = students.find((s) => s.id === studentId);
+    const updated = await api.updateStudent(session.token, studentId, { ...payload, isActive: existing?.isActive ?? true });
+    setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s));
     setDetailsTargetStudent((prev) => prev && prev.id === updated.id ? updated : prev);
-    await reload();
   };
 
-  const handleEndEnrollment = async (enrollmentId: string, status: 'Completed' | 'Withdrawn') => {
-    const updated = await api.endEnrollment(session.token, enrollmentId, status);
-    setDetailsTargetStudent((prev) => prev && prev.id === updated.id ? updated : prev);
-    await reload();
-  };
 
   const handleRecordFee = async (payload: { studentId: string; feeDueId: string | null; amount: number; method: PaymentMethod; remarks?: string }) => {
     const payment = await api.recordPayment(session.token, payload);
@@ -145,11 +149,19 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
     return payment;
   };
 
-  const handleAddTransaction = async (newTx: Transaction) => {
-    try {
-      const created = await api.createTransaction(session.token, newTx);
+  const handleSaveTransaction = async (fields: { title: string; type: 'income' | 'expense'; amount: number; category: string }) => {
+    if (editingTransaction) {
+      const updated = await api.updateTransaction(session.token, editingTransaction.id, fields);
+      setTransactions((prev) => prev.map((t) => t.id === updated.id ? updated : t));
+    } else {
+      const created = await api.createTransaction(session.token, fields);
       setTransactions((prev) => [created, ...prev]);
-    } catch (error) { showError(error); }
+    }
+  };
+
+  const handleDeleteTransaction = async (transactionId: string) => {
+    await api.deleteTransaction(session.token, transactionId);
+    setTransactions((prev) => prev.filter((t) => t.id !== transactionId));
   };
 
   const handleSaveBatch = async (payload: {
@@ -165,14 +177,29 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
     }
   };
 
-  const handleSaveCourse = async (name: string, description: string, isActive: boolean) => {
+  const handleArchiveBatch = async (batchId: string) => {
+    await api.archiveBatch(session.token, batchId);
+    setBatches((prev) => prev.map((b) => b.id === batchId ? { ...b, isActive: false } : b));
+  };
+
+  const handleSaveCourse = async (name: string, description: string, isActive: boolean, fee: NewCourseFee | null) => {
     if (editingCourse) {
       const updated = await api.updateCourse(session.token, editingCourse.id, { name, description, isActive });
       setCourses((prev) => prev.map((c) => c.id === updated.id ? updated : c));
     } else {
       const created = await api.createCourse(session.token, { name, description });
       setCourses((prev) => [...prev, created]);
+      if (fee) {
+        await handleAddFeeStructure({
+          courseId: created.id, name: fee.name, amount: fee.amount, frequency: fee.frequency, effectiveFrom: fee.dueDate
+        });
+      }
     }
+  };
+
+  const handleArchiveCourse = async (courseId: string) => {
+    await api.archiveCourse(session.token, courseId);
+    setCourses((prev) => prev.map((c) => c.id === courseId ? { ...c, isActive: false } : c));
   };
 
   const handleSaveStaff = async (name: string, phone: string, email: string, isActive: boolean) => {
@@ -185,12 +212,22 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
     }
   };
 
+  const handleArchiveStaff = async (staffId: string) => {
+    await api.archiveStaff(session.token, staffId);
+    setStaff((prev) => prev.map((s) => s.id === staffId ? { ...s, isActive: false } : s));
+  };
+
   const handleAddFeeStructure = async (payload: {
     courseId: string; name: string; amount: number; frequency: FeeStructure['frequency']; effectiveFrom: string; effectiveTo?: string | null;
   }) => {
     const created = await api.createFeeStructure(session.token, payload);
     setFeeStructures((prev) => [created, ...prev.filter((s) => s.courseId !== created.courseId || s.id !== created.id)]);
     await reload();
+  };
+
+  const handleUpdateFeeStructure = async (structureId: string, payload: { name: string; effectiveTo?: string | null; isActive: boolean }) => {
+    const updated = await api.updateFeeStructure(session.token, structureId, payload);
+    setFeeStructures((prev) => prev.map((s) => s.id === updated.id ? updated : s));
   };
 
   const handleDeleteStudent = async (studentId: string) => {
@@ -247,7 +284,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
       <Navigation
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
-        onOpenAddStudent={() => setIsAddStudentOpen(true)}
+        onOpenAddStudent={openAddStudent}
         settings={settings}
       />
 
@@ -286,7 +323,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
               transactions={transactions}
               outstandingDues={outstandingDues}
               setCurrentTab={setCurrentTab}
-              onOpenAddStudent={() => setIsAddStudentOpen(true)}
+              onOpenAddStudent={openAddStudent}
               onOpenAddBatch={() => { setEditingBatch(null); setIsAddBatchOpen(true); }}
               onOpenRecordFee={openRecordFee}
             />
@@ -296,7 +333,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         {currentTab === 'students' && (
           <StudentsTab
             students={students}
-            onOpenAddStudent={() => setIsAddStudentOpen(true)}
+            onOpenAddStudent={openAddStudent}
             onOpenRecordFee={openRecordFee}
             onViewStudent={openStudentDetails}
             onSendMessage={(student) => openWhatsApp(student)}
@@ -328,8 +365,10 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             canManage={isAdmin}
             onOpenRecordFee={openRecordFee}
             onOpenWhatsAppAll={() => openWhatsApp(undefined)}
-            onOpenAddTransaction={() => setIsAddTransactionOpen(true)}
+            onOpenAddTransaction={openAddTransaction}
+            onEditTransaction={openEditTransaction}
             onAddFeeStructure={handleAddFeeStructure}
+            onUpdateFeeStructure={handleUpdateFeeStructure}
           />
         )}
 
@@ -338,7 +377,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             students={students}
             batches={batches}
             token={session.token}
-            onOpenAddStudent={() => setIsAddStudentOpen(true)}
+            onOpenAddStudent={openAddStudent}
           />
         )}
 
@@ -356,8 +395,10 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
       {/* Modals */}
       <AddStudentModal
         isOpen={isAddStudentOpen}
-        onClose={() => setIsAddStudentOpen(false)}
+        onClose={() => { setIsAddStudentOpen(false); setEditingStudent(null); }}
+        editingStudent={editingStudent}
         onAddStudent={handleAddStudent}
+        onUpdateStudent={handleUpdateStudent}
         batches={batches}
       />
 
@@ -379,8 +420,10 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
 
       <AddTransactionModal
         isOpen={isAddTransactionOpen}
-        onClose={() => setIsAddTransactionOpen(false)}
-        onAddTransaction={handleAddTransaction}
+        onClose={() => { setIsAddTransactionOpen(false); setEditingTransaction(null); }}
+        editingTransaction={editingTransaction}
+        onSave={handleSaveTransaction}
+        onDelete={handleDeleteTransaction}
         incomeCategories={settings.incomeCategories}
         expenseCategories={settings.expenseCategories}
       />
@@ -392,6 +435,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         staff={staff}
         editingBatch={editingBatch}
         onSave={handleSaveBatch}
+        onArchive={handleArchiveBatch}
       />
 
       <AddCourseModal
@@ -399,6 +443,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         onClose={() => setIsAddCourseOpen(false)}
         editingCourse={editingCourse}
         onSave={handleSaveCourse}
+        onArchive={handleArchiveCourse}
       />
 
       <AddStaffModal
@@ -406,19 +451,18 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         onClose={() => setIsAddStaffOpen(false)}
         editingStaff={editingStaff}
         onSave={handleSaveStaff}
+        onArchive={handleArchiveStaff}
       />
 
       <StudentDetailsModal
         isOpen={isStudentDetailsOpen}
         onClose={() => setIsStudentDetailsOpen(false)}
         student={detailsTargetStudent}
-        batches={batches}
         token={session.token}
         onRecordFee={openRecordFee}
         onSendMessage={(student) => openWhatsApp(student)}
         onDeleteStudent={handleDeleteStudent}
-        onEnroll={handleEnroll}
-        onEndEnrollment={handleEndEnrollment}
+        onEdit={openEditStudent}
       />
       <FeeReceiptModal isOpen={isReceiptOpen} onClose={() => setIsReceiptOpen(false)} receipt={lastReceipt} />
     </div>

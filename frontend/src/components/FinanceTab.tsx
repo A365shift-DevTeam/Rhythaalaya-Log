@@ -11,9 +11,11 @@ interface FinanceTabProps {
   onOpenRecordFee: (student?: Student) => void;
   onOpenWhatsAppAll: () => void;
   onOpenAddTransaction: () => void;
+  onEditTransaction: (transaction: Transaction) => void;
   onAddFeeStructure: (payload: {
     courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string; effectiveTo?: string | null;
   }) => Promise<void>;
+  onUpdateFeeStructure: (structureId: string, payload: { name: string; effectiveTo?: string | null; isActive: boolean }) => Promise<void>;
 }
 
 const DUE_STATUS_STYLE: Record<string, string> = {
@@ -24,7 +26,7 @@ const DUE_STATUS_STYLE: Record<string, string> = {
 
 export const FinanceTab: React.FC<FinanceTabProps> = ({
   students, transactions, outstandingDues, courses, feeStructures, canManage,
-  onOpenRecordFee, onOpenWhatsAppAll, onOpenAddTransaction, onAddFeeStructure
+  onOpenRecordFee, onOpenWhatsAppAll, onOpenAddTransaction, onEditTransaction, onAddFeeStructure, onUpdateFeeStructure
 }) => {
   const pendingStudents = students.filter((s) => s.outstandingBalance > 0);
   const totalDuePending = outstandingDues.reduce((sum, due) => sum + due.balanceAmount, 0);
@@ -47,7 +49,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-        <div className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6 flex flex-col justify-between">
+        <div className="premium-card p-6 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <span className="font-sans text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Total Revenue
@@ -62,7 +64,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6 flex flex-col justify-between">
+        <div className="premium-card p-6 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <span className="font-sans text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-rose-500"></span> Operating Costs
@@ -77,7 +79,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           </div>
         </div>
 
-        <div className={`bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6 flex flex-col justify-between border-l-4 ${isNetLoss ? 'border-l-rose-500' : 'border-l-brand-500'}`}>
+        <div className={`premium-card p-6 flex flex-col justify-between border-l-4 ${isNetLoss ? 'border-l-rose-500' : 'border-l-brand-500'}`}>
           <div className="flex justify-between items-start">
             <span className={`font-sans text-xs font-bold uppercase tracking-wider ${isNetLoss ? 'text-rose-600 dark:text-rose-400' : 'text-brand-500 dark:text-brand-400'}`}>
               {isNetLoss ? 'Net Loss' : 'Net Profit'}
@@ -105,33 +107,42 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
 
       {/* Bottom Row: Recent Transactions & Pending Fee Reminders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6">
+        <div className="premium-card p-6">
           <div className="flex justify-between items-center mb-5">
             <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Financial Logs</h3>
             {canManage && <button onClick={onOpenAddTransaction} className="font-sans text-xs font-bold text-brand-500 dark:text-brand-400 hover:underline uppercase tracking-wider">+ Record Entry</button>}
           </div>
           <div className="space-y-3">
             {transactions.length === 0 && <p className="text-xs text-slate-500">No transactions recorded yet.</p>}
-            {transactions.slice(0, 5).map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-brand-50/70 dark:bg-brand-900/40 border border-brand-200/50 dark:border-brand-700/50 hover:border-brand-300 dark:hover:border-brand-600 transition-all">
-                <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.type === 'income' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400'}`}>
-                    <span className="material-symbols-outlined text-[18px]">{item.type === 'income' ? 'arrow_downward' : 'arrow_upward'}</span>
+            {transactions.slice(0, 5).map((item) => {
+              const editable = canManage && !item.feePaymentId;
+              return (
+                <div key={item.id} className={`flex items-center justify-between p-3 rounded-xl bg-brand-50/70 dark:bg-brand-900/40 border border-brand-200/50 dark:border-brand-700/50 hover:border-brand-300 dark:hover:border-brand-600 transition-all ${editable ? 'cursor-pointer' : ''}`}
+                  role={editable ? 'button' : undefined} tabIndex={editable ? 0 : undefined}
+                  onClick={editable ? () => onEditTransaction(item) : undefined}
+                  onKeyDown={editable ? (event) => { if (event.key === 'Enter') onEditTransaction(item); } : undefined}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.type === 'income' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400'}`}>
+                      <span className="material-symbols-outlined text-[18px]">{item.type === 'income' ? 'arrow_downward' : 'arrow_upward'}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-sans text-sm font-bold text-slate-900 dark:text-white truncate">{item.title}</div>
+                      <div className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-0.5">{item.date} • {item.category}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">{item.title}</div>
-                    <div className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-0.5">{item.date} • {item.category}</div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div className={`font-sans text-sm font-extrabold ${item.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                      {item.type === 'income' ? '+' : '-'}₹{item.amount.toLocaleString('en-IN')}
+                    </div>
+                    {editable && <span className="material-symbols-outlined text-[16px] text-slate-400">edit</span>}
                   </div>
                 </div>
-                <div className={`font-sans text-sm font-extrabold ${item.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                  {item.type === 'income' ? '+' : '-'}₹{item.amount.toLocaleString('en-IN')}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6 flex flex-col justify-between">
+        <div className="premium-card p-6 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-start mb-5 gap-3">
               <div>
@@ -162,7 +173,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                       <div className="min-w-0">
                         <div className="font-sans text-xs font-bold text-slate-900 dark:text-white truncate">{due.studentName}</div>
                         <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                          <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${DUE_STATUS_STYLE[due.status] ?? DUE_STATUS_STYLE.Pending}`}>{due.status}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${DUE_STATUS_STYLE[due.status] ?? DUE_STATUS_STYLE.Pending}`}>{due.status}</span>
                           <span className="font-sans text-[11px] text-slate-500 dark:text-slate-400">{due.courseName} · due {new Date(due.dueDate).toLocaleDateString('en-IN')}</span>
                         </div>
                       </div>
@@ -190,14 +201,15 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
       </div>
 
       {/* Fee structures (admin setup, tucked away since it's rarely touched) */}
-      <FeeStructuresPanel courses={courses} feeStructures={feeStructures} canManage={canManage} onAdd={onAddFeeStructure} />
+      <FeeStructuresPanel courses={courses} feeStructures={feeStructures} canManage={canManage} onAdd={onAddFeeStructure} onUpdate={onUpdateFeeStructure} />
     </div>
   );
 };
 
-function FeeStructuresPanel({ courses, feeStructures, canManage, onAdd }: {
+function FeeStructuresPanel({ courses, feeStructures, canManage, onAdd, onUpdate }: {
   courses: Course[]; feeStructures: FeeStructure[]; canManage: boolean;
   onAdd: (payload: { courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string; effectiveTo?: string | null }) => Promise<void>;
+  onUpdate: (structureId: string, payload: { name: string; effectiveTo?: string | null; isActive: boolean }) => Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState(false);
@@ -208,6 +220,36 @@ function FeeStructuresPanel({ courses, feeStructures, canManage, onAdd }: {
   const [effectiveFrom, setEffectiveFrom] = useState(new Date().toISOString().split('T')[0]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEffectiveTo, setEditEffectiveTo] = useState('');
+  const [editIsActive, setEditIsActive] = useState(true);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  const startEdit = (structure: FeeStructure) => {
+    setEditingId(structure.id);
+    setEditName(structure.name);
+    setEditEffectiveTo(structure.effectiveTo || '');
+    setEditIsActive(structure.isActive);
+    setEditError('');
+  };
+
+  const handleEditSubmit = async (event: React.FormEvent, structureId: string) => {
+    event.preventDefault();
+    if (!editName.trim()) return;
+    setEditSubmitting(true);
+    setEditError('');
+    try {
+      await onUpdate(structureId, { name: editName.trim(), effectiveTo: editEffectiveTo || null, isActive: editIsActive });
+      setEditingId(null);
+    } catch (requestError) {
+      setEditError(requestError instanceof Error ? requestError.message : 'Could not save changes.');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
 
   const handleOpen = () => {
     setCourseId(courses[0]?.id || '');
@@ -236,7 +278,7 @@ function FeeStructuresPanel({ courses, feeStructures, canManage, onAdd }: {
   };
 
   return (
-    <section className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6">
+    <section className="premium-card p-6">
       <button type="button" onClick={() => setExpanded((value) => !value)}
         aria-expanded={expanded} className="flex w-full items-center justify-between gap-3 text-left">
         <div>
@@ -287,15 +329,46 @@ function FeeStructuresPanel({ courses, feeStructures, canManage, onAdd }: {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {feeStructures.map((structure) => (
             <div key={structure.id} className={`rounded-xl border p-3.5 ${structure.isActive ? 'border-brand-200 dark:border-brand-800 bg-brand-50/50 dark:bg-brand-950/30' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 opacity-70'}`}>
-              <div className="flex justify-between items-start gap-2">
-                <div className="text-xs font-bold text-slate-900 dark:text-white">{structure.courseName}</div>
-                {!structure.isActive && <span className="text-[10px] font-bold text-slate-500">Superseded</span>}
-              </div>
-              <div className="text-[11px] text-slate-500 mt-0.5">{structure.name}</div>
-              <div className="mt-2 flex items-baseline gap-1.5">
-                <span className="text-lg font-extrabold text-brand-700 dark:text-brand-300 tabular-nums">₹{structure.amount.toLocaleString('en-IN')}</span>
-                <span className="text-[11px] text-slate-500">/ {FEE_FREQUENCY_LABELS[structure.frequency]}</span>
-              </div>
+              {editingId === structure.id ? (
+                <form onSubmit={(event) => handleEditSubmit(event, structure.id)} className="space-y-2">
+                  <input value={editName} onChange={(event) => setEditName(event.target.value)} required
+                    className="w-full min-h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white" />
+                  <label className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                    Ends on
+                    <input type="date" value={editEffectiveTo} onChange={(event) => setEditEffectiveTo(event.target.value)}
+                      className="min-h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white" />
+                  </label>
+                  <label className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                    <input type="checkbox" checked={editIsActive} onChange={(event) => setEditIsActive(event.target.checked)} className="h-3.5 w-3.5 accent-emerald-600" />
+                    Plan is active
+                  </label>
+                  {editError && <p className="text-[11px] text-rose-600">{editError}</p>}
+                  <div className="flex items-center gap-2 justify-end pt-1">
+                    <button type="button" onClick={() => setEditingId(null)} className="min-h-8 px-2.5 rounded-lg text-[11px] font-semibold text-slate-600 hover:bg-white dark:hover:bg-slate-700">Cancel</button>
+                    <button type="submit" disabled={editSubmitting} className="btn-brand min-h-8 px-3 rounded-lg text-[11px] font-bold disabled:opacity-50">{editSubmitting ? 'Saving…' : 'Save'}</button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white">{structure.courseName}</div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {!structure.isActive && <span className="text-[10px] font-bold text-slate-500">Superseded</span>}
+                      {canManage && (
+                        <button type="button" onClick={() => startEdit(structure)} aria-label={`Edit ${structure.name}`}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-brand-600 hover:bg-white dark:hover:bg-slate-700">
+                          <span className="material-symbols-outlined text-[15px]">edit</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">{structure.name}</div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-lg font-extrabold text-brand-700 dark:text-brand-300 tabular-nums">₹{structure.amount.toLocaleString('en-IN')}</span>
+                    <span className="text-[11px] text-slate-500">/ {FEE_FREQUENCY_LABELS[structure.frequency]}</span>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>

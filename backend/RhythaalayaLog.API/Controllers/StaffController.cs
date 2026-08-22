@@ -25,4 +25,12 @@ public sealed class StaffController(IAcademyService service) : ControllerBase
     [Authorize(Roles = "TenantAdmin")]
     public async Task<ActionResult<StaffDto>> Update(Guid id, UpdateStaffRequest request, CancellationToken ct) =>
         Ok(await service.UpdateStaffAsync(id, request, ct));
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<IActionResult> Archive(Guid id, CancellationToken ct)
+    {
+        await service.ArchiveStaffAsync(id, ct);
+        return NoContent();
+    }
 }

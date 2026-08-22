@@ -64,7 +64,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           </button>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs overflow-hidden">
+        <div className="premium-card overflow-hidden">
           {isEditingOrg ? (
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -159,7 +159,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
         <h3 className="font-heading text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs px-1">
           Theme & Display
         </h3>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
+        <div className="premium-card divide-y divide-slate-100 dark:divide-slate-800">
           <div className="p-4 sm:px-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div className="flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
@@ -249,7 +249,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
         <h3 className="font-heading text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs px-1">
           Data Management
         </h3>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
+        <div className="premium-card divide-y divide-slate-100 dark:divide-slate-800">
           <button type="button"
             onClick={onExportData}
             className="w-full p-4 sm:px-6 flex items-center justify-between text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"

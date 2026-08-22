@@ -34,6 +34,13 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         return new CourseDto(course.Id, course.Name, course.Description, course.IsActive, batchCount);
     }
 
+    public async Task ArchiveCourseAsync(Guid id, CancellationToken ct)
+    {
+        var course = await db.Courses.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Course));
+        course.IsActive = false;
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task<IReadOnlyList<StaffDto>> GetStaffAsync(CancellationToken ct) =>
         await db.Staff.AsNoTracking().OrderBy(x => x.Name)
             .Select(x => new StaffDto(x.Id, x.Name, x.Phone, x.Email, x.IsActive, x.Batches.Count(b => b.IsActive)))
@@ -59,6 +66,13 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         await db.SaveChangesAsync(ct);
         var batchCount = await db.Batches.CountAsync(x => x.StaffId == id && x.IsActive, ct);
         return new StaffDto(staff.Id, staff.Name, staff.Phone, staff.Email, staff.IsActive, batchCount);
+    }
+
+    public async Task ArchiveStaffAsync(Guid id, CancellationToken ct)
+    {
+        var staff = await db.Staff.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Staff));
+        staff.IsActive = false;
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task<IReadOnlyList<BatchDto>> GetBatchesAsync(CancellationToken ct)
@@ -98,6 +112,13 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         batch.IsActive = request.IsActive;
         await db.SaveChangesAsync(ct);
         return await GetBatchAsync(id, ct);
+    }
+
+    public async Task ArchiveBatchAsync(Guid id, CancellationToken ct)
+    {
+        var batch = await db.Batches.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Batch));
+        batch.IsActive = false;
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task<IReadOnlyList<StudentDto>> GetStudentsAsync(string? search, Guid? batchId,

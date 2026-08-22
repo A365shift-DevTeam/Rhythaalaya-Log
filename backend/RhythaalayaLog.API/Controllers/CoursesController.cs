@@ -25,4 +25,12 @@ public sealed class CoursesController(IAcademyService service) : ControllerBase
     [Authorize(Roles = "TenantAdmin")]
     public async Task<ActionResult<CourseDto>> Update(Guid id, UpdateCourseRequest request, CancellationToken ct) =>
         Ok(await service.UpdateCourseAsync(id, request, ct));
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<IActionResult> Archive(Guid id, CancellationToken ct)
+    {
+        await service.ArchiveCourseAsync(id, ct);
+        return NoContent();
+    }
 }

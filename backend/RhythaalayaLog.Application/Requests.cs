@@ -33,6 +33,8 @@ public sealed record RefundFeePaymentRequest(decimal? Amount, string? Remarks);
 
 public sealed record CreateTransactionRequest(string Title, TransactionType Type, decimal Amount,
     string Category, DateTimeOffset? OccurredAt);
+public sealed record UpdateTransactionRequest(string Title, TransactionType Type, decimal Amount,
+    string Category, DateTimeOffset? OccurredAt);
 
 public sealed record UpdateSettingsRequest(string Name, string Type, string? LogoUrl, string ThemeColor,
     bool DarkMode, string Currency, string Locale, string TimeZone,

@@ -12,9 +12,10 @@ interface AddBatchModalProps {
     name: string; courseId: string; staffId: string; days: string[];
     startTime: string; endTime: string; startDate: string; endDate: string | null; isActive: boolean;
   }) => Promise<void>;
+  onArchive?: (batchId: string) => Promise<void>;
 }
 
-export const AddBatchModal: React.FC<AddBatchModalProps> = ({ isOpen, onClose, courses, staff, editingBatch, onSave }) => {
+export const AddBatchModal: React.FC<AddBatchModalProps> = ({ isOpen, onClose, courses, staff, editingBatch, onSave, onArchive }) => {
   const [name, setName] = useState('');
   const [courseId, setCourseId] = useState('');
   const [staffId, setStaffId] = useState('');
@@ -25,6 +26,7 @@ export const AddBatchModal: React.FC<AddBatchModalProps> = ({ isOpen, onClose, c
   const [endDate, setEndDate] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState('');
   const dialogRef = useDialogLifecycle(isOpen, onClose);
 
@@ -49,6 +51,21 @@ export const AddBatchModal: React.FC<AddBatchModalProps> = ({ isOpen, onClose, c
   if (!isOpen) return null;
 
   const toggleDay = (day: string) => setDays((prev) => prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]);
+
+  const handleArchive = async () => {
+    if (!editingBatch || !onArchive) return;
+    if (!confirm(`Archive "${editingBatch.name}"? It will stop appearing for new enrollments and attendance, but existing history is kept.`)) return;
+    setArchiving(true);
+    setError('');
+    try {
+      await onArchive(editingBatch.id);
+      onClose();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Could not archive the batch.');
+    } finally {
+      setArchiving(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -164,11 +181,20 @@ export const AddBatchModal: React.FC<AddBatchModalProps> = ({ isOpen, onClose, c
 
             {error && <div role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs">{error}</div>}
 
-            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={onClose} disabled={submitting} className="min-h-11 px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800">Cancel</button>
-              <button type="submit" disabled={submitting} className="btn-brand min-h-11 px-5 py-2 rounded-xl text-xs font-semibold disabled:opacity-50">
-                {submitting ? 'Saving…' : editingBatch ? 'Save changes' : 'Create batch'}
-              </button>
+            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
+              {editingBatch && onArchive ? (
+                <button type="button" onClick={handleArchive} disabled={submitting || archiving}
+                  className="min-h-11 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 disabled:opacity-50 flex items-center justify-center gap-1.5 sm:justify-start">
+                  <span className="material-symbols-outlined text-[16px]">archive</span>
+                  {archiving ? 'Archiving…' : 'Archive batch'}
+                </button>
+              ) : <span />}
+              <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                <button type="button" onClick={onClose} disabled={submitting || archiving} className="min-h-11 px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800">Cancel</button>
+                <button type="submit" disabled={submitting || archiving} className="btn-brand min-h-11 px-5 py-2 rounded-xl text-xs font-semibold disabled:opacity-50">
+                  {submitting ? 'Saving…' : editingBatch ? 'Save changes' : 'Create batch'}
+                </button>
+              </div>
             </div>
           </form>
         )}

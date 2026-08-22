@@ -220,7 +220,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
                           <div className="min-w-0">
                             <div className="truncate text-xs font-bold text-slate-900 dark:text-white">{due.courseName}</div>
                             <div className="mt-1 flex items-center gap-1.5">
-                              <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${STATUS_STYLE[due.status] ?? STATUS_STYLE.Pending}`}>{due.status}</span>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLE[due.status] ?? STATUS_STYLE.Pending}`}>{due.status}</span>
                               <span className="text-[11px] text-slate-500 dark:text-slate-400">due {new Date(due.dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
                             </div>
                           </div>

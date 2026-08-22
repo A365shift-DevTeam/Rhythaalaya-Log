@@ -44,7 +44,15 @@ public sealed class FeeDueGenerator(AppDbContext db)
             .OrderByDescending(x => x.DueDate).FirstOrDefaultAsync(ct);
         if (latest is not null && structure.Frequency == FeeFrequency.OneTime) return;
 
-        var nextDueDate = latest is null ? enrollment.EnrolledOn : AddPeriod(latest.DueDate, structure.Frequency);
+        // Recurring fees share one calendar due date across every student (anchored on the structure's
+        // EffectiveFrom, e.g. "the 5th of every month"); a student who joins later just starts at the
+        // first occurrence on/after they enrolled. OneTime fees (e.g. a registration fee) still anchor
+        // on the individual enrollment date, since there is no recurring cycle to align to.
+        var nextDueDate = latest is not null
+            ? AddPeriod(latest.DueDate, structure.Frequency)
+            : structure.Frequency == FeeFrequency.OneTime
+                ? enrollment.EnrolledOn
+                : FirstDueOnOrAfter(structure.EffectiveFrom, enrollment.EnrolledOn, structure.Frequency);
         while (nextDueDate <= today && (structure.EffectiveTo is null || nextDueDate <= structure.EffectiveTo))
         {
             var exists = await db.FeeDues.AnyAsync(x => x.EnrollmentId == enrollmentId
@@ -131,6 +139,14 @@ public sealed class FeeDueGenerator(AppDbContext db)
         var dues = await query.ToListAsync(ct);
         foreach (var due in dues) due.Status = FeeDueStatus.Overdue;
         if (dues.Count > 0) await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Walks forward from <paramref name="anchor"/> in steps of <paramref name="frequency"/> to the first date on or after <paramref name="minDate"/>.</summary>
+    private static DateOnly FirstDueOnOrAfter(DateOnly anchor, DateOnly minDate, FeeFrequency frequency)
+    {
+        var date = anchor;
+        while (date < minDate) date = AddPeriod(date, frequency);
+        return date;
     }
 
     private static DateOnly Today() => DateOnly.FromDateTime(DateTime.UtcNow.Date);

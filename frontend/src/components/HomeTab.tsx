@@ -134,7 +134,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   return (
     <div className="space-y-6 md:space-y-8 pb-12">
       {/* Top Banner Greeting */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs">
+      <div className="premium-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 md:p-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="font-sans text-xs font-semibold uppercase tracking-wider text-brand-500 dark:text-brand-400">
@@ -164,7 +164,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
         <button type="button" onClick={() => setCurrentTab('students')}
-          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between text-left transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs">
+          className="premium-card-interactive p-4 sm:p-5 flex flex-col justify-between text-left">
           <div className="flex items-center justify-between">
             <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Active Students</span>
             <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center">
@@ -180,7 +180,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         </button>
 
         <button type="button" onClick={() => setCurrentTab('batches')}
-          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between text-left transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs">
+          className="premium-card-interactive p-4 sm:p-5 flex flex-col justify-between text-left">
           <div className="flex items-center justify-between">
             <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Batches</span>
             <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center">
@@ -194,7 +194,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         </button>
 
         <button type="button" onClick={() => setCurrentTab('finance')}
-          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between text-left transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs">
+          className="premium-card-interactive p-4 sm:p-5 flex flex-col justify-between text-left">
           <div className="flex items-center justify-between">
             <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Fees Collected</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -208,7 +208,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         </button>
 
         <button type="button" onClick={() => setCurrentTab('log')}
-          className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between text-left transition-all hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600 shadow-xs">
+          className="premium-card-interactive p-4 sm:p-5 flex flex-col justify-between text-left">
           <div className="flex items-center justify-between">
             <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Attendance Avg</span>
             <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center">
@@ -280,7 +280,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           </div>
         </article>
 
-        <article className="xl:col-span-2 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/[0.04] overflow-hidden">
+        <article className="premium-card xl:col-span-2 rounded-3xl overflow-hidden">
           <div className="p-5 md:p-7 pb-2 flex items-start justify-between gap-4">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Enrollment portfolio</span>
@@ -347,7 +347,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 
       {/* Main Row: Batches Schedule & Overdue Alert */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-brand-200/60 dark:border-brand-800 shadow-xs flex flex-col justify-between">
+        <div className="premium-card lg:col-span-2 p-6 flex flex-col justify-between">
           <div className="flex justify-between items-center mb-5">
             <div>
               <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Active Batches</h3>
@@ -412,7 +412,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       </div>
 
       {/* Recent Activity Feed */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-brand-200/60 dark:border-brand-800 shadow-xs">
+      <div className="premium-card p-6">
         <div className="flex justify-between items-center mb-5">
           <div>
             <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Recent Academy Activity</h3>

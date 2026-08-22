@@ -83,7 +83,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs">
+      <div className="premium-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-5">
         <div>
           <h2 className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Attendance Log</h2>
           <p className="font-sans text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Record daily student roll call and track attendance trends</p>
@@ -113,7 +113,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
       </div>
 
       {batches.length === 0 ? (
-        <div className="text-center py-14 bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs">
+        <div className="premium-card text-center py-14">
           <span className="material-symbols-outlined text-4xl text-slate-400">calendar_add_on</span>
           <p className="font-heading text-lg font-bold text-slate-900 dark:text-white mt-2">No batches yet</p>
           <p className="font-sans text-xs text-slate-500 mt-1">Create a batch first, then enroll students to take attendance.</p>
@@ -126,7 +126,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
             <span className="font-sans text-xs text-slate-500 font-medium">Click P (Present), A (Absent), L (Leave)</span>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs overflow-hidden">
+          <div className="premium-card overflow-hidden">
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading && <div className="p-6 text-xs text-slate-500">Loading roster…</div>}
               {!loading && roster.length === 0 && <div className="p-6 text-xs text-slate-500">No active students enrolled in this batch yet.</div>}

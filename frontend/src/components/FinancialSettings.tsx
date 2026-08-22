@@ -24,7 +24,7 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
       <section className="space-y-3" aria-labelledby="receipt-settings-title">
         <SectionHeading id="receipt-settings-title" icon="receipt_long" title="Fee Receipt Setup"
           description="Configure the information displayed on every payment receipt." />
-        <form onSubmit={saveReceipt} className="rounded-2xl border border-brand-200/60 bg-white p-4 shadow-xs dark:border-brand-800 dark:bg-slate-900 sm:p-6">
+        <form onSubmit={saveReceipt} className="premium-card p-4 sm:p-6">
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Receipt prefix" id="receipt-prefix" hint="Example: RCT-2026">
@@ -87,7 +87,7 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
       <section className="space-y-3" aria-labelledby="notification-settings-title">
         <SectionHeading id="notification-settings-title" icon="notifications" title="Notification Preferences"
           description="Choose which operational updates appear in the notification center." />
-        <div className="divide-y divide-slate-100 rounded-2xl border border-brand-200/60 bg-white shadow-xs dark:divide-slate-800 dark:border-brand-800 dark:bg-slate-900">
+        <div className="premium-card divide-y divide-slate-100 dark:divide-slate-800">
           <PreferenceRow icon="notifications_active" title="Enable notifications" description="Show academy alerts in the application."
             checked={settings.notifications.enabled}
             onChange={(enabled) => setSettings((previous) => ({ ...previous, notifications: { ...previous.notifications, enabled } }))} />
@@ -154,7 +154,7 @@ function CategoryEditor({ title, tone, categories, onChange }: { title: string; 
     onChange([...categories, next]); setValue('');
   };
   const toneClasses = tone === 'income' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300';
-  return <div className="rounded-2xl border border-brand-200/60 bg-white p-4 shadow-xs dark:border-brand-800 dark:bg-slate-900 sm:p-5">
+  return <div className="premium-card p-4 sm:p-5">
     <div className="flex items-center justify-between"><h4 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h4><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${toneClasses}`}>{categories.length}/20</span></div>
     <div className="mt-4 flex flex-wrap gap-2">{categories.map((category) => <span key={category} className="inline-flex min-h-9 items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">{category}
       <button type="button" disabled={categories.length === 1} onClick={() => onChange(categories.filter((item) => item !== category))} aria-label={`Remove ${category}`} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-white disabled:opacity-30 dark:hover:bg-slate-700"><span className="material-symbols-outlined text-[17px]">close</span></button></span>)}</div>

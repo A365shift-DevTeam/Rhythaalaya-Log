@@ -249,6 +249,32 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
         return MapTransaction(item);
     }
 
+    public async Task<TransactionDto> UpdateTransactionAsync(Guid id, UpdateTransactionRequest request, CancellationToken ct)
+    {
+        RequireText(request.Title, nameof(request.Title));
+        RequireText(request.Category, nameof(request.Category));
+        if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
+        var item = await db.Transactions.FindAsync([id], ct) ?? throw new NotFoundException(nameof(FinancialTransaction));
+        if (item.FeePaymentId is not null)
+            throw new ConflictException("This entry was generated from a fee payment — refund the payment instead of editing it directly.");
+        item.Title = request.Title.Trim();
+        item.Type = request.Type;
+        item.Amount = request.Amount;
+        item.Category = request.Category.Trim();
+        item.OccurredAt = (request.OccurredAt ?? item.OccurredAt).ToUniversalTime();
+        await db.SaveChangesAsync(ct);
+        return MapTransaction(item);
+    }
+
+    public async Task DeleteTransactionAsync(Guid id, CancellationToken ct)
+    {
+        var item = await db.Transactions.FindAsync([id], ct) ?? throw new NotFoundException(nameof(FinancialTransaction));
+        if (item.FeePaymentId is not null)
+            throw new ConflictException("This entry was generated from a fee payment — refund the payment instead of deleting it directly.");
+        db.Transactions.Remove(item);
+        await db.SaveChangesAsync(ct);
+    }
+
     private IQueryable<FeeDue> DueQuery() => db.FeeDues.AsNoTracking().Include(x => x.Student)
         .Include(x => x.Enrollment).ThenInclude(x => x.Batch).ThenInclude(x => x.Course);
 
