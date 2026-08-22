@@ -11,40 +11,94 @@ export function LoginPage({ onLogin }: { onLogin: (session: Session) => void }) 
     event.preventDefault();
     setLoading(true);
     setError('');
-    try { onLogin(await api.login(email, password)); }
-    catch (err) { setError(err instanceof ApiError ? err.message : 'Unable to sign in.'); }
-    finally { setLoading(false); }
+    try {
+      onLogin(await api.login(email, password));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'That email and password do not match.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-mint-50 flex items-center justify-center p-4 sm:p-6">
-      <div className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-brand-200/50 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-24 h-96 w-96 rounded-full bg-emerald-200/40 blur-3xl" />
-      <div className="relative w-full max-w-md rounded-3xl bg-white/95 border border-brand-200/70 shadow-2xl shadow-brand-950/10 p-6 sm:p-8 backdrop-blur-sm">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 text-white flex items-center justify-center mb-6 shadow-lg shadow-brand-500/25">
-          <span className="material-symbols-outlined text-3xl">school</span>
+    <main className="grid min-h-dvh grid-cols-1 bg-bg lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      {/*
+        The ink panel is the same spine the signed-in app uses, so the
+        product looks like itself from the first screen.
+      */}
+      <section className="relative flex flex-col justify-center bg-rail px-6 py-10 sm:px-10 lg:px-14 lg:py-16">
+        <div>
+          <p className="sam-mark text-[13px] tracking-[0.35em]" aria-hidden="true">|·○·○·○</p>
+          <h1 className="display-lg mt-4 text-[clamp(2rem,1.35rem+2.6vw,2.875rem)] text-rail-text">
+            Rhythaalaya Log
+          </h1>
+          <p className="mt-3.5 max-w-[26rem] text-[14px] leading-[1.6] text-rail-text-2">
+            The register for a performing-arts academy — students, batches, attendance
+            and fees, kept in one place.
+          </p>
         </div>
-        <h1 className="font-heading text-3xl font-extrabold text-slate-900">Rhythaalaya Log</h1>
-        <p className="text-sm leading-6 text-slate-500 mt-2 mb-7">Sign in securely to manage students, fees, batches, and attendance.</p>
-        <form onSubmit={submit} className="space-y-4">
-          <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Email address</span>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-              className="mt-1.5 min-h-12 w-full rounded-xl border border-brand-200 bg-slate-50 px-4 py-3 text-base outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-              placeholder="admin@academy.com" autoComplete="email" />
-          </label>
-          <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Password</span>
-            <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-              className="mt-1.5 min-h-12 w-full rounded-xl border border-brand-200 bg-slate-50 px-4 py-3 text-base outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-              placeholder="At least 8 characters" autoComplete="current-password" />
-          </label>
-          {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-sm px-4 py-3">{error}</div>}
-          <button type="submit" disabled={loading} className="btn-brand min-h-12 w-full rounded-xl py-3 font-bold disabled:cursor-wait disabled:opacity-60">
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
-      </div>
+
+        <p className="mt-10 text-[11px] text-rail-text-2 lg:absolute lg:bottom-12 lg:left-14 lg:mt-0">
+          Each academy sees only its own records.
+        </p>
+      </section>
+
+      <section className="flex items-center justify-center px-4 py-10 sm:px-8">
+        <div className="w-full max-w-sm">
+          <h2 className="display">Sign in</h2>
+          <p className="label mt-1.5">Use the account your academy set up for you.</p>
+
+          <form onSubmit={submit} className="mt-6 space-y-4" noValidate>
+            <div>
+              <label htmlFor="login-email" className="label mb-1.5 block font-semibold text-ink">
+                Email
+              </label>
+              <input
+                id="login-email"
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="field"
+                placeholder="you@academy.com"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="login-password" className="label mb-1.5 block font-semibold text-ink">
+                Password
+              </label>
+              <input
+                id="login-password"
+                type="password"
+                required
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="field"
+                placeholder="Your password"
+                autoComplete="current-password"
+              />
+            </div>
+
+            {error && (
+              <p
+                role="alert"
+                className="flex items-start gap-2 rounded-ctl border border-kumkum-line bg-kumkum-tint px-3 py-2.5 text-[13px] text-kumkum"
+              >
+                <span className="material-symbols-outlined mt-px shrink-0 text-[18px]" aria-hidden="true">error</span>
+                {error}
+              </p>
+            )}
+
+            <button type="submit" disabled={loading} className="btn btn-primary w-full">
+              {loading ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
+        </div>
+      </section>
     </main>
   );
 }

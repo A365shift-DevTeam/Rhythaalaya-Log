@@ -19,7 +19,7 @@ import { ApiError, api, authStore, Session } from './api';
 import { LoginPage } from './components/LoginPage';
 import { SuperAdminPage } from './components/SuperAdminPage';
 
-import { Navigation } from './components/Navigation';
+import { Navigation, PrimaryAction } from './components/Navigation';
 import { StudentsTab } from './components/StudentsTab';
 import { FinanceTab } from './components/FinanceTab';
 import { LogTab } from './components/LogTab';
@@ -94,6 +94,12 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', settings.darkMode);
   }, [settings.darkMode]);
+
+  // The accent picker in Settings swaps the leaf token family. Without this
+  // the stored themeColor was written but never read.
+  useEffect(() => {
+    document.documentElement.dataset.accent = settings.themeColor || 'emerald';
+  }, [settings.themeColor]);
 
   // Modals state
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
@@ -228,56 +234,78 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   const openWhatsApp = (student?: Student) => { setWhatsAppTargetStudent(student); setIsWhatsAppOpen(true); };
   const openStudentDetails = (student: Student) => { setDetailsTargetStudent(student); setIsStudentDetailsOpen(true); };
 
+  // The action that follows the screen, so the button is never the wrong
+  // one for the tab you are looking at.
+  const primaryAction: PrimaryAction | null = (() => {
+    switch (currentTab) {
+      case 'home':
+      case 'students':
+        return { label: 'Add student', icon: 'person_add', onClick: () => setIsAddStudentOpen(true) };
+      case 'batches':
+        return isAdmin
+          ? { label: 'Add batch', icon: 'add', onClick: () => { setEditingBatch(null); setIsAddBatchOpen(true); } }
+          : null;
+      case 'finance':
+        return { label: 'Record fee', icon: 'payments', onClick: () => openRecordFee(undefined) };
+      default:
+        return null;
+    }
+  })();
+
   if (loading) return (
-    <div className="min-h-screen bg-mint-50 dark:bg-brand-950 p-4 md:p-8" role="status" aria-live="polite">
-      <span className="sr-only">Loading academy</span>
+    <div className="min-h-dvh bg-bg p-4 md:p-8" role="status" aria-live="polite">
+      <span className="sr-only">Loading your academy</span>
       <div className="mx-auto max-w-6xl animate-pulse space-y-5 pt-16 md:pt-24">
-        <div className="h-8 w-56 rounded-xl bg-brand-100 dark:bg-brand-900" />
+        <div className="h-8 w-56 rounded-ctl bg-surface-3" />
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((item) => <div key={item} className="h-32 rounded-2xl bg-white dark:bg-slate-900" />)}
+          {[1, 2, 3, 4].map((item) => <div key={item} className="h-28 rounded-card bg-surface" />)}
         </div>
-        <div className="h-80 rounded-3xl bg-white dark:bg-slate-900" />
+        <div className="h-80 rounded-card bg-surface" />
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-mint-50 dark:bg-brand-950 text-slate-900 dark:text-brand-50 font-sans antialiased selection:bg-brand-500 selection:text-white">
+    <div className="min-h-dvh bg-bg text-ink antialiased">
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <Navigation
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
-        onOpenAddStudent={() => setIsAddStudentOpen(true)}
         settings={settings}
+        userName={session.user.fullName}
+        userRole={isAdmin ? 'Admin' : 'Staff'}
+        onLogout={onLogout}
+        primaryAction={primaryAction}
+        renderNotifications={(tone) => (
+          <NotificationCenter
+            tone={tone}
+            tenantKey={session.user.tenantId || session.user.email}
+            preferences={settings.notifications}
+            students={students}
+            transactions={transactions}
+            onNavigate={setCurrentTab}
+          />
+        )}
       />
 
-      <main id="main-content" tabIndex={-1} className="md:ml-[270px] min-h-screen px-4 sm:px-6 lg:px-8 py-5 md:py-8 pb-28 md:pb-12">
-        <div className="mx-auto w-full max-w-[1440px]">
-        <header className="mb-5 flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-brand-200/60 bg-white/80 px-3 py-2.5 shadow-xs backdrop-blur-sm dark:border-brand-800 dark:bg-slate-900/80 sm:px-4">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-slate-800 dark:text-white">{session.user.tenantName}</p>
-            <p className="truncate text-xs text-slate-500 dark:text-slate-400">Signed in as {session.user.fullName}</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <NotificationCenter tenantKey={session.user.tenantId || session.user.email} preferences={settings.notifications}
-              students={students} transactions={transactions} onNavigate={setCurrentTab} />
-            <button type="button" onClick={onLogout} className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3.5 text-xs font-bold bg-white text-slate-700 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-rose-950/40">
-              Sign out
-            </button>
-          </div>
-        </header>
-        {loadError && <div role="alert" className="mb-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
-          <span className="material-symbols-outlined mt-0.5 text-[20px]" aria-hidden="true">error</span>
-          <span className="min-w-0 flex-1 py-1">{loadError}</span>
-          <button type="button" onClick={() => void reload()} className="min-h-9 rounded-lg px-2.5 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50">Retry</button>
-          <button type="button" onClick={() => setLoadError('')} aria-label="Dismiss error" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900/50">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="min-h-dvh px-4 pb-24 pt-4 sm:px-6 md:ml-[240px] md:pb-10 md:pt-7 lg:px-8"
+      >
+        <div className="mx-auto w-full max-w-[1400px]">
+        {loadError && <div role="alert" className="mb-5 flex items-start gap-2.5 rounded-card border border-kumkum-line bg-kumkum-tint px-3.5 py-3 text-[13px] text-kumkum">
+          <span className="material-symbols-outlined mt-px shrink-0 text-[20px]" aria-hidden="true">error</span>
+          <span className="min-w-0 flex-1 py-0.5">{loadError}</span>
+          <button type="button" onClick={() => void reload()} className="btn btn-sm shrink-0 border-kumkum-line text-kumkum hover:bg-kumkum/10">Try again</button>
+          <button type="button" onClick={() => setLoadError('')} aria-label="Dismiss" className="icon-btn h-9 w-9 shrink-0 text-kumkum hover:bg-kumkum/10">
             <span className="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
           </button>
         </div>}
         {currentTab === 'home' && (
           <React.Suspense fallback={
-            <div className="min-h-[420px] rounded-3xl border border-brand-200/60 dark:border-brand-800 bg-white dark:bg-slate-900 flex items-center justify-center text-sm font-semibold text-brand-700 dark:text-brand-300">
-              Loading dashboard…
+            <div className="empty min-h-[420px]">
+              <span className="label">Loading today…</span>
             </div>
           }>
             <HomeTab
@@ -335,7 +363,6 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
 
         {currentTab === 'log' && (
           <LogTab
-            students={students}
             batches={batches}
             token={session.token}
             onOpenAddStudent={() => setIsAddStudentOpen(true)}
@@ -374,6 +401,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         isOpen={isWhatsAppOpen}
         onClose={() => setIsWhatsAppOpen(false)}
         student={whatsAppTargetStudent}
+        academyName={settings.name}
         allOverdueStudents={students.filter((s) => s.outstandingBalance > 0)}
       />
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FeeDue, FeePayment, PAYMENT_METHOD_LABELS, PaymentMethod, Student } from '../../types';
 import { api } from '../../api';
-import { useDialogLifecycle } from './useDialogLifecycle';
+import { Dialog, DialogError } from './Dialog';
 
 interface RecordFeeModalProps {
   isOpen: boolean;
@@ -10,24 +10,37 @@ interface RecordFeeModalProps {
   initialStudent?: Student;
   token: string;
   onRecordFee: (payload: {
-    studentId: string; feeDueId: string | null; amount: number; method: PaymentMethod; remarks?: string;
+    studentId: string;
+    feeDueId: string | null;
+    amount: number;
+    method: PaymentMethod;
+    remarks?: string;
   }) => Promise<FeePayment>;
 }
 
 const METHODS: PaymentMethod[] = ['Cash', 'Upi', 'Card', 'BankTransfer', 'Cheque', 'Other'];
 
-export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose, students, initialStudent, token, onRecordFee }) => {
+const rupees = (value: number) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+
+export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({
+  isOpen,
+  onClose,
+  students,
+  initialStudent,
+  token,
+  onRecordFee
+}) => {
   const eligibleStudents = students.filter((student) => student.isActive);
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [dues, setDues] = useState<FeeDue[]>([]);
   const [loadingDues, setLoadingDues] = useState(false);
-  const [feeDueId, setFeeDueId] = useState<string>('advance');
+  const [feeDueId, setFeeDueId] = useState('advance');
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('Cash');
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const dialogRef = useDialogLifecycle(isOpen, onClose);
+  const formId = 'record-fee-form';
 
   useEffect(() => {
     if (!isOpen) return;
@@ -47,131 +60,191 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
       .then((rows) => {
         const outstanding = rows.filter((due) => due.status !== 'Paid' && due.status !== 'Cancelled');
         setDues(outstanding);
-        const firstDue = outstanding[0];
-        setFeeDueId(firstDue ? firstDue.id : 'advance');
-        setAmount(firstDue ? String(firstDue.balanceAmount) : '');
+        const first = outstanding[0];
+        setFeeDueId(first ? first.id : 'advance');
+        setAmount(first ? String(first.balanceAmount) : '');
       })
-      .catch((requestError) => setError(requestError instanceof Error ? requestError.message : 'Unable to load fee dues.'))
+      .catch((requestError) => setError(
+        requestError instanceof Error ? requestError.message : 'The dues could not be loaded.'
+      ))
       .finally(() => setLoadingDues(false));
   }, [isOpen, selectedStudentId, token]);
-
-  if (!isOpen) return null;
 
   const selectedStudent = eligibleStudents.find((student) => student.id === selectedStudentId);
   const selectedDue = dues.find((due) => due.id === feeDueId);
 
-  const handleDueChange = (id: string) => {
+  const chooseDue = (id: string) => {
     setFeeDueId(id);
     const due = dues.find((item) => item.id === id);
     setAmount(due ? String(due.balanceAmount) : '');
+    setError('');
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const paymentAmount = Number(amount);
-    if (!selectedStudent) { setError('Select a student.'); return; }
-    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) { setError('Enter a valid payment amount.'); return; }
-    if (selectedDue && paymentAmount > selectedDue.balanceAmount) { setError('Payment cannot exceed this due\'s remaining balance.'); return; }
+    if (!selectedStudent) { setError('Pick a student first.'); return; }
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      setError('Enter how much was paid.');
+      return;
+    }
+    if (selectedDue && paymentAmount > selectedDue.balanceAmount) {
+      setError(`That is more than the ${rupees(selectedDue.balanceAmount)} left on this due.`);
+      return;
+    }
 
     setSubmitting(true);
     setError('');
     try {
       await onRecordFee({
-        studentId: selectedStudent.id, feeDueId: feeDueId === 'advance' ? null : feeDueId,
-        amount: paymentAmount, method, remarks: remarks.trim() || undefined
+        studentId: selectedStudent.id,
+        feeDueId: feeDueId === 'advance' ? null : feeDueId,
+        amount: paymentAmount,
+        method,
+        remarks: remarks.trim() || undefined
       });
       onClose();
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Payment could not be recorded.');
+      setError(requestError instanceof Error ? requestError.message : 'The payment could not be recorded.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="record-fee-title" className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-brand-200/50 bg-white p-4 shadow-2xl dark:bg-slate-900 sm:rounded-2xl sm:p-6 space-y-4">
-        <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-          <h3 id="record-fee-title" className="font-heading text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span className="material-symbols-outlined text-brand-500">payments</span>
-            <span>Record fee payment</span>
-          </h3>
-          <button type="button" onClick={onClose} disabled={submitting} aria-label="Close fee payment" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50">
-            <span className="material-symbols-outlined">close</span>
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Record fee"
+      description="Log a payment you have received."
+      footer={
+        <>
+          <button type="button" onClick={onClose} disabled={submitting} className="btn btn-ghost">
+            Cancel
           </button>
+          <button
+            type="submit"
+            form={formId}
+            disabled={submitting || eligibleStudents.length === 0}
+            className="btn btn-primary"
+          >
+            {submitting ? 'Recording…' : 'Record payment'}
+          </button>
+        </>
+      }
+    >
+      <form id={formId} onSubmit={handleSubmit} className="space-y-3.5">
+        <div>
+          <label htmlFor="fee-student" className="label mb-1.5 block font-semibold text-ink">Student</label>
+          <select
+            id="fee-student"
+            value={selectedStudentId}
+            disabled={eligibleStudents.length === 0 || submitting}
+            onChange={(event) => setSelectedStudentId(event.target.value)}
+            className="field"
+          >
+            {eligibleStudents.length === 0 && <option value="">No students on the roll</option>}
+            {eligibleStudents.map((student) => (
+              <option key={student.id} value={student.id}>
+                {student.name} · {student.studentNumber}
+                {student.outstandingBalance > 0 ? ` · ${rupees(student.outstandingBalance)} due` : ''}
+              </option>
+            ))}
+          </select>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 font-sans text-sm">
+        {selectedStudentId && (
           <div>
-            <label htmlFor="fee-student" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Select student</label>
-            <select id="fee-student" value={selectedStudentId} disabled={eligibleStudents.length === 0 || submitting}
-              onChange={(event) => setSelectedStudentId(event.target.value)}
-              className="w-full min-h-11 p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white disabled:opacity-60">
-              {eligibleStudents.length === 0 && <option value="">No active students</option>}
-              {eligibleStudents.map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.name} ({student.studentNumber}) — ₹{student.outstandingBalance.toLocaleString('en-IN')} due
+            <label htmlFor="fee-due" className="label mb-1.5 block font-semibold text-ink">Put it towards</label>
+            <select
+              id="fee-due"
+              value={feeDueId}
+              disabled={loadingDues || submitting}
+              onChange={(event) => chooseDue(event.target.value)}
+              className="field"
+            >
+              {dues.map((due) => (
+                <option key={due.id} value={due.id}>
+                  {due.courseName} · due {new Date(due.dueDate).toLocaleDateString('en-IN', {
+                    day: 'numeric', month: 'short', year: 'numeric'
+                  })} · {rupees(due.balanceAmount)}
                 </option>
+              ))}
+              <option value="advance">Pay in advance</option>
+            </select>
+            {loadingDues && <p className="label-xs mt-1.5">Checking what is owed…</p>}
+            {!loadingDues && dues.length === 0 && (
+              <p className="label-xs mt-1.5">
+                Nothing is owed right now, so this is held as credit and used against the next due.
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <div>
+            <label htmlFor="fee-amount" className="label mb-1.5 block font-semibold text-ink">
+              Amount paid (₹)
+            </label>
+            <input
+              id="fee-amount"
+              type="number"
+              required
+              min="0.01"
+              step="0.01"
+              inputMode="decimal"
+              value={amount}
+              disabled={submitting}
+              onChange={(event) => setAmount(event.target.value)}
+              className="field num"
+            />
+            {selectedDue && (
+              <p className="label-xs mt-1.5 flex flex-wrap items-center gap-x-1.5">
+                <span className="num">{rupees(selectedDue.balanceAmount)}</span> outstanding
+                {Number(amount) !== selectedDue.balanceAmount && (
+                  <button
+                    type="button"
+                    onClick={() => setAmount(String(selectedDue.balanceAmount))}
+                    className="font-semibold text-leaf underline underline-offset-2"
+                  >
+                    Pay it all
+                  </button>
+                )}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="fee-method" className="label mb-1.5 block font-semibold text-ink">Paid by</label>
+            <select
+              id="fee-method"
+              value={method}
+              disabled={submitting}
+              onChange={(event) => setMethod(event.target.value as PaymentMethod)}
+              className="field"
+            >
+              {METHODS.map((item) => (
+                <option key={item} value={item}>{PAYMENT_METHOD_LABELS[item]}</option>
               ))}
             </select>
           </div>
+        </div>
 
-          {selectedStudentId && (
-            <div>
-              <label htmlFor="fee-due" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Apply to</label>
-              <select id="fee-due" value={feeDueId} disabled={loadingDues || submitting} onChange={(event) => handleDueChange(event.target.value)}
-                className="w-full min-h-11 p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white disabled:opacity-60">
-                <option value="advance">Advance payment (no specific due yet)</option>
-                {dues.map((due) => (
-                  <option key={due.id} value={due.id}>
-                    {due.courseName} · due {new Date(due.dueDate).toLocaleDateString('en-IN')} · ₹{due.balanceAmount.toLocaleString('en-IN')} ({due.status})
-                  </option>
-                ))}
-              </select>
-              {loadingDues && <p className="mt-1 text-xs text-slate-400">Loading dues…</p>}
-              {!loadingDues && dues.length === 0 && (
-                <p className="mt-1 text-xs text-slate-500">No pending dues — this will be recorded as advance credit, automatically applied to future dues.</p>
-              )}
-            </div>
-          )}
+        <div>
+          <label htmlFor="fee-remarks" className="label mb-1.5 block font-semibold text-ink">Note</label>
+          <input
+            id="fee-remarks"
+            type="text"
+            value={remarks}
+            disabled={submitting}
+            onChange={(event) => setRemarks(event.target.value)}
+            placeholder="Cheque number, reference, anything worth remembering"
+            className="field"
+          />
+        </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label htmlFor="fee-amount" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Payment amount (₹)</label>
-              <input id="fee-amount" type="number" required min="0.01" step="0.01" value={amount} disabled={submitting}
-                onChange={(event) => setAmount(event.target.value)}
-                className="w-full min-h-11 p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white disabled:opacity-60" />
-              {selectedDue && <div className="mt-1 text-xs text-slate-500">Balance: ₹{selectedDue.balanceAmount.toLocaleString('en-IN')}</div>}
-            </div>
-            <div>
-              <label htmlFor="fee-method" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Payment method</label>
-              <select id="fee-method" value={method} disabled={submitting} onChange={(event) => setMethod(event.target.value as PaymentMethod)}
-                className="w-full min-h-11 p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white disabled:opacity-60">
-                {METHODS.map((item) => <option key={item} value={item}>{PAYMENT_METHOD_LABELS[item]}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="fee-remarks" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Remarks (optional)</label>
-            <input id="fee-remarks" type="text" value={remarks} disabled={submitting} onChange={(event) => setRemarks(event.target.value)}
-              placeholder="Reference note, cheque number, etc."
-              className="w-full min-h-11 p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white disabled:opacity-60" />
-          </div>
-
-          {error && <div role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs">{error}</div>}
-
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-            <button type="button" onClick={onClose} disabled={submitting} className="min-h-11 px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50">
-              Cancel
-            </button>
-            <button type="submit" disabled={submitting || eligibleStudents.length === 0} className="btn-brand min-h-11 px-5 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
-              <span className="material-symbols-outlined text-[16px]">{submitting ? 'progress_activity' : 'check'}</span>
-              <span>{submitting ? 'Recording…' : 'Confirm payment'}</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <DialogError message={error} />
+      </form>
+    </Dialog>
   );
 };

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { OrgSettings } from '../types';
 import { FinancialSettings } from './FinancialSettings';
+import { DetailRow, Section, Toggle } from './SettingsUI';
 
 interface MenuTabProps {
   settings: OrgSettings;
@@ -9,286 +10,208 @@ interface MenuTabProps {
   onImportData: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
+/* Keys match what the server already stores in themeColor. */
+const ACCENTS: { key: string; label: string; swatch: string }[] = [
+  { key: 'emerald', label: 'Green', swatch: '#1f7a55' },
+  { key: 'blue', label: 'Blue', swatch: '#1d5fa8' },
+  { key: 'purple', label: 'Purple', swatch: '#6a3fa0' },
+  { key: 'rose', label: 'Rose', swatch: '#b23a5f' }
+];
+
 export const MenuTab: React.FC<MenuTabProps> = ({
   settings,
   setSettings,
   onExportData,
   onImportData
 }) => {
-  const [isEditingOrg, setIsEditingOrg] = useState(false);
+  const [editingOrg, setEditingOrg] = useState(false);
   const [orgName, setOrgName] = useState(settings.name);
   const [orgType, setOrgType] = useState(settings.type);
+  const [orgLogo, setOrgLogo] = useState(settings.logoUrl);
 
-  const handleSaveOrg = () => {
-    setSettings((prev) => ({ ...prev, name: orgName, type: orgType }));
-    setIsEditingOrg(false);
+  useEffect(() => {
+    if (editingOrg) return;
+    setOrgName(settings.name);
+    setOrgType(settings.type);
+    setOrgLogo(settings.logoUrl);
+  }, [settings.name, settings.type, settings.logoUrl, editingOrg]);
+
+  const saveOrg = (event: React.FormEvent) => {
+    event.preventDefault();
+    setSettings((previous) => ({
+      ...previous,
+      name: orgName.trim() || previous.name,
+      type: orgType.trim(),
+      logoUrl: orgLogo.trim()
+    }));
+    setEditingOrg(false);
   };
 
-  const handleToggleDarkMode = () => {
-    const newDark = !settings.darkMode;
-    setSettings((prev) => ({ ...prev, darkMode: newDark }));
-    if (newDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+  const toggleDarkMode = () => {
+    setSettings((previous) => ({ ...previous, darkMode: !previous.darkMode }));
   };
+
+  const accent = settings.themeColor || 'emerald';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
-      {/* Top Title */}
-      <div>
-        <h2 className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-          Academy Settings
-        </h2>
-        <p className="font-sans text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Configure organization profile, fee structure, appearance, and data backup
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl space-y-5 pb-8 md:space-y-6">
+      <header>
+        <h1 className="display-lg">Settings</h1>
+        <p className="label mt-1">Your academy details, how the app looks, receipts, and backups.</p>
+      </header>
 
-      {/* Organization Section */}
-      <section className="space-y-3">
-        <div className="flex justify-between items-center px-1">
-          <h3 className="font-heading text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs">
-            Studio Profile
-          </h3>
+      <Section
+        title="Academy"
+        description="Shown in the sidebar, on receipts, and to everyone signed in."
+        action={
           <button
             type="button"
-            onClick={() => setIsEditingOrg(!isEditingOrg)}
-            className="min-h-11 rounded-xl px-2 text-xs font-bold text-brand-500 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 flex items-center gap-1"
+            onClick={() => setEditingOrg((open) => !open)}
+            className="btn btn-ghost btn-sm text-leaf"
           >
-            <span className="material-symbols-outlined text-[16px]">
-              {isEditingOrg ? 'close' : 'edit'}
-            </span>
-            <span>{isEditingOrg ? 'Cancel' : 'Edit Profile'}</span>
+            {editingOrg ? 'Cancel' : 'Edit'}
           </button>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs overflow-hidden">
-          {isEditingOrg ? (
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="org-name" className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
-                    Studio / Academy Name
-                  </label>
-                  <input
-                    id="org-name"
-                    type="text"
-                    value={orgName}
-                    onChange={(e) => setOrgName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-brand-200 dark:border-brand-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="org-type" className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
-                    Category / Type
-                  </label>
-                  <input
-                    id="org-type"
-                    type="text"
-                    value={orgType}
-                    onChange={(e) => setOrgType(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-brand-200 dark:border-brand-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
-                  />
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleSaveOrg}
-                className="btn-brand min-h-11 px-5 py-2.5 rounded-xl text-xs font-bold"
-              >
-                Save Profile
-              </button>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              <div className="p-4 sm:px-6 flex items-center justify-between">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined">storefront</span>
-                  </div>
-                  <div>
-                    <div className="font-sans text-xs text-slate-400 font-medium">Academy Name</div>
-                    <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
-                      {settings.name}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 sm:px-6 flex items-center justify-between">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined">category</span>
-                  </div>
-                  <div>
-                    <div className="font-sans text-xs text-slate-400 font-medium">Academy Type</div>
-                    <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
-                      {settings.type}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 sm:px-6 flex items-center justify-between">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined">image</span>
-                  </div>
-                  <div>
-                    <div className="font-sans text-xs text-slate-400 font-medium">Logo</div>
-                    <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
-                      Active Banner Logo
-                    </div>
-                  </div>
-                </div>
-                <div className="w-9 h-9 rounded-xl overflow-hidden border border-brand-200 dark:border-brand-700 shrink-0 flex items-center justify-center bg-brand-50 dark:bg-brand-900/60">
-                  {settings.logoUrl
-                    ? <img src={settings.logoUrl} alt="Logo" className="w-full h-full object-cover" />
-                    : <span className="material-symbols-outlined text-brand-400 text-[18px]">image</span>}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Appearance Section */}
-      <section className="space-y-3">
-        <h3 className="font-heading text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs px-1">
-          Theme & Display
-        </h3>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
-          <div className="p-4 sm:px-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined">palette</span>
+        }
+      >
+        {editingOrg ? (
+          <form onSubmit={saveOrg} className="space-y-3 p-3 md:p-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="org-name" className="label mb-1.5 block font-semibold text-ink">Name</label>
+                <input
+                  id="org-name"
+                  value={orgName}
+                  onChange={(event) => setOrgName(event.target.value)}
+                  required
+                  className="field"
+                />
               </div>
               <div>
-                <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
-                  Accent Color Palette
-                </div>
-                <div className="font-sans text-xs text-slate-500">
-                  Select primary studio accent color
-                </div>
+                <label htmlFor="org-type" className="label mb-1.5 block font-semibold text-ink">
+                  What you teach
+                </label>
+                <input
+                  id="org-type"
+                  value={orgType}
+                  onChange={(event) => setOrgType(event.target.value)}
+                  placeholder="Music &amp; dance school"
+                  className="field"
+                />
               </div>
             </div>
-            <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
-              <button
-                type="button"
-                onClick={() => setSettings((p) => ({ ...p, themeColor: 'blue' }))}
-                aria-label="Use blue accent color"
-                aria-pressed={settings.themeColor === 'blue'}
-                className={`w-11 h-11 rounded-full border-[8px] border-white dark:border-slate-900 bg-blue-500 transition-all ${
-                  settings.themeColor === 'blue' ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : ''
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => setSettings((p) => ({ ...p, themeColor: 'purple' }))}
-                aria-label="Use purple accent color"
-                aria-pressed={settings.themeColor === 'purple'}
-                className={`w-11 h-11 rounded-full border-[8px] border-white dark:border-slate-900 bg-brand-500 transition-all ${
-                  settings.themeColor === 'purple' ? 'ring-2 ring-offset-2 ring-brand-500 scale-110' : ''
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => setSettings((p) => ({ ...p, themeColor: 'emerald' }))}
-                aria-label="Use emerald accent color"
-                aria-pressed={settings.themeColor === 'emerald'}
-                className={`w-11 h-11 rounded-full border-[8px] border-white dark:border-slate-900 bg-emerald-500 transition-all ${
-                  settings.themeColor === 'emerald' ? 'ring-2 ring-offset-2 ring-emerald-500 scale-110' : ''
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => setSettings((p) => ({ ...p, themeColor: 'rose' }))}
-                aria-label="Use rose accent color"
-                aria-pressed={settings.themeColor === 'rose'}
-                className={`w-11 h-11 rounded-full border-[8px] border-white dark:border-slate-900 bg-rose-500 transition-all ${
-                  settings.themeColor === 'rose' ? 'ring-2 ring-offset-2 ring-rose-500 scale-110' : ''
-                }`}
-              />
-            </div>
-          </div>
-
-          <div className="p-4 sm:px-6 flex items-center justify-between">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined">dark_mode</span>
-              </div>
-              <div>
-                <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
-                  Dark Atmosphere
-                </div>
-                <div className="font-sans text-xs text-slate-500">
-                  Toggle dark mode interface
-                </div>
-              </div>
-            </div>
-            <label className="relative inline-flex min-h-11 items-center cursor-pointer">
+            <div>
+              <label htmlFor="org-logo" className="label mb-1.5 block font-semibold text-ink">
+                Logo image address
+              </label>
               <input
-                type="checkbox"
-                aria-label="Toggle dark mode"
-                checked={settings.darkMode}
-                onChange={handleToggleDarkMode}
-                className="sr-only peer"
+                id="org-logo"
+                type="url"
+                value={orgLogo}
+                onChange={(event) => setOrgLogo(event.target.value)}
+                placeholder="https://…"
+                className="field"
               />
-              <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
-            </label>
+              <p className="label-xs mt-1.5">Leave empty to use the first letter of the academy name.</p>
+            </div>
+            <div className="flex justify-end">
+              <button type="submit" className="btn btn-primary btn-sm">Save academy</button>
+            </div>
+          </form>
+        ) : (
+          <dl className="divide-y divide-line-2">
+            <DetailRow label="Name" value={settings.name} />
+            <DetailRow label="What you teach" value={settings.type || 'Not set'} />
+            <DetailRow label="Logo">
+              <span className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-ctl bg-leaf text-[13px] font-semibold text-leaf-on">
+                  {settings.logoUrl
+                    ? <img src={settings.logoUrl} alt="" className="h-full w-full object-cover" />
+                    : settings.name.trim().charAt(0).toUpperCase() || 'A'}
+                </span>
+                <span className="label-xs">{settings.logoUrl ? 'Custom image' : 'Using the initial'}</span>
+              </span>
+            </DetailRow>
+          </dl>
+        )}
+      </Section>
+
+      <Section title="Appearance" description="Applies to everyone in this academy.">
+        <div className="divide-y divide-line-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 md:px-4">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-ink">Accent colour</p>
+              <p className="label-xs mt-0.5">Used for buttons and the selected tab.</p>
+            </div>
+            <div className="flex items-center gap-1.5" role="radiogroup" aria-label="Accent colour">
+              {ACCENTS.map((option) => {
+                const selected = accent === option.key;
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    aria-label={option.label}
+                    title={option.label}
+                    onClick={() => setSettings((previous) => ({ ...previous, themeColor: option.key }))}
+                    className={`flex h-9 w-9 items-center justify-center rounded-ctl border-2 transition-colors ${
+                      selected ? 'border-ink' : 'border-line hover:border-ink-3'
+                    }`}
+                  >
+                    <span className="h-4 w-4 rounded-full" style={{ backgroundColor: option.swatch }} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 p-3 md:px-4">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-ink">Dark mode</p>
+              <p className="label-xs mt-0.5">Easier on the eyes in a dim studio.</p>
+            </div>
+            <Toggle checked={settings.darkMode} onChange={toggleDarkMode} label="Dark mode" />
           </div>
         </div>
-      </section>
+      </Section>
 
       <FinancialSettings settings={settings} setSettings={setSettings} />
 
-      {/* Data Backup Section */}
-      <section className="space-y-3">
-        <h3 className="font-heading text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs px-1">
-          Data Management
-        </h3>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-brand-200/60 dark:border-brand-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
-          <button type="button"
-            onClick={onExportData}
-            className="w-full p-4 sm:px-6 flex items-center justify-between text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined">file_download</span>
-              </div>
-              <div>
-                <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
-                  Export Backup File
-                </div>
-                <div className="font-sans text-xs text-slate-500">
-                  Download local snapshot as JSON file
-                </div>
-              </div>
+      <Section title="Your data" description="Take a copy of what is in the app.">
+        <div className="divide-y divide-line-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 md:px-4">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-ink">Download a copy</p>
+              <p className="label-xs mt-0.5">
+                Students, batches, courses, teachers, and the ledger, as a JSON file.
+              </p>
             </div>
-            <span className="material-symbols-outlined text-slate-400">chevron_right</span>
-          </button>
+            <button type="button" onClick={onExportData} className="btn btn-secondary btn-sm shrink-0">
+              <span className="material-symbols-outlined text-[17px]" aria-hidden="true">download</span>
+              Download
+            </button>
+          </div>
 
-          <label className="min-h-16 p-4 sm:px-6 flex items-center justify-between hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-brand-500">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined">file_upload</span>
-              </div>
-              <div>
-                <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
-                  Restore Data Backup
-                </div>
-                <div className="font-sans text-xs text-slate-500">
-                  Import existing JSON data file
-                </div>
-              </div>
+          {/* The server rejects direct JSON import, so the screen says so up
+              front instead of failing after the file is picked. */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 md:px-4">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-ink">Restore from a file</p>
+              <p className="label-xs mt-0.5">
+                Not available here — bulk imports go through your administrator to keep academies separate.
+              </p>
             </div>
-            <input type="file" accept=".json" onChange={onImportData} className="hidden" />
-            <span className="material-symbols-outlined text-slate-400">chevron_right</span>
-          </label>
+            <label className="btn btn-secondary btn-sm shrink-0 opacity-60">
+              <input type="file" accept=".json" onChange={onImportData} className="sr-only" />
+              Choose file
+            </label>
+          </div>
         </div>
-      </section>
+      </Section>
     </div>
   );
 };
+
+
+
+

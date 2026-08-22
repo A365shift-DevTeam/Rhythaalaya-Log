@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Transaction } from '../../types';
-import { useDialogLifecycle } from './useDialogLifecycle';
+import { Dialog } from './Dialog';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -21,128 +21,130 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [type, setType] = useState<'income' | 'expense'>('income');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(incomeCategories[0] || 'Other Income');
-  const dialogRef = useDialogLifecycle(isOpen, onClose);
+  const formId = 'transaction-form';
 
   const availableCategories = type === 'income' ? incomeCategories : expenseCategories;
+
   useEffect(() => {
-    if (isOpen) setCategory(availableCategories[0] || (type === 'income' ? 'Other Income' : 'Other Expense'));
+    if (isOpen) {
+      setCategory(availableCategories[0] || (type === 'income' ? 'Other Income' : 'Other Expense'));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type, isOpen, incomeCategories, expenseCategories]);
 
-  if (!isOpen) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
     if (!title.trim() || !amount) return;
 
-    const newTx: Transaction = {
+    onAddTransaction({
       id: `tx-${Date.now()}`,
-      title,
+      title: title.trim(),
       type,
       amount: Number(amount) || 0,
       category,
       date: 'Today',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
+      time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    });
 
-    onAddTransaction(newTx);
     onClose();
     setTitle('');
     setAmount('');
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="transaction-modal-title" className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-brand-200/50 bg-white p-4 shadow-2xl dark:bg-slate-900 sm:rounded-2xl sm:p-6 space-y-4">
-        <div className="flex justify-between items-center border-b border-[#f3faf7] dark:border-[#1e293b] pb-3">
-          <h3 id="transaction-modal-title" className="font-heading text-xl font-bold text-[#0b1c30] dark:text-[#f8fafc]">
-            Add Financial Entry
-          </h3>
-          <button type="button" onClick={onClose} aria-label="Close financial entry" className="flex h-11 w-11 items-center justify-center rounded-xl text-[#565e74] hover:bg-slate-100 hover:text-[#0b1c30] dark:hover:bg-slate-800">
-            <span className="material-symbols-outlined">close</span>
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      size="sm"
+      title="Record entry"
+      description="Money that came in or went out, outside of a fee payment."
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="btn btn-ghost">Cancel</button>
+          <button
+            type="submit"
+            form={formId}
+            disabled={!title.trim() || !amount}
+            className="btn btn-primary"
+          >
+            Record entry
           </button>
+        </>
+      }
+    >
+      <form id={formId} onSubmit={handleSubmit} className="space-y-3.5">
+        <fieldset>
+          <legend className="label mb-1.5 font-semibold text-ink">Direction</legend>
+          <div className="segmented w-full" role="group" aria-label="Direction">
+            <button
+              type="button"
+              onClick={() => setType('income')}
+              aria-pressed={type === 'income'}
+              className="flex-1"
+            >
+              Money in
+            </button>
+            <button
+              type="button"
+              onClick={() => setType('expense')}
+              aria-pressed={type === 'expense'}
+              className="flex-1"
+            >
+              Money out
+            </button>
+          </div>
+        </fieldset>
+
+        <div>
+          <label htmlFor="transaction-title" className="label mb-1.5 block font-semibold text-ink">
+            What was it for
+          </label>
+          <input
+            id="transaction-title"
+            type="text"
+            required
+            autoFocus
+            placeholder={type === 'income' ? 'Annual day ticket sales' : 'Hall rent — August'}
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            className="field"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 font-sans text-sm">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <div>
-            <label htmlFor="transaction-title" className="block text-xs font-semibold text-[#565e74] dark:text-[#cbd5e1] mb-1">
-              Transaction Title *
+            <label htmlFor="transaction-amount" className="label mb-1.5 block font-semibold text-ink">
+              Amount (₹)
             </label>
             <input
-              type="text"
-              id="transaction-title"
+              id="transaction-amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              inputMode="decimal"
               required
-              placeholder="e.g. Studio Rent / Sound Equipment"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full min-h-11 p-2.5 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
+              placeholder="2500"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              className="field num"
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label htmlFor="transaction-type" className="block text-xs font-semibold text-[#565e74] dark:text-[#cbd5e1] mb-1">
-                Entry Type
-              </label>
-              <select
-                id="transaction-type"
-                value={type}
-                onChange={(e) => setType(e.target.value as 'income' | 'expense')}
-                className="w-full min-h-11 p-2.5 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
-              >
-                <option value="income">Income (+)</option>
-                <option value="expense">Expense (-)</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="transaction-amount" className="block text-xs font-semibold text-[#565e74] dark:text-[#cbd5e1] mb-1">
-                Amount (₹)
-              </label>
-              <input
-                type="number"
-                id="transaction-amount"
-                min="0.01"
-                step="0.01"
-                required
-                placeholder="250"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full min-h-11 p-2.5 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
-              />
-            </div>
-          </div>
-
           <div>
-            <label htmlFor="transaction-category" className="block text-xs font-semibold text-[#565e74] dark:text-[#cbd5e1] mb-1">
+            <label htmlFor="transaction-category" className="label mb-1.5 block font-semibold text-ink">
               Category
             </label>
             <select
               id="transaction-category"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full min-h-11 p-2.5 bg-[#f3faf7] dark:bg-[#1e293b] border border-[#a8ddd0] rounded-xl text-[#0b1c30] dark:text-[#f8fafc]"
+              onChange={(event) => setCategory(event.target.value)}
+              className="field"
             >
               {availableCategories.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </div>
-
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={onClose}
-              className="min-h-11 px-4 py-2 rounded-xl text-xs font-semibold text-[#565e74] hover:bg-[#f3faf7]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn-brand min-h-11 px-5 py-2 rounded-xl text-xs font-semibold"
-            >
-              Save Entry
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </Dialog>
   );
 };

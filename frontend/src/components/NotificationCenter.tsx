@@ -7,6 +7,8 @@ interface NotificationCenterProps {
   students: Student[];
   transactions: Transaction[];
   onNavigate: (tab: AppTab) => void;
+  /** 'rail' sits on the ink sidebar and opens upward; 'bar' sits on the mobile header. */
+  tone?: 'rail' | 'bar';
 }
 
 interface AppNotification {
@@ -14,12 +16,25 @@ interface AppNotification {
   title: string;
   message: string;
   icon: string;
-  tone: 'warning' | 'success' | 'info';
+  tone: 'due' | 'settled' | 'neutral';
   tab: AppTab;
   time: string;
 }
 
-export function NotificationCenter({ tenantKey, preferences, students, transactions, onNavigate }: NotificationCenterProps) {
+const TONE_CLASS: Record<AppNotification['tone'], string> = {
+  due: 'bg-kumkum-tint text-kumkum',
+  settled: 'bg-leaf-tint text-leaf-strong',
+  neutral: 'bg-surface-2 text-ink-2'
+};
+
+export function NotificationCenter({
+  tenantKey,
+  preferences,
+  students,
+  transactions,
+  onNavigate,
+  tone = 'bar'
+}: NotificationCenterProps) {
   const [open, setOpen] = useState(false);
   const storageKey = `rhythaalaya_notifications_read_${tenantKey}`;
   const [readIds, setReadIds] = useState<string[]>(() => {
@@ -28,71 +43,192 @@ export function NotificationCenter({ tenantKey, preferences, students, transacti
   });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const notifications = useMemo(() => buildNotifications(preferences, students, transactions), [preferences, students, transactions]);
+  const notifications = useMemo(
+    () => buildNotifications(preferences, students, transactions),
+    [preferences, students, transactions]
+  );
   const unreadCount = notifications.filter((item) => !readIds.includes(item.id)).length;
 
   useEffect(() => { localStorage.setItem(storageKey, JSON.stringify(readIds)); }, [readIds, storageKey]);
+
   useEffect(() => {
+    if (!open) return;
     const close = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) setOpen(false);
     };
     const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', close); document.addEventListener('keydown', escape);
-    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', escape); };
-  }, []);
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [open]);
 
   const openItem = (item: AppNotification) => {
     setReadIds((current) => current.includes(item.id) ? current : [...current, item.id]);
-    setOpen(false); onNavigate(item.tab);
+    setOpen(false);
+    onNavigate(item.tab);
   };
 
-  return <div className="relative" ref={containerRef}>
-    <button type="button" onClick={() => setOpen((value) => !value)} aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`} aria-expanded={open}
-      className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-brand-900/50">
-      <span className="material-symbols-outlined text-[21px]" aria-hidden="true">notifications</span>
-      {unreadCount > 0 && <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-rose-600 px-1 text-[10px] font-extrabold text-white dark:border-slate-900">{unreadCount > 9 ? '9+' : unreadCount}</span>}
-    </button>
+  const triggerClass = tone === 'rail'
+    ? 'icon-btn text-rail-text-2 hover:bg-rail-2 hover:text-rail-text'
+    : 'icon-btn h-11 w-11 border border-line';
 
-    {open && <section aria-label="Notifications" className="fixed left-3 right-3 top-[78px] z-[70] max-h-[min(520px,calc(100dvh-110px))] overflow-hidden rounded-2xl border border-brand-200 bg-white shadow-2xl dark:border-brand-800 dark:bg-slate-900 sm:absolute sm:left-auto sm:right-0 sm:top-14 sm:w-[380px]">
-      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-        <div><h2 className="text-sm font-extrabold text-slate-900 dark:text-white">Notifications</h2><p className="text-xs text-slate-500">{unreadCount ? `${unreadCount} unread update${unreadCount === 1 ? '' : 's'}` : 'You are all caught up'}</p></div>
-        {unreadCount > 0 && <button type="button" onClick={() => setReadIds(notifications.map((item) => item.id))} className="min-h-10 rounded-xl px-2 text-xs font-bold text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-900/50">Mark all read</button>}
-      </div>
-      <div className="max-h-[420px] overflow-y-auto p-2">
-        {!preferences.enabled ? <EmptyNotification icon="notifications_off" title="Notifications are disabled" description="Enable them from Settings to receive operational updates." />
-          : notifications.length === 0 ? <EmptyNotification icon="notifications_none" title="No notifications" description="New fee, payment, and attendance updates will appear here." />
-          : notifications.map((item) => {
-            const unread = !readIds.includes(item.id);
-            const tones = { warning: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300', success: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300', info: 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300' };
-            return <button key={item.id} type="button" onClick={() => openItem(item)} className={`flex min-h-[76px] w-full items-start gap-3 rounded-xl p-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/70 ${unread ? 'bg-brand-50/60 dark:bg-brand-900/30' : ''}`}>
-              <span className={`material-symbols-outlined flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[20px] ${tones[item.tone]}`}>{item.icon}</span>
-              <span className="min-w-0 flex-1"><span className="flex items-center gap-2"><span className="truncate text-xs font-extrabold text-slate-900 dark:text-white">{item.title}</span>{unread && <span className="h-2 w-2 shrink-0 rounded-full bg-brand-500" />}</span><span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">{item.message}</span></span>
-              <span className="shrink-0 text-[10px] font-semibold text-slate-400">{item.time}</span>
-            </button>;
-          })}
-      </div>
-    </section>}
-  </div>;
+  const panelClass = tone === 'rail'
+    ? 'absolute bottom-[calc(100%+0.5rem)] left-0 z-[70] w-[336px]'
+    : 'fixed left-3 right-3 top-[3.75rem] z-[70] sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+0.5rem)] sm:w-[336px]';
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+        aria-expanded={open}
+        className={`relative ${triggerClass}`}
+      >
+        <span className="material-symbols-outlined text-[21px]" aria-hidden="true">notifications</span>
+        {unreadCount > 0 && (
+          <span className="num absolute right-1 top-1 flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-kumkum px-1 text-[9px] font-semibold text-white">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <section
+          aria-label="Notifications"
+          className={`${panelClass} overflow-hidden rounded-card border border-line bg-surface shadow-[var(--shadow-pop)]`}
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-line-2 px-3.5 py-2.5">
+            <div className="min-w-0">
+              <h2 className="title text-[15px]">Notifications</h2>
+              <p className="label-xs">
+                {unreadCount ? `${unreadCount} unread` : 'Nothing new'}
+              </p>
+            </div>
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setReadIds(notifications.map((item) => item.id))}
+                className="btn btn-ghost btn-sm shrink-0 text-leaf"
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
+
+          <div className="max-h-[min(24rem,calc(100dvh-12rem))] overflow-y-auto p-1.5">
+            {!preferences.enabled ? (
+              <EmptyNotification
+                icon="notifications_off"
+                title="Notifications are off"
+                description="Turn them on in Settings to see fee, payment, and attendance updates here."
+              />
+            ) : notifications.length === 0 ? (
+              <EmptyNotification
+                icon="notifications_none"
+                title="Nothing to review"
+                description="Fee, payment, and attendance updates will appear here."
+              />
+            ) : (
+              notifications.map((item) => {
+                const unread = !readIds.includes(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => openItem(item)}
+                    className={`flex w-full items-start gap-2.5 rounded-ctl p-2.5 text-left transition-colors hover:bg-surface-2 ${
+                      unread ? 'bg-surface-2/70' : ''
+                    }`}
+                  >
+                    <span
+                      className={`material-symbols-outlined flex h-8 w-8 shrink-0 items-center justify-center rounded-ctl text-[18px] ${TONE_CLASS[item.tone]}`}
+                      aria-hidden="true"
+                    >
+                      {item.icon}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-1.5">
+                        <span className="truncate text-[13px] font-semibold text-ink">{item.title}</span>
+                        {unread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-leaf" aria-label="Unread" />}
+                      </span>
+                      <span className="mt-0.5 block text-[12px] leading-[1.45] text-ink-2">{item.message}</span>
+                    </span>
+                    <span className="num shrink-0 text-[10px] text-ink-3">{item.time}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </section>
+      )}
+    </div>
+  );
 }
 
-function buildNotifications(preferences: NotificationSettings, students: Student[], transactions: Transaction[]): AppNotification[] {
+function buildNotifications(
+  preferences: NotificationSettings,
+  students: Student[],
+  transactions: Transaction[]
+): AppNotification[] {
   if (!preferences.enabled) return [];
   const items: AppNotification[] = [];
+
   const pending = students.filter((student) => student.outstandingBalance > 0);
   if (preferences.feeReminders && pending.length) {
     const total = pending.reduce((sum, student) => sum + student.outstandingBalance, 0);
-    items.push({ id: `fees-${pending.map((item) => item.id).sort().join('-')}-${total}`, title: 'Fee collection requires attention', message: `${pending.length} students have ₹${total.toLocaleString('en-IN')} outstanding.`, icon: 'pending_actions', tone: 'warning', tab: 'finance', time: 'Now' });
+    items.push({
+      id: `fees-${pending.map((item) => item.id).sort().join('-')}-${total}`,
+      title: 'Fees are outstanding',
+      message: `${pending.length} student${pending.length === 1 ? '' : 's'} owe ₹${total.toLocaleString('en-IN')}.`,
+      icon: 'pending_actions',
+      tone: 'due',
+      tab: 'finance',
+      time: 'Now'
+    });
   }
-  if (preferences.paymentUpdates) transactions.slice(0, 3).forEach((transaction) => {
-    items.push({ id: `transaction-${transaction.id}`, title: transaction.type === 'income' ? 'Income recorded' : 'Expense recorded', message: `${transaction.title} · ${transaction.type === 'income' ? '+' : '-'}₹${transaction.amount.toLocaleString('en-IN')}`, icon: transaction.type === 'income' ? 'payments' : 'receipt_long', tone: transaction.type === 'income' ? 'success' : 'info', tab: 'finance', time: transaction.date });
-  });
+
+  if (preferences.paymentUpdates) {
+    transactions.slice(0, 3).forEach((transaction) => {
+      items.push({
+        id: `transaction-${transaction.id}`,
+        title: transaction.type === 'income' ? 'Payment recorded' : 'Expense recorded',
+        message: `${transaction.title} · ${transaction.type === 'income' ? '+' : '−'}₹${transaction.amount.toLocaleString('en-IN')}`,
+        icon: transaction.type === 'income' ? 'payments' : 'receipt_long',
+        tone: transaction.type === 'income' ? 'settled' : 'neutral',
+        tab: 'finance',
+        time: transaction.date
+      });
+    });
+  }
+
   if (preferences.attendanceAlerts) {
     const lowAttendance = students.filter((student) => student.overallAttendance < 75);
-    if (lowAttendance.length) items.push({ id: `attendance-${lowAttendance.map((item) => item.id).sort().join('-')}`, title: 'Low attendance alert', message: `${lowAttendance.length} students are below the 75% attendance threshold.`, icon: 'fact_check', tone: 'warning', tab: 'log', time: 'Today' });
+    if (lowAttendance.length) {
+      items.push({
+        id: `attendance-${lowAttendance.map((item) => item.id).sort().join('-')}`,
+        title: 'Attendance is slipping',
+        message: `${lowAttendance.length} student${lowAttendance.length === 1 ? ' is' : 's are'} below 75%.`,
+        icon: 'fact_check',
+        tone: 'due',
+        tab: 'log',
+        time: 'Today'
+      });
+    }
   }
+
   return items;
 }
 
 function EmptyNotification({ icon, title, description }: { icon: string; title: string; description: string }) {
-  return <div className="px-5 py-10 text-center"><span className="material-symbols-outlined text-4xl text-slate-300 dark:text-slate-600">{icon}</span><h3 className="mt-2 text-sm font-bold text-slate-800 dark:text-white">{title}</h3><p className="mx-auto mt-1 max-w-64 text-xs leading-5 text-slate-500">{description}</p></div>;
+  return (
+    <div className="px-5 py-9 text-center">
+      <span className="material-symbols-outlined text-[28px] text-ink-3" aria-hidden="true">{icon}</span>
+      <h3 className="title mt-1.5 text-[15px]">{title}</h3>
+      <p className="label mx-auto mt-1 max-w-56">{description}</p>
+    </div>
+  );
 }

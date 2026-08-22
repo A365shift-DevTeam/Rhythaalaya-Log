@@ -283,9 +283,10 @@ function mapReceipt(x: any): Receipt {
 function mapTransaction(x: any): Transaction {
   const occurred = new Date(x.occurredAt);
   return { id: x.id, title: x.title, type: String(x.type).toLowerCase() as 'income' | 'expense',
-    amount: x.amount, category: x.category, date: occurred.toLocaleDateString(),
+    amount: x.amount, category: x.category,
+    date: occurred.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
     occurredAt: x.occurredAt, feePaymentId: x.feePaymentId || undefined,
-    time: occurred.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+    time: occurred.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) };
 }
 function mapSettings(x: any): OrgSettings {
   return { name: x.name, type: x.type, logoUrl: x.logoUrl || '', themeColor: x.themeColor,

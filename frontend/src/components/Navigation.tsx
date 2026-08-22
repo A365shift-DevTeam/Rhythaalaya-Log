@@ -1,168 +1,248 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AppTab, OrgSettings } from '../types';
+
+export interface PrimaryAction {
+  label: string;
+  icon: string;
+  onClick: () => void;
+}
 
 interface NavigationProps {
   currentTab: AppTab;
   setCurrentTab: (tab: AppTab) => void;
-  onOpenAddStudent: () => void;
   settings: OrgSettings;
+  userName: string;
+  userRole: string;
+  onLogout: () => void;
+  primaryAction: PrimaryAction | null;
+  renderNotifications: (tone: 'rail' | 'bar') => React.ReactNode;
 }
+
+const NAV_ITEMS = [
+  { id: 'home', label: 'Today', icon: 'today' },
+  { id: 'students', label: 'Students', icon: 'group' },
+  { id: 'batches', label: 'Batches', icon: 'event_note' },
+  { id: 'finance', label: 'Fees', icon: 'currency_rupee' },
+  { id: 'log', label: 'Attendance', icon: 'fact_check' },
+  { id: 'menu', label: 'Settings', icon: 'settings' }
+] as const;
+
+/* Settings is not a daily destination; Batches is. The bottom bar carries
+   the five screens staff actually move between, and Settings moves into
+   the top-bar menu alongside Sign out. */
+const BOTTOM_BAR_IDS: AppTab[] = ['home', 'students', 'batches', 'finance', 'log'];
 
 export const Navigation: React.FC<NavigationProps> = ({
   currentTab,
   setCurrentTab,
-  onOpenAddStudent,
-  settings
+  settings,
+  userName,
+  userRole,
+  onLogout,
+  primaryAction,
+  renderNotifications
 }) => {
-  const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const navItems = [
-    { id: 'home', label: 'Dashboard', icon: 'dashboard' },
-    { id: 'students', label: 'Students', icon: 'group' },
-    { id: 'batches', label: 'Batches', icon: 'calendar_view_week' },
-    { id: 'finance', label: 'Finance', icon: 'payments' },
-    { id: 'log', label: 'Attendance', icon: 'fact_check' },
-    { id: 'menu', label: 'Settings', icon: 'settings' },
-  ] as const;
-  const mobileNavItems = navItems.filter((item) =>
-    ['home', 'students', 'log', 'finance'].includes(item.id)
-  );
-  const mobileMoreItems = navItems.filter((item) => ['batches', 'menu'].includes(item.id));
-  const moreIsActive = currentTab === 'batches' || currentTab === 'menu';
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setIsMenuOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setIsMenuOpen(false); };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isMenuOpen]);
 
   const navigate = (tab: AppTab) => {
     setCurrentTab(tab);
-    setIsMoreOpen(false);
+    setIsMenuOpen(false);
   };
+
+  const bottomItems = NAV_ITEMS.filter((item) => BOTTOM_BAR_IDS.includes(item.id));
+  const academyInitial = settings.name.trim().charAt(0).toUpperCase() || 'A';
+
+  const academyMark = (size: string) => (
+    <span
+      className={`${size} flex shrink-0 items-center justify-center overflow-hidden rounded-ctl bg-leaf font-semibold text-leaf-on`}
+      aria-hidden="true"
+    >
+      {settings.logoUrl
+        ? <img src={settings.logoUrl} alt="" className="h-full w-full object-cover" />
+        : academyInitial}
+    </span>
+  );
 
   return (
     <>
-      {/* Desktop Sidebar Drawer */}
-      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-[270px] p-5 border-r border-brand-200/70 dark:border-brand-800 bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl z-50">
-        {/* Brand Header */}
-        <button
-          type="button"
-          className="flex w-full items-center gap-3 mb-6 px-1 rounded-xl text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
-          onClick={() => navigate('home')}
-          aria-label="Go to dashboard"
-        >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-400 to-[#63c06a] text-white flex items-center justify-center shadow-md shadow-brand-500/25 group-hover:scale-105 transition-transform">
-            <span className="material-symbols-outlined text-2xl filled">auto_awesome</span>
-          </div>
-          <div>
-            <span className="font-heading text-xl font-extrabold text-slate-900 dark:text-white tracking-tight block">
-              StudioSync
-            </span>
-            <span className="font-sans text-[11px] font-semibold text-brand-500 dark:text-brand-400 uppercase tracking-widest block -mt-1">
-              Studio OS
-            </span>
-          </div>
-        </button>
-
-        {/* Studio Profile Card */}
-        <div className="flex items-center gap-3 p-3 mb-6 bg-brand-50/90 dark:bg-brand-900/50 border border-brand-200/70 dark:border-brand-700/50 rounded-2xl">
-          <div className="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center font-bold text-sm overflow-hidden shrink-0 border border-brand-400/30 shadow-inner">
-            {settings.logoUrl ? (
-              <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover" />
-            ) : (
-              settings.name.charAt(0) || 'S'
-            )}
-          </div>
-          <div className="overflow-hidden flex-1 min-w-0">
-            <p className="font-sans text-xs font-bold text-slate-900 dark:text-brand-50 truncate">
-              {settings.name}
-            </p>
-            <p className="font-sans text-[11px] text-slate-500 dark:text-brand-200/80 truncate flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
-              {settings.type}
-            </p>
-          </div>
+      {/* ---------------------------------------------------------------
+          Desktop rail. Ink, so that leaf can mean "active" and nothing
+          else. Carries identity, navigation, and the account — which is
+          why the main column no longer needs a header of its own.
+          --------------------------------------------------------------- */}
+      <aside className="fixed left-0 top-0 z-50 hidden h-dvh w-[240px] flex-col border-r border-rail-line bg-rail md:flex">
+        <div className="flex items-center gap-2.5 px-4 py-5">
+          {academyMark('h-9 w-9 text-sm')}
+          <span className="min-w-0">
+            <span className="block truncate text-[13px] font-semibold text-rail-text">{settings.name}</span>
+            <span className="block truncate text-[11px] text-rail-text-2">{settings.type}</span>
+          </span>
         </div>
 
-        {/* Navigation Items */}
-        <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
-          {navItems.map((item) => {
-            const isActive = currentTab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => navigate(item.id)}
-                aria-current={isActive ? 'page' : undefined}
-                className={`w-full min-h-11 flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl transition-all text-left font-sans text-sm font-medium ${
-                  isActive
-                    ? 'bg-gradient-to-r from-brand-400 via-brand-500 to-[#63c06a] text-white shadow-md shadow-brand-400/30 font-semibold'
-                    : 'text-slate-600 dark:text-brand-100 hover:bg-brand-50 dark:hover:bg-brand-900/60'
-                }`}
-              >
-                <span className={`material-symbols-outlined text-[20px] ${isActive ? 'filled' : ''}`}>
-                  {item.icon}
-                </span>
-                <span className="flex-1">{item.label}</span>
-                {isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                )}
-              </button>
-            );
-          })}
+        <nav aria-label="Main" className="flex-1 overflow-y-auto px-2.5 py-1">
+          <ul className="space-y-0.5">
+            {NAV_ITEMS.map((item) => {
+              const isActive = currentTab === item.id;
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(item.id)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`flex min-h-11 w-full items-center gap-3 rounded-ctl px-3 text-left text-[13px] transition-colors ${
+                      isActive
+                        ? 'bg-leaf font-semibold text-leaf-on'
+                        : 'font-medium text-rail-text-2 hover:bg-rail-2 hover:text-rail-text'
+                    }`}
+                  >
+                    <span
+                      className={`material-symbols-outlined text-[20px] ${isActive ? 'filled' : ''}`}
+                      aria-hidden="true"
+                    >
+                      {item.icon}
+                    </span>
+                    {item.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </nav>
 
-        {/* Sidebar Footer Action */}
-        <div className="pt-4 border-t border-brand-200/70 dark:border-brand-800 space-y-3">
-          <button
-            type="button"
-            onClick={onOpenAddStudent}
-            className="btn-brand w-full min-h-11 py-3 px-4 rounded-xl font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2"
-          >
-            <span className="material-symbols-outlined text-[18px]">person_add</span>
-            <span>Add Student</span>
-          </button>
+        <div className="space-y-3 border-t border-rail-line p-2.5">
+          {primaryAction && (
+            <button
+              type="button"
+              onClick={primaryAction.onClick}
+              className="btn btn-primary w-full"
+            >
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                {primaryAction.icon}
+              </span>
+              {primaryAction.label}
+            </button>
+          )}
+
+          <div className="flex items-center gap-2">
+            <span className="min-w-0 flex-1 px-1">
+              <span className="block truncate text-[12px] font-medium text-rail-text">{userName}</span>
+              <span className="block truncate text-[11px] text-rail-text-2">{userRole}</span>
+            </span>
+            {renderNotifications('rail')}
+            <button
+              type="button"
+              onClick={onLogout}
+              title="Sign out"
+              aria-label="Sign out"
+              className="icon-btn text-rail-text-2 hover:bg-rail-2 hover:text-rail-text"
+            >
+              <span className="material-symbols-outlined text-[20px]" aria-hidden="true">logout</span>
+            </button>
+          </div>
         </div>
       </aside>
 
-      {/* Mobile Top Header */}
-      <header className="md:hidden sticky top-0 z-40 flex justify-between items-center px-4 py-3 bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl border-b border-brand-200/70 dark:border-brand-800 shadow-xs">
-        <button type="button" className="flex min-h-11 items-center gap-2.5 rounded-xl text-left" onClick={() => navigate('home')} aria-label="Go to dashboard">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-400 to-[#63c06a] text-white flex items-center justify-center shadow-xs">
-            <span className="material-symbols-outlined text-lg filled">auto_awesome</span>
-          </div>
-          <h1 className="font-heading text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
-            StudioSync
-          </h1>
-        </button>
+      {/* ---------------------------------------------------------------
+          Mobile top bar — the only header on the screen.
+          --------------------------------------------------------------- */}
+      <header className="sticky top-0 z-40 flex items-center gap-2 border-b border-line bg-surface px-3 py-2 md:hidden">
         <button
           type="button"
-          onClick={onOpenAddStudent}
-          className="btn-brand min-h-11 px-3.5 py-2 rounded-xl font-sans text-xs font-semibold flex items-center gap-1.5"
+          onClick={() => navigate('home')}
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-ctl text-left"
         >
-          <span className="material-symbols-outlined text-[16px]">add</span>
-          <span>Student</span>
+          {academyMark('h-8 w-8 text-[13px]')}
+          <span className="min-w-0">
+            <span className="block truncate text-[13px] font-semibold text-ink">{settings.name}</span>
+            <span className="block truncate text-[11px] text-ink-3">{settings.type}</span>
+          </span>
         </button>
+
+        {renderNotifications('bar')}
+
+        <div className="relative" ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen((open) => !open)}
+            aria-expanded={isMenuOpen}
+            aria-haspopup="menu"
+            aria-label="Account menu"
+            className="icon-btn h-11 w-11 border border-line"
+          >
+            <span className="material-symbols-outlined text-[21px]" aria-hidden="true">more_vert</span>
+          </button>
+
+          {isMenuOpen && (
+            <div
+              role="menu"
+              aria-label="Account"
+              className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-60 overflow-hidden rounded-card border border-line bg-surface shadow-[var(--shadow-pop)]"
+            >
+              <div className="border-b border-line-2 px-3 py-2.5">
+                <p className="truncate text-[13px] font-semibold text-ink">{userName}</p>
+                <p className="truncate text-[11px] text-ink-3">{userRole}</p>
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => navigate('menu')}
+                className="flex min-h-11 w-full items-center gap-3 px-3 text-left text-[13px] font-medium text-ink hover:bg-surface-2"
+              >
+                <span className="material-symbols-outlined text-[20px] text-ink-2" aria-hidden="true">settings</span>
+                Settings
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={onLogout}
+                className="flex min-h-11 w-full items-center gap-3 border-t border-line-2 px-3 text-left text-[13px] font-medium text-kumkum hover:bg-kumkum-tint"
+              >
+                <span className="material-symbols-outlined text-[20px]" aria-hidden="true">logout</span>
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
-      {/* Mobile Bottom Navigation Bar */}
-      {isMoreOpen && (
-        <div className="md:hidden fixed inset-0 z-[55] bg-slate-950/35 backdrop-blur-[2px]" onClick={() => setIsMoreOpen(false)}>
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="More navigation"
-            className="absolute bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-3 right-3 rounded-2xl border border-brand-200/70 dark:border-brand-800 bg-white dark:bg-brand-950 p-2 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <p className="px-3 pb-2 pt-1 text-xs font-bold uppercase tracking-wider text-slate-400">More</p>
-            {mobileMoreItems.map((item) => (
-              <button key={item.id} type="button" onClick={() => navigate(item.id)}
-                className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-slate-700 hover:bg-brand-50 dark:text-brand-100 dark:hover:bg-brand-900/60">
-                <span className="material-symbols-outlined text-[21px] text-brand-500">{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* ---------------------------------------------------------------
+          The action follows the screen instead of always saying
+          "Add Student" on tabs where that is not the next thing to do.
+          --------------------------------------------------------------- */}
+      {primaryAction && (
+        <button
+          type="button"
+          onClick={primaryAction.onClick}
+          className="btn btn-primary fixed right-4 z-40 shadow-[var(--shadow-pop)] md:hidden"
+          style={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom))' }}
+        >
+          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+            {primaryAction.icon}
+          </span>
+          {primaryAction.label}
+        </button>
       )}
 
-      <nav aria-label="Primary navigation" className="md:hidden fixed bottom-0 left-0 w-full z-[60] grid grid-cols-5 items-stretch px-2 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl border-t border-brand-200/70 dark:border-brand-800 shadow-[0_-8px_24px_rgba(15,23,42,0.08)]">
-        {mobileNavItems.map((item) => {
+      <nav
+        aria-label="Main"
+        className="fixed bottom-0 left-0 z-50 grid w-full grid-cols-5 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+      >
+        {bottomItems.map((item) => {
           const isActive = currentTab === item.id;
           return (
             <button
@@ -170,26 +250,25 @@ export const Navigation: React.FC<NavigationProps> = ({
               type="button"
               onClick={() => navigate(item.id)}
               aria-current={isActive ? 'page' : undefined}
-              className={`relative min-h-[60px] flex flex-col items-center justify-center rounded-xl px-1 py-1 transition-all ${
-                isActive
-                  ? 'bg-brand-50 text-brand-600 dark:bg-brand-900/60 dark:text-brand-300 font-bold'
-                  : 'text-slate-500 dark:text-brand-200/70 hover:text-brand-700'
+              className={`relative flex min-h-[3.5rem] flex-col items-center justify-center gap-1 px-0.5 pt-2 pb-1.5 transition-colors ${
+                isActive ? 'text-leaf' : 'text-ink-3'
               }`}
             >
-              <span className={`material-symbols-outlined text-[20px] ${isActive ? 'filled' : ''}`}>
+              {isActive && (
+                <span className="absolute inset-x-3 top-0 h-0.5 rounded-b bg-leaf" aria-hidden="true" />
+              )}
+              <span
+                className={`material-symbols-outlined text-[21px] ${isActive ? 'filled' : ''}`}
+                aria-hidden="true"
+              >
                 {item.icon}
               </span>
-              <span className="font-sans text-[11px] leading-tight tracking-tight font-semibold mt-1">
+              <span className={`text-[10px] leading-none ${isActive ? 'font-semibold' : 'font-medium'}`}>
                 {item.label}
               </span>
             </button>
           );
         })}
-        <button type="button" onClick={() => setIsMoreOpen((open) => !open)} aria-expanded={isMoreOpen}
-          className={`relative min-h-[60px] flex flex-col items-center justify-center rounded-xl px-1 py-1 transition-all ${moreIsActive || isMoreOpen ? 'bg-brand-50 text-brand-600 dark:bg-brand-900/60 dark:text-brand-300 font-bold' : 'text-slate-500 dark:text-brand-200/70'}`}>
-          <span className={`material-symbols-outlined text-[20px] ${moreIsActive ? 'filled' : ''}`}>more_horiz</span>
-          <span className="font-sans text-[11px] leading-tight tracking-tight font-semibold mt-1">More</span>
-        </button>
       </nav>
     </>
   );

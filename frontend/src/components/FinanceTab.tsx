@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { Course, FeeDue, FeeFrequency, FeeStructure, FEE_FREQUENCY_LABELS, Student, Transaction } from '../types';
+import {
+  Course,
+  FeeDue,
+  FeeFrequency,
+  FeeStructure,
+  FEE_FREQUENCY_LABELS,
+  Student,
+  Transaction
+} from '../types';
 
 interface FinanceTabProps {
   students: Student[];
@@ -12,184 +20,233 @@ interface FinanceTabProps {
   onOpenWhatsAppAll: () => void;
   onOpenAddTransaction: () => void;
   onAddFeeStructure: (payload: {
-    courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string; effectiveTo?: string | null;
+    courseId: string;
+    name: string;
+    amount: number;
+    frequency: FeeFrequency;
+    effectiveFrom: string;
+    effectiveTo?: string | null;
   }) => Promise<void>;
 }
 
-export const FinanceTab: React.FC<FinanceTabProps> = ({
-  students, transactions, outstandingDues, courses, feeStructures, canManage,
-  onOpenRecordFee, onOpenWhatsAppAll, onOpenAddTransaction, onAddFeeStructure
-}) => {
-  const pendingStudents = students.filter((s) => s.outstandingBalance > 0);
+const rupees = (value: number) => {
+  const amount = Number(value || 0);
+  return `${amount < 0 ? '−' : ''}₹${Math.abs(amount).toLocaleString('en-IN')}`;
+};
 
-  const totalIncome = transactions.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-  const totalExpense = transactions.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
-  const netProfit = totalIncome - totalExpense;
-  const marginPercentage = totalIncome > 0 ? Math.round((netProfit / totalIncome) * 100) : 0;
-  const isNetLoss = netProfit < 0;
-  const marginBarWidth = Math.min(100, Math.abs(marginPercentage));
+const formatDate = (value: string) => new Date(value).toLocaleDateString('en-IN', {
+  day: 'numeric', month: 'short', year: 'numeric'
+});
+
+export const FinanceTab: React.FC<FinanceTabProps> = ({
+  students,
+  transactions,
+  outstandingDues,
+  courses,
+  feeStructures,
+  canManage,
+  onOpenRecordFee,
+  onOpenWhatsAppAll,
+  onOpenAddTransaction,
+  onAddFeeStructure
+}) => {
+  const owingStudents = students.filter((student) => student.outstandingBalance > 0);
+  const collected = transactions.filter((t) => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+  const spent = transactions.filter((t) => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  const net = collected - spent;
+  const outstanding = outstandingDues.reduce((sum, due) => sum + due.balanceAmount, 0);
+  const overdue = outstandingDues.filter((due) => due.status === 'Overdue');
 
   return (
-    <div className="space-y-6 md:space-y-8 pb-12">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Financial Ledger</h2>
-          <p className="font-sans text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Track tuition revenue, operating costs, and pending dues</p>
-        </div>
-      </div>
+    <div className="space-y-5 pb-8 md:space-y-6">
+      <header>
+        <h1 className="display-lg">Fees</h1>
+        <p className="label mt-1">Collect dues, keep the ledger, and set what each course charges.</p>
+      </header>
 
-      {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-        <div className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6 flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <span className="font-sans text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Total Revenue
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[20px]">trending_up</span>
-            </div>
-          </div>
-          <div className="mt-4">
-            <div className="font-heading text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">₹{totalIncome.toLocaleString('en-IN')}</div>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 font-medium">Year to date</p>
-          </div>
-        </div>
+      <section aria-label="Money summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat label="Collected" value={rupees(collected)} note="Year to date" />
+        <Stat label="Spent" value={rupees(spent)} note="Year to date" />
+        <Stat label="Net" value={rupees(net)} note="Year to date" tone={net < 0 ? 'due' : 'settled'} />
+        <Stat
+          label="Outstanding"
+          value={rupees(outstanding)}
+          note={overdue.length ? `${overdue.length} overdue` : 'None overdue'}
+          tone={outstanding > 0 ? 'due' : 'settled'}
+        />
+      </section>
 
-        <div className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6 flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <span className="font-sans text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-rose-500"></span> Operating Costs
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[20px]">trending_down</span>
-            </div>
+      {/* Collecting dues is the daily job, so it leads the screen. */}
+      <section className="card overflow-hidden">
+        <div className="flex flex-wrap items-start justify-between gap-2.5 border-b border-line px-3 py-2.5 md:px-4">
+          <div className="min-w-0">
+            <h2 className="title">Dues to collect</h2>
+            <p className="label-xs mt-0.5">
+              {outstandingDues.length
+                ? <><span className="num">{outstandingDues.length}</span> due{outstandingDues.length === 1 ? '' : 's'} across <span className="num">{owingStudents.length}</span> student{owingStudents.length === 1 ? '' : 's'}</>
+                : 'Everyone is settled'}
+            </p>
           </div>
-          <div className="mt-4">
-            <div className="font-heading text-3xl md:text-4xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight tabular-nums">₹{totalExpense.toLocaleString('en-IN')}</div>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 font-medium">Year to date</p>
-          </div>
-        </div>
-
-        <div className={`bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6 flex flex-col justify-between border-l-4 ${isNetLoss ? 'border-l-rose-500' : 'border-l-brand-500'}`}>
-          <div className="flex justify-between items-start">
-            <span className={`font-sans text-xs font-bold uppercase tracking-wider ${isNetLoss ? 'text-rose-600 dark:text-rose-400' : 'text-brand-500 dark:text-brand-400'}`}>
-              {isNetLoss ? 'Net Loss' : 'Net Profit'}
-            </span>
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isNetLoss ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400' : 'bg-brand-50 text-brand-500 dark:bg-brand-900/60 dark:text-brand-400'}`}>
-              <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
-            </div>
-          </div>
-          <div className="mt-4">
-            <div className={`font-heading text-3xl md:text-4xl font-extrabold tracking-tight tabular-nums ${isNetLoss ? 'text-rose-600 dark:text-rose-400' : 'text-brand-600 dark:text-brand-400'}`}>
-              {isNetLoss ? '-' : ''}₹{Math.abs(netProfit).toLocaleString('en-IN')}
-            </div>
-            <div className="mt-2 space-y-1.5">
-              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div className={`${isNetLoss ? 'bg-rose-500' : 'bg-brand-500'} h-2 rounded-full transition-all`} style={{ width: `${marginBarWidth}%` }}></div>
-              </div>
-              <div className="font-sans text-[11px] text-slate-500 dark:text-slate-400 font-semibold flex justify-between">
-                <span>Profit Margin</span>
-                <span className={isNetLoss ? 'text-rose-600 dark:text-rose-400' : 'text-brand-500 dark:text-brand-400'}>{marginPercentage}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Fee structures */}
-      <FeeStructuresPanel courses={courses} feeStructures={feeStructures} canManage={canManage} onAdd={onAddFeeStructure} />
-
-      {/* Bottom Row: Recent Transactions & Pending Fee Reminders */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6">
-          <div className="flex justify-between items-center mb-5">
-            <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Financial Logs</h3>
-            {canManage && <button onClick={onOpenAddTransaction} className="font-sans text-xs font-bold text-brand-500 dark:text-brand-400 hover:underline uppercase tracking-wider">+ Record Entry</button>}
-          </div>
-          <div className="space-y-3">
-            {transactions.length === 0 && <p className="text-xs text-slate-500">No transactions recorded yet.</p>}
-            {transactions.slice(0, 5).map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-brand-50/70 dark:bg-brand-900/40 border border-brand-200/50 dark:border-brand-700/50 hover:border-brand-300 dark:hover:border-brand-600 transition-all">
-                <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.type === 'income' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400'}`}>
-                    <span className="material-symbols-outlined text-[18px]">{item.type === 'income' ? 'arrow_downward' : 'arrow_upward'}</span>
-                  </div>
-                  <div>
-                    <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">{item.title}</div>
-                    <div className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-0.5">{item.date} • {item.category}</div>
-                  </div>
-                </div>
-                <div className={`font-sans text-sm font-extrabold ${item.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                  {item.type === 'income' ? '+' : '-'}₹{item.amount.toLocaleString('en-IN')}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6 flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-center mb-5">
-              <div>
-                <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Dues & Collections</h3>
-                <p className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-0.5">{outstandingDues.length} dues outstanding · {pendingStudents.length} students</p>
-              </div>
-              <button type="button" onClick={onOpenWhatsAppAll} disabled={pendingStudents.length === 0}
-                className="min-h-11 flex items-center gap-1.5 bg-emerald-700 text-white px-3.5 py-2 rounded-xl transition-all font-sans text-xs font-bold uppercase tracking-wider shadow-md shadow-emerald-600/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">
-                <span className="material-symbols-outlined text-[18px]">forum</span><span>WhatsApp All</span>
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {outstandingDues.length === 0 && <p className="text-xs text-slate-500">No outstanding dues — nice work!</p>}
-              {outstandingDues.slice(0, 4).map((due) => {
-                const student = students.find((s) => s.id === due.studentId);
-                return (
-                  <div key={due.id} className="flex flex-col items-stretch justify-between gap-3 p-3 rounded-xl bg-brand-50/70 dark:bg-brand-900/40 border border-brand-200/50 dark:border-brand-700/50 sm:flex-row sm:items-center">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center font-bold text-xs">{due.studentName.charAt(0)}</div>
-                      <div>
-                        <div className="font-sans text-xs font-bold text-slate-900 dark:text-white">{due.studentName}</div>
-                        <div className={`font-sans text-[11px] font-semibold mt-0.5 ${due.status === 'Overdue' ? 'text-rose-600' : 'text-slate-500'}`}>
-                          {due.courseName} · {due.status} · due {new Date(due.dueDate).toLocaleDateString('en-IN')}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 sm:justify-end">
-                      <span className="font-sans text-xs font-extrabold text-slate-900 dark:text-white">₹{due.balanceAmount.toLocaleString('en-IN')}</span>
-                      <button type="button" onClick={() => onOpenRecordFee(student)}
-                        className="min-h-11 px-3.5 py-2 bg-white dark:bg-brand-900/60 text-brand-600 dark:text-brand-300 hover:bg-brand-500 hover:text-white rounded-xl border border-brand-200 dark:border-brand-700 text-xs font-bold transition-all">
-                        Collect
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col items-start justify-between gap-2 text-xs text-slate-500 sm:flex-row sm:items-center">
-            <span>Dues are generated automatically from fee structures</span>
-            <button type="button" onClick={() => onOpenRecordFee()} className="min-h-11 rounded-xl px-2 text-brand-500 dark:text-brand-400 font-bold hover:bg-brand-50 dark:hover:bg-brand-900/50">
-              Manual Collect &rarr;
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenWhatsAppAll}
+              disabled={owingStudents.length === 0}
+              className="btn btn-secondary btn-sm"
+            >
+              <span className="material-symbols-outlined text-[17px]" aria-hidden="true">chat</span>
+              Remind all
+            </button>
+            <button type="button" onClick={() => onOpenRecordFee()} className="btn btn-primary btn-sm">
+              Record fee
             </button>
           </div>
         </div>
-      </div>
+
+        {outstandingDues.length === 0 ? (
+          <div className="p-3">
+            <div className="empty">
+              <span className="material-symbols-outlined text-[26px] text-leaf" aria-hidden="true">task_alt</span>
+              <p className="text-[13px] font-semibold text-ink">Nothing to collect</p>
+              <p className="label max-w-72">Every due on the books has been paid.</p>
+            </div>
+          </div>
+        ) : (
+          <ul className="divide-y divide-line-2">
+            {outstandingDues.map((due) => {
+              const student = students.find((item) => item.id === due.studentId);
+              return (
+                <li key={due.id} className="flex items-center gap-3 px-3 py-2.5 md:px-4">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-medium text-ink">{due.studentName}</span>
+                    <span className="block truncate text-[11px] text-ink-3">
+                      {due.courseName} · due <span className="num">{formatDate(due.dueDate)}</span>
+                    </span>
+                  </span>
+                  {due.status === 'Overdue' && <span className="chip chip-due shrink-0">Overdue</span>}
+                  {due.status === 'Partial' && <span className="chip chip-neutral shrink-0">Part paid</span>}
+                  <span className="num shrink-0 text-[13px] font-semibold text-ink">
+                    {rupees(due.balanceAmount)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onOpenRecordFee(student)}
+                    className="btn btn-secondary btn-sm shrink-0"
+                  >
+                    Collect
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <section className="card overflow-hidden">
+        <div className="flex items-start justify-between gap-2.5 border-b border-line px-3 py-2.5 md:px-4">
+          <div>
+            <h2 className="title">Ledger</h2>
+            <p className="label-xs mt-0.5">Every payment in and cost out</p>
+          </div>
+          {canManage && (
+            <button type="button" onClick={onOpenAddTransaction} className="btn btn-ghost btn-sm text-leaf">
+              <span className="material-symbols-outlined text-[17px]" aria-hidden="true">add</span>
+              Record entry
+            </button>
+          )}
+        </div>
+
+        {transactions.length === 0 ? (
+          <div className="p-3">
+            <div className="empty">
+              <p className="text-[13px] font-semibold text-ink">The ledger is empty</p>
+              <p className="label max-w-72">Record a fee payment or a cost and it lands here.</p>
+            </div>
+          </div>
+        ) : (
+          <ul className="divide-y divide-line-2">
+            {transactions.slice(0, 12).map((item) => (
+              <li key={item.id} className="flex items-center gap-3 px-3 py-2.5 md:px-4">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-medium text-ink">{item.title}</span>
+                  <span className="block truncate text-[11px] text-ink-3">
+                    <span className="num">{item.date}</span> · {item.category}
+                  </span>
+                </span>
+                <span
+                  className={`num shrink-0 text-[13px] font-semibold ${
+                    item.type === 'income' ? 'text-leaf-strong' : 'text-ink-2'
+                  }`}
+                >
+                  {item.type === 'income' ? '+' : '−'}{rupees(item.amount)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <FeeStructuresPanel
+        courses={courses}
+        feeStructures={feeStructures}
+        canManage={canManage}
+        onAdd={onAddFeeStructure}
+      />
     </div>
   );
 };
 
-function FeeStructuresPanel({ courses, feeStructures, canManage, onAdd }: {
-  courses: Course[]; feeStructures: FeeStructure[]; canManage: boolean;
-  onAdd: (payload: { courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string; effectiveTo?: string | null }) => Promise<void>;
+function Stat({
+  label,
+  value,
+  note,
+  tone = 'plain'
+}: {
+  label: string;
+  value: string;
+  note: string;
+  tone?: 'plain' | 'due' | 'settled';
+}) {
+  return (
+    <div className="card p-3.5 md:p-4">
+      <p className="label">{label}</p>
+      <p
+        className={`num-lg mt-1.5 truncate ${
+          tone === 'due' ? 'text-kumkum' : tone === 'settled' ? 'text-leaf-strong' : 'text-ink'
+        }`}
+        title={value}
+      >
+        {value}
+      </p>
+      <p className="label-xs mt-1 truncate">{note}</p>
+    </div>
+  );
+}
+
+function FeeStructuresPanel({
+  courses,
+  feeStructures,
+  canManage,
+  onAdd
+}: {
+  courses: Course[];
+  feeStructures: FeeStructure[];
+  canManage: boolean;
+  onAdd: (payload: {
+    courseId: string;
+    name: string;
+    amount: number;
+    frequency: FeeFrequency;
+    effectiveFrom: string;
+    effectiveTo?: string | null;
+  }) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [courseId, setCourseId] = useState('');
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [frequency, setFrequency] = useState<FeeFrequency>('Monthly');
-  const [effectiveFrom, setEffectiveFrom] = useState(new Date().toISOString().split('T')[0]);
+  const [effectiveFrom, setEffectiveFrom] = useState(() => new Date().toISOString().split('T')[0]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -213,68 +270,167 @@ function FeeStructuresPanel({ courses, feeStructures, canManage, onAdd }: {
       await onAdd({ courseId, name: name.trim(), amount: parsedAmount, frequency, effectiveFrom });
       setOpen(false);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not save the fee structure.');
+      setError(requestError instanceof Error ? requestError.message : 'The fee could not be saved.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const active = feeStructures.filter((structure) => structure.isActive);
+  const superseded = feeStructures.filter((structure) => !structure.isActive);
+
   return (
-    <section className="bg-white dark:bg-slate-900 border border-brand-200/60 dark:border-brand-800 rounded-2xl shadow-xs p-6">
-      <div className="flex justify-between items-center mb-4">
+    <section className="card overflow-hidden">
+      <div className="flex items-start justify-between gap-2.5 border-b border-line px-3 py-2.5 md:px-4">
         <div>
-          <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Fee structures</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Define what each course charges and how often</p>
+          <h2 className="title">What each course charges</h2>
+          <p className="label-xs mt-0.5">Dues are raised from these automatically</p>
         </div>
-        {canManage && <button type="button" onClick={handleOpen} disabled={courses.length === 0}
-          className="btn-brand min-h-10 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:opacity-50">
-          <span className="material-symbols-outlined text-[16px]">add</span>Add
-        </button>}
+        {canManage && !open && (
+          <button
+            type="button"
+            onClick={handleOpen}
+            disabled={courses.length === 0}
+            className="btn btn-ghost btn-sm text-leaf"
+          >
+            <span className="material-symbols-outlined text-[17px]" aria-hidden="true">add</span>
+            Add fee
+          </button>
+        )}
       </div>
 
       {open && (
-        <form onSubmit={handleSubmit} className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 rounded-xl bg-slate-50 dark:bg-slate-800 p-4">
-          <select value={courseId} onChange={(event) => setCourseId(event.target.value)} required
-            className="min-h-10 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white">
-            {courses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}
-          </select>
-          <input value={name} onChange={(event) => setName(event.target.value)} required placeholder="Name e.g. Standard Fee"
-            className="min-h-10 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white" />
-          <input type="number" min="1" step="1" value={amount} onChange={(event) => setAmount(event.target.value)} required placeholder="Amount ₹"
-            className="min-h-10 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white" />
-          <select value={frequency} onChange={(event) => setFrequency(event.target.value as FeeFrequency)}
-            className="min-h-10 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white">
-            {(Object.keys(FEE_FREQUENCY_LABELS) as FeeFrequency[]).map((f) => <option key={f} value={f}>{FEE_FREQUENCY_LABELS[f]}</option>)}
-          </select>
-          <input type="date" value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} required
-            className="min-h-10 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white" />
-          <div className="sm:col-span-2 lg:col-span-5 flex items-center gap-2 justify-end">
-            {error && <span className="text-xs text-rose-600 mr-auto">{error}</span>}
-            <button type="button" onClick={() => setOpen(false)} className="min-h-10 px-3 rounded-lg text-xs font-semibold text-slate-600 hover:bg-white dark:hover:bg-slate-700">Cancel</button>
-            <button type="submit" disabled={submitting} className="btn-brand min-h-10 px-4 rounded-lg text-xs font-bold disabled:opacity-50">{submitting ? 'Saving…' : 'Save'}</button>
+        <form onSubmit={handleSubmit} className="border-b border-line-2 bg-surface-2 p-3 md:p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div>
+              <label htmlFor="fee-course" className="label mb-1.5 block font-semibold text-ink">Course</label>
+              <select
+                id="fee-course"
+                value={courseId}
+                onChange={(event) => setCourseId(event.target.value)}
+                required
+                className="field"
+              >
+                {courses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="fee-name" className="label mb-1.5 block font-semibold text-ink">Name</label>
+              <input
+                id="fee-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                required
+                placeholder="Standard monthly"
+                className="field"
+              />
+            </div>
+            <div>
+              <label htmlFor="fee-amount" className="label mb-1.5 block font-semibold text-ink">Amount (₹)</label>
+              <input
+                id="fee-amount"
+                type="number"
+                min="1"
+                step="1"
+                inputMode="numeric"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                required
+                placeholder="1200"
+                className="field num"
+              />
+            </div>
+            <div>
+              <label htmlFor="fee-frequency" className="label mb-1.5 block font-semibold text-ink">Charged</label>
+              <select
+                id="fee-frequency"
+                value={frequency}
+                onChange={(event) => setFrequency(event.target.value as FeeFrequency)}
+                className="field"
+              >
+                {(Object.keys(FEE_FREQUENCY_LABELS) as FeeFrequency[]).map((key) => (
+                  <option key={key} value={key}>{FEE_FREQUENCY_LABELS[key]}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="fee-from" className="label mb-1.5 block font-semibold text-ink">Starts</label>
+              <input
+                id="fee-from"
+                type="date"
+                value={effectiveFrom}
+                onChange={(event) => setEffectiveFrom(event.target.value)}
+                required
+                className="field num"
+              />
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+            {error && <p role="alert" className="mr-auto text-[12px] font-medium text-kumkum">{error}</p>}
+            <button type="button" onClick={() => setOpen(false)} className="btn btn-ghost btn-sm">Cancel</button>
+            <button type="submit" disabled={submitting} className="btn btn-primary btn-sm">
+              {submitting ? 'Saving…' : 'Save fee'}
+            </button>
           </div>
         </form>
       )}
 
       {feeStructures.length === 0 ? (
-        <p className="text-xs text-slate-500">No fee structures yet. {!canManage ? 'Ask your admin to add one.' : courses.length === 0 ? 'Create a course first.' : 'Add one to start generating dues.'}</p>
+        <div className="p-3">
+          <div className="empty">
+            <p className="text-[13px] font-semibold text-ink">No fees set up</p>
+            <p className="label max-w-80">
+              {!canManage
+                ? 'Your admin sets what each course charges.'
+                : courses.length === 0
+                  ? 'Add a course first, then set what it charges.'
+                  : 'Set a fee for a course and dues start being raised.'}
+            </p>
+          </div>
+        </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {feeStructures.map((structure) => (
-            <div key={structure.id} className={`rounded-xl border p-3.5 ${structure.isActive ? 'border-brand-200 dark:border-brand-800 bg-brand-50/50 dark:bg-brand-950/30' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 opacity-70'}`}>
-              <div className="flex justify-between items-start gap-2">
-                <div className="text-xs font-bold text-slate-900 dark:text-white">{structure.courseName}</div>
-                {!structure.isActive && <span className="text-[10px] font-bold text-slate-500">Superseded</span>}
+        <div className="p-3 md:p-4">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            {active.map((structure) => (
+              <FeeCard key={structure.id} structure={structure} />
+            ))}
+          </div>
+
+          {superseded.length > 0 && (
+            <details className="mt-3">
+              <summary className="label cursor-pointer select-none py-1">
+                Show {superseded.length} replaced fee{superseded.length === 1 ? '' : 's'}
+              </summary>
+              <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                {superseded.map((structure) => (
+                  <FeeCard key={structure.id} structure={structure} replaced />
+                ))}
               </div>
-              <div className="text-[11px] text-slate-500 mt-0.5">{structure.name}</div>
-              <div className="mt-2 flex items-baseline gap-1.5">
-                <span className="text-lg font-extrabold text-brand-700 dark:text-brand-300 tabular-nums">₹{structure.amount.toLocaleString('en-IN')}</span>
-                <span className="text-[11px] text-slate-500">/ {FEE_FREQUENCY_LABELS[structure.frequency]}</span>
-              </div>
-            </div>
-          ))}
+            </details>
+          )}
         </div>
       )}
     </section>
+  );
+}
+
+function FeeCard({ structure, replaced = false }: { structure: FeeStructure; replaced?: boolean; key?: React.Key }) {
+  return (
+    <div className={`card-inset p-3 ${replaced ? 'opacity-70' : ''}`}>
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 truncate text-[13px] font-medium text-ink" title={structure.courseName}>
+          {structure.courseName}
+        </p>
+        {replaced && <span className="chip chip-neutral shrink-0">Replaced</span>}
+      </div>
+      <p className="label-xs mt-0.5 truncate">{structure.name}</p>
+      <p className="mt-2 flex items-baseline gap-1.5">
+        <span className="num text-[17px] font-semibold text-ink">
+          ₹{structure.amount.toLocaleString('en-IN')}
+        </span>
+        <span className="label-xs">{FEE_FREQUENCY_LABELS[structure.frequency].toLowerCase()}</span>
+      </p>
+    </div>
   );
 }

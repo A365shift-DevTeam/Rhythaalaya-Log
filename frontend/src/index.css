@@ -1,93 +1,659 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 /*
-  Brand green from reference CTA (teal → green gradient):
-  left teal ~#3aa8a0 · mid solid ~#45b080 · right green ~#63c06a
-  Not a light mint green — richer, saturated teal-green.
+  Rhythaalaya Log — design tokens
+  ------------------------------------------------------------------
+  Colour is assigned by ROLE, never by decoration. Each hue has one job:
+    leaf    primary action + active navigation
+    brass   "now" — the sam beat, today's marker, the live session
+    kumkum  overdue and absent, and nothing else
+    slate   secondary text and neutral data
+  Everything else is ink on paper.
+
+  Roles are runtime custom properties so dark mode swaps values rather
+  than requiring a dark: variant on every element.
 */
-@theme {
-  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
-  --font-heading: "Poppins", ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand-50: #f3faf7;
-  --color-brand-100: #d9f0e8;
-  --color-brand-200: #a8ddd0;
-  --color-brand-300: #6ec4b2;
-  --color-brand-400: #3aa8a0;
-  --color-brand-500: #45b080;
-  --color-brand-600: #2f9a6e;
-  --color-brand-700: #247a58;
-  --color-brand-800: #1b5c42;
-  --color-brand-900: #134232;
-  --color-brand-950: #0b261c;
+:root {
+  color-scheme: light;
 
-  --color-mint-50: #f6faf8;
-  --color-mint-100: #e8f4ef;
+  --c-bg: #eaeee8;
+  --c-surface: #fcfdfb;
+  --c-surface-2: #f1f4ef;
+  --c-surface-3: #e5eae2;
+
+  --c-text: #12211c;
+  --c-text-2: #4a5b54;
+  --c-text-3: #74847d;
+
+  --c-line: #d2dbcf;
+  --c-line-2: #e2e8df;
+
+  --c-leaf: #1f7a55;
+  --c-leaf-strong: #17603f;
+  --c-leaf-on: #ffffff;
+  --c-leaf-tint: #dfeee5;
+  --c-leaf-line: #b6d8c6;
+
+  --c-brass: #8f6a1e;
+  --c-brass-mark: #b8862f;
+  --c-brass-tint: #f6eedc;
+  --c-brass-line: #e2cfa4;
+
+  --c-kumkum: #ac3527;
+  --c-kumkum-tint: #fae7e4;
+  --c-kumkum-line: #eec4bd;
+
+  /* The rail is ink in both themes — it is the spine of the app. */
+  --c-rail: #12211c;
+  --c-rail-2: #1b2f28;
+  --c-rail-line: #2a3f37;
+  --c-rail-text: #dce6e0;
+  --c-rail-text-2: #8fa39a;
+
+  /* Chart ramp: leaf leads, brass counterweights, sages fill out the tail. */
+  --c-chart-1: var(--c-leaf);
+  --c-chart-2: #b8862f;
+  --c-chart-3: #5c9b80;
+  --c-chart-4: #8ba79c;
+  --c-chart-5: #bfccc5;
+  --c-grid: #e2e8df;
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2374847d' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+
+  --r-ctl: 8px;
+  --r-card: 14px;
+
+  --shadow-card: 0 1px 2px rgb(18 33 28 / 0.05);
+  --shadow-raise: 0 6px 20px -8px rgb(18 33 28 / 0.18);
+  --shadow-pop: 0 18px 44px -16px rgb(18 33 28 / 0.32);
 }
 
-@variant dark (&:where(.dark, .dark *));
+.dark {
+  color-scheme: dark;
+
+  --c-bg: #0d1714;
+  --c-surface: #15221e;
+  --c-surface-2: #1b2b25;
+  --c-surface-3: #22352d;
+
+  --c-text: #e6ede8;
+  --c-text-2: #a9bab2;
+  --c-text-3: #7d8f87;
+
+  --c-line: #2b3d36;
+  --c-line-2: #22322c;
+
+  --c-leaf: #3fa878;
+  --c-leaf-strong: #57bd8d;
+  --c-leaf-on: #06120d;
+  --c-leaf-tint: #16332552;
+  --c-leaf-line: #2f6b4f;
+
+  --c-brass: #d9b168;
+  --c-brass-mark: #d6ab5c;
+  --c-brass-tint: #3226123f;
+  --c-brass-line: #5d4a24;
+
+  --c-kumkum: #e2796b;
+  --c-kumkum-tint: #3a1d1a55;
+  --c-kumkum-line: #6a3129;
+
+  --c-rail: #0a120f;
+  --c-rail-2: #121e19;
+  --c-rail-line: #22332c;
+  --c-rail-text: #dce6e0;
+  --c-rail-text-2: #85978e;
+
+  --c-chart-1: var(--c-leaf);
+  --c-chart-2: #d6ab5c;
+  --c-chart-3: #6fae91;
+  --c-chart-4: #8ea79d;
+  --c-chart-5: #5d6f68;
+  --c-grid: #24352e;
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%237d8f87' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-raise: 0 6px 20px -8px rgb(0 0 0 / 0.5);
+  --shadow-pop: 0 18px 44px -16px rgb(0 0 0 / 0.7);
+}
+
+/* ------------------------------------------------------------------
+   Accent choice.
+   The academy picks one accent in Settings; it swaps only the leaf
+   family, so "primary action / active navigation" keeps its single
+   meaning whichever colour is chosen. Ink, paper, brass and kumkum
+   never move.
+   ------------------------------------------------------------------ */
+:root[data-accent='blue'] {
+  --c-leaf: #1d5fa8;
+  --c-leaf-strong: #17497f;
+  --c-leaf-tint: #dee8f5;
+  --c-leaf-line: #b2cae8;
+}
+.dark[data-accent='blue'] {
+  --c-leaf: #5b9be0;
+  --c-leaf-strong: #82b6ec;
+  --c-leaf-on: #06121f;
+  --c-leaf-tint: #17293f66;
+  --c-leaf-line: #305275;
+}
+
+:root[data-accent='purple'] {
+  --c-leaf: #6a3fa0;
+  --c-leaf-strong: #543182;
+  --c-leaf-tint: #e9e1f4;
+  --c-leaf-line: #ccbbe6;
+}
+.dark[data-accent='purple'] {
+  --c-leaf: #a385da;
+  --c-leaf-strong: #b8a1e5;
+  --c-leaf-on: #120a1f;
+  --c-leaf-tint: #26184066;
+  --c-leaf-line: #4c3a70;
+}
+
+:root[data-accent='rose'] {
+  --c-leaf: #b23a5f;
+  --c-leaf-strong: #8e2d4c;
+  --c-leaf-tint: #f7e1e8;
+  --c-leaf-line: #ecbccd;
+}
+.dark[data-accent='rose'] {
+  --c-leaf: #e0819f;
+  --c-leaf-strong: #eb9db6;
+  --c-leaf-on: #1d0a11;
+  --c-leaf-tint: #3a1d2866;
+  --c-leaf-line: #6b3a4c;
+}
+
+@theme inline {
+  --font-sans: "Inter Tight", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-surface-2: var(--c-surface-2);
+  --color-surface-3: var(--c-surface-3);
+
+  --color-ink: var(--c-text);
+  --color-ink-2: var(--c-text-2);
+  --color-ink-3: var(--c-text-3);
+
+  --color-line: var(--c-line);
+  --color-line-2: var(--c-line-2);
+
+  --color-leaf: var(--c-leaf);
+  --color-leaf-strong: var(--c-leaf-strong);
+  --color-leaf-on: var(--c-leaf-on);
+  --color-leaf-tint: var(--c-leaf-tint);
+  --color-leaf-line: var(--c-leaf-line);
+
+  --color-brass: var(--c-brass);
+  --color-brass-mark: var(--c-brass-mark);
+  --color-brass-tint: var(--c-brass-tint);
+  --color-brass-line: var(--c-brass-line);
+
+  --color-kumkum: var(--c-kumkum);
+  --color-kumkum-tint: var(--c-kumkum-tint);
+  --color-kumkum-line: var(--c-kumkum-line);
+
+  --color-rail: var(--c-rail);
+  --color-rail-2: var(--c-rail-2);
+  --color-rail-line: var(--c-rail-line);
+  --color-rail-text: var(--c-rail-text);
+  --color-rail-text-2: var(--c-rail-text-2);
+
+  --radius-ctl: var(--r-ctl);
+  --radius-card: var(--r-card);
+}
 
 @layer base {
   html {
     min-width: 320px;
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     min-width: 320px;
-    min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: clip;
-    font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: #f6faf8;
-    color: #0f172a;
+    background-color: var(--c-bg);
+    color: var(--c-text);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.5;
     text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
 
-  .dark body {
-    background-color: #0b261c;
-    color: #f3faf7;
+  /*
+    Fraunces carries the voice. WONK swaps in the splayed g and angled
+    terminals — carved rather than corporate — so it is only switched on
+    at sizes where the detail is actually visible.
+  */
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-variation-settings: "opsz" 40, "SOFT" 30, "WONK" 1;
+    letter-spacing: -0.011em;
+    line-height: 1.15;
+    color: var(--c-text);
+    text-wrap: balance;
   }
 
-  h1, h2, h3, h4, h5, h6, .font-heading {
-    font-family: 'Poppins', system-ui, sans-serif;
+  h5, h6 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.006em;
   }
 
-  button,
-  [role='button'],
-  label[for],
-  select {
+  button, [role='button'], label[for], select, summary {
     cursor: pointer;
   }
 
-  button:disabled,
-  select:disabled,
-  input:disabled {
+  button:disabled, select:disabled, input:disabled, textarea:disabled {
     cursor: not-allowed;
   }
 
   :focus-visible {
-    outline: 3px solid rgba(69, 176, 128, 0.42);
+    outline: 2px solid var(--c-leaf);
     outline-offset: 2px;
+    border-radius: 4px;
   }
 
-  input,
-  select,
-  textarea {
+  /* 16px on phones stops iOS Safari zooming the viewport on focus. */
+  input, select, textarea {
+    font-family: inherit;
     font-size: 1rem;
   }
 
   @media (min-width: 640px) {
-    input,
-    select,
-    textarea {
-      font-size: inherit;
-    }
+    input, select, textarea { font-size: 0.875rem; }
+  }
+
+  ::placeholder { color: var(--c-text-3); }
+
+  ::selection {
+    background: var(--c-leaf);
+    color: var(--c-leaf-on);
   }
 }
 
 @layer components {
+  /* ---------------------------------------------------------------
+     Type roles
+     --------------------------------------------------------------- */
+  .display-lg {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-variation-settings: "opsz" 72, "SOFT" 40, "WONK" 1;
+    font-size: clamp(1.625rem, 1.35rem + 1.3vw, 2.125rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+  }
+
+  .display {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-variation-settings: "opsz" 48, "SOFT" 34, "WONK" 1;
+    font-size: clamp(1.3125rem, 1.18rem + 0.6vw, 1.625rem);
+    line-height: 1.15;
+    letter-spacing: -0.016em;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-variation-settings: "opsz" 24, "SOFT" 24, "WONK" 0;
+    font-size: 1.0625rem;
+    line-height: 1.25;
+    letter-spacing: -0.008em;
+  }
+
+  /* Sentence case, calm weight. A label labels; it does not shout. */
+  .label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--c-text-2);
+  }
+
+  .label-xs {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--c-text-3);
+  }
+
+  /* Every rupee figure, receipt number, ID and time uses this so that
+     columns of numbers line up on the digit. */
+  .num {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-feature-settings: "tnum" 1, "zero" 1;
+    letter-spacing: -0.02em;
+  }
+
+  .num-lg {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-variation-settings: "opsz" 60, "SOFT" 36, "WONK" 0;
+    font-feature-settings: "tnum" 1;
+    font-size: clamp(1.5rem, 1.3rem + 0.9vw, 1.875rem);
+    line-height: 1.05;
+    letter-spacing: -0.022em;
+  }
+
+  /* ---------------------------------------------------------------
+     Surfaces — exactly two radii in the whole application
+     --------------------------------------------------------------- */
+  .card {
+    background-color: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-i {
+    background-color: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow-card);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .card-i:hover {
+    border-color: var(--c-leaf-line);
+    box-shadow: var(--shadow-raise);
+  }
+
+  .card-inset {
+    background-color: var(--c-surface-2);
+    border: 1px solid var(--c-line-2);
+    border-radius: var(--r-card);
+  }
+
+  /* ---------------------------------------------------------------
+     Controls
+     --------------------------------------------------------------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0 0.9375rem;
+    border-radius: var(--r-ctl);
+    border: 1px solid transparent;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .btn:disabled { opacity: 0.45; }
+
+  .btn-sm {
+    min-height: 2.25rem;
+    padding: 0 0.6875rem;
+    font-size: 0.75rem;
+    gap: 0.375rem;
+  }
+
+  .btn-primary {
+    background-color: var(--c-leaf);
+    color: var(--c-leaf-on);
+  }
+  .btn-primary:hover:not(:disabled) { background-color: var(--c-leaf-strong); }
+
+  .btn-secondary {
+    background-color: var(--c-surface);
+    border-color: var(--c-line);
+    color: var(--c-text);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--c-surface-2);
+    border-color: var(--c-leaf-line);
+  }
+
+  .btn-ghost {
+    background-color: transparent;
+    color: var(--c-text-2);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background-color: var(--c-surface-2);
+    color: var(--c-text);
+  }
+
+  .btn-danger {
+    background-color: transparent;
+    border-color: var(--c-kumkum-line);
+    color: var(--c-kumkum);
+  }
+  .btn-danger:hover:not(:disabled) { background-color: var(--c-kumkum-tint); }
+
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--r-ctl);
+    color: var(--c-text-2);
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .icon-btn:hover:not(:disabled) {
+    background-color: var(--c-surface-2);
+    color: var(--c-text);
+  }
+  .icon-btn:disabled { opacity: 0.35; }
+
+  .field,
   .settings-input {
-    @apply min-h-11 w-full rounded-xl border border-brand-200 bg-slate-50 px-3.5 py-2.5 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-brand-700 dark:bg-slate-800 dark:text-white;
+    display: block;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--r-ctl);
+    border: 1px solid var(--c-line);
+    background-color: var(--c-surface);
+    color: var(--c-text);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .field:focus,
+  .settings-input:focus {
+    border-color: var(--c-leaf);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-leaf) 18%, transparent);
+    outline: none;
+  }
+  .field:disabled,
+  .settings-input:disabled { background-color: var(--c-surface-2); color: var(--c-text-3); }
+
+  select.field,
+  select.settings-input {
+    appearance: none;
+    padding-right: 2.25rem;
+    background-image: var(--chevron);
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    background-size: 1rem 1rem;
+  }
+
+  /* ---------------------------------------------------------------
+     Segmented control — replaces the rows of gradient pill buttons
+     --------------------------------------------------------------- */
+  .segmented {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    border-radius: var(--r-ctl);
+    background-color: var(--c-surface-2);
+    border: 1px solid var(--c-line-2);
+  }
+
+  .segmented > button {
+    min-height: 2.125rem;
+    padding: 0 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--c-text-2);
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .segmented > button:hover { color: var(--c-text); }
+  .segmented > button[aria-pressed='true'],
+  .segmented > button[data-on='true'] {
+    background-color: var(--c-surface);
+    color: var(--c-text);
+    font-weight: 600;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* ---------------------------------------------------------------
+     Status chips — the only place leaf and kumkum act as status
+     --------------------------------------------------------------- */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+
+  .chip-settled {
+    background-color: var(--c-leaf-tint);
+    border-color: var(--c-leaf-line);
+    color: var(--c-leaf-strong);
+  }
+
+  .chip-due {
+    background-color: var(--c-kumkum-tint);
+    border-color: var(--c-kumkum-line);
+    color: var(--c-kumkum);
+  }
+
+  .chip-now {
+    background-color: var(--c-brass-tint);
+    border-color: var(--c-brass-line);
+    color: var(--c-brass);
+  }
+
+  .chip-neutral {
+    background-color: var(--c-surface-2);
+    border-color: var(--c-line-2);
+    color: var(--c-text-2);
+  }
+
+  /* ---------------------------------------------------------------
+     The beat grid — tala notation borrowed as structure.
+     Used only where the content genuinely is a cycle: the day schedule,
+     the attendance roster, and a weekday pattern. Nowhere else.
+     --------------------------------------------------------------- */
+  .beat {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+    border: 1px solid var(--c-line);
+    background-color: var(--c-surface-2);
+    color: var(--c-text-3);
+  }
+
+  .beat-on {
+    border-color: var(--c-leaf-line);
+    background-color: var(--c-leaf-tint);
+    color: var(--c-leaf-strong);
+  }
+
+  .beat-miss {
+    border-color: var(--c-kumkum-line);
+    background-color: var(--c-kumkum-tint);
+    color: var(--c-kumkum);
+  }
+
+  /* Leave is neither a win nor an alarm, so it stays neutral and leaves
+     brass free to mean "now". */
+  .beat-leave {
+    border-color: var(--c-line);
+    background-color: var(--c-surface-3);
+    color: var(--c-text-2);
+  }
+
+  /* sam — the emphatic first beat of the cycle. Brass, and rare. */
+  .beat-sam {
+    border-color: var(--c-brass-line);
+    background-color: var(--c-brass-tint);
+    color: var(--c-brass);
+  }
+
+  .sam-mark {
+    color: var(--c-brass-mark);
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+
+  /* ---------------------------------------------------------------
+     Tables — mono numerals, right aligned, hairline rules
+     --------------------------------------------------------------- */
+  .data-table { width: 100%; border-collapse: collapse; }
+
+  .data-table th {
+    padding: 0.625rem 0.75rem;
+    text-align: left;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--c-text-3);
+    border-bottom: 1px solid var(--c-line);
+    white-space: nowrap;
+  }
+
+  .data-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--c-line-2);
+    vertical-align: middle;
+  }
+
+  .data-table tbody tr:last-child td { border-bottom: 0; }
+  .data-table tbody tr:hover { background-color: var(--c-surface-2); }
+
+  .data-table .col-num {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* ---------------------------------------------------------------
+     Empty states — an invitation to act, never an apology
+     --------------------------------------------------------------- */
+  .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    border: 1px dashed var(--c-line);
+    border-radius: var(--r-card);
+    background-color: var(--c-surface-2);
   }
 }
 
@@ -96,49 +662,23 @@
   left: 1rem;
   top: 1rem;
   z-index: 100;
-  transform: translateY(-180%);
-  border-radius: 0.75rem;
-  background: #0f172a;
-  color: #fff;
+  transform: translateY(-200%);
+  border-radius: var(--r-ctl);
+  background: var(--c-rail);
+  color: var(--c-rail-text);
   padding: 0.75rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 700;
+  font-size: 0.8125rem;
+  font-weight: 600;
   transition: transform 0.15s ease;
 }
 
-.skip-link:focus {
-  transform: translateY(0);
-}
+.skip-link:focus { transform: translateY(0); }
 
-/* Primary CTA — teal → green like the reference button */
-.btn-brand {
-  background-image: linear-gradient(90deg, #3aa8a0 0%, #45b080 45%, #63c06a 100%);
-  color: #ffffff;
-  box-shadow: 0 8px 20px -6px rgba(58, 168, 160, 0.45);
-  transition: filter 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
-}
-
-.btn-brand:hover {
-  filter: brightness(0.96);
-  box-shadow: 0 10px 24px -6px rgba(58, 168, 160, 0.55);
-}
-
-.btn-brand:active {
-  transform: scale(0.98);
-  filter: brightness(0.92);
-}
-
-.btn-brand:focus-visible {
-  outline-color: rgba(47, 154, 110, 0.65);
-  outline-offset: 3px;
-}
-
-/* Material Icons styling */
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
   font-style: normal;
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1;
   letter-spacing: normal;
   text-transform: none;
@@ -155,95 +695,22 @@
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* Glass & Card Surfaces */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-.dark .glass-panel {
-  background: rgba(19, 66, 50, 0.9);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-.premium-card {
-  background-color: #ffffff;
-  border: 1px solid rgba(168, 221, 208, 0.5);
-  box-shadow: 0 1px 3px 0 rgba(36, 122, 88, 0.05);
-  border-radius: 1rem;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.dark .premium-card {
-  background-color: #134232 !important;
-  border-color: rgba(58, 168, 160, 0.22) !important;
-  color: #f3faf7 !important;
-}
-
-.premium-card-interactive {
-  background-color: #ffffff;
-  border: 1px solid rgba(168, 221, 208, 0.5);
-  box-shadow: 0 1px 3px 0 rgba(36, 122, 88, 0.05);
-  border-radius: 1rem;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.dark .premium-card-interactive {
-  background-color: #134232 !important;
-  border-color: rgba(58, 168, 160, 0.22) !important;
-  color: #f3faf7 !important;
-}
-
-.premium-card-interactive:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px -10px rgba(58, 168, 160, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
-  border-color: rgba(69, 176, 128, 0.45);
-}
-
-.dark .premium-card-interactive:hover {
-  border-color: rgba(99, 192, 106, 0.4) !important;
-  box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5) !important;
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(58, 168, 160, 0.35);
-  border-radius: 9999px;
+  background: var(--c-line);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(69, 176, 128, 0.55);
-}
-
-/* Pie chart — teal → green brand */
-.pie-chart {
-  background: conic-gradient(
-    #3aa8a0 0% 55%,
-    #45b080 55% 82%,
-    #63c06a 82% 100%
-  );
-  border-radius: 50%;
+  background: var(--c-text-3);
+  background-clip: content-box;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  *,
-  *::before,
-  *::after {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -252,15 +719,8 @@
 }
 
 @media print {
-  body * {
-    visibility: hidden !important;
-  }
-
-  .fee-receipt-print,
-  .fee-receipt-print * {
-    visibility: visible !important;
-  }
-
+  body * { visibility: hidden !important; }
+  .fee-receipt-print, .fee-receipt-print * { visibility: visible !important; }
   .fee-receipt-print {
     position: absolute;
     inset: 0;

@@ -1,0 +1,102 @@
+- generic [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - link "Skip to main content" [ref=f3e4] [cursor=pointer]:
+      - /url: "#main-content"
+    - banner [ref=f3e5]:
+      - button "Sruthi Laya Academy Music & Dance School" [ref=f3e6] [cursor=pointer]:
+        - generic [ref=f3e7]: S
+        - generic [ref=f3e8]:
+          - generic [ref=f3e9]: Sruthi Laya Academy
+          - generic [ref=f3e10]: Music & Dance School
+      - button "Notifications, 5 unread" [ref=f3e12] [cursor=pointer]:
+        - generic [ref=f3e13]: notifications
+        - generic [ref=f3e14]: "5"
+      - button "Account menu" [ref=f3e16] [cursor=pointer]:
+        - generic [ref=f3e17]: more_vert
+    - navigation "Main" [ref=f3e18]:
+      - button "Today" [ref=f3e19] [cursor=pointer]:
+        - generic [ref=f3e20]: today
+      - button "Students" [ref=f3e22] [cursor=pointer]:
+        - generic [ref=f3e23]: group
+      - button "Batches" [ref=f3e25] [cursor=pointer]:
+        - generic [ref=f3e26]: event_note
+      - button "Fees" [ref=f3e28] [cursor=pointer]:
+        - generic [ref=f3e29]: currency_rupee
+      - button "Attendance" [active] [ref=f3e31] [cursor=pointer]:
+        - generic [ref=f3e33]: fact_check
+    - main [ref=f3e35]:
+      - generic [ref=f3e37]:
+        - generic [ref=f3e38]:
+          - heading "Attendance" [level=1] [ref=f3e39]
+          - paragraph [ref=f3e40]: Mark the roll for one batch on one day.
+        - generic [ref=f3e41]:
+          - generic [ref=f3e42]:
+            - generic [ref=f3e43] [cursor=pointer]: Date
+            - textbox "Date" [ref=f3e44]: 2026-08-21
+          - generic [ref=f3e45]:
+            - generic [ref=f3e46] [cursor=pointer]: Batch
+            - generic [ref=f3e47]:
+              - combobox "Batch" [ref=f3e48] [cursor=pointer]:
+                - option "Vocal — Beginners" [selected]
+                - option "Vocal — Intermediate"
+                - option "Bharatanatyam — Junior"
+                - option "Veena — Weekend"
+                - option "Mridangam — Evening"
+              - generic: expand_more
+          - generic [ref=f3e49]:
+            - generic [ref=f3e50]: Meets on
+            - img "Meets on Friday, Sunday" [ref=f3e51]:
+              - generic [ref=f3e52]: S
+              - generic [ref=f3e53]: M
+              - generic [ref=f3e54]: T
+              - generic [ref=f3e55]: W
+              - generic [ref=f3e56]: T
+              - generic [ref=f3e57]: F
+              - generic [ref=f3e58]: S
+        - region "Roll" [ref=f3e60]:
+          - generic [ref=f3e61]:
+            - heading "Roll (5)" [level=2] [ref=f3e62]:
+              - text: Roll
+              - generic [ref=f3e63]: (5)
+            - generic [ref=f3e64]:
+              - generic [ref=f3e65]: P
+              - generic [ref=f3e66]: A
+              - generic [ref=f3e67]: L
+          - list [ref=f3e68]:
+            - listitem [ref=f3e69]:
+              - generic [ref=f3e70]: Anjali Ramesh
+              - group "Attendance for Anjali Ramesh" [ref=f3e71]:
+                - button "Present — Anjali Ramesh" [ref=f3e72] [cursor=pointer]: P
+                - button "Absent — Anjali Ramesh" [pressed] [ref=f3e73] [cursor=pointer]: A
+                - button "Leave — Anjali Ramesh" [ref=f3e74] [cursor=pointer]: L
+            - listitem [ref=f3e75]:
+              - generic [ref=f3e76]: Aravind Balaji
+              - group "Attendance for Aravind Balaji" [ref=f3e77]:
+                - button "Present — Aravind Balaji" [pressed] [ref=f3e78] [cursor=pointer]: P
+                - button "Absent — Aravind Balaji" [ref=f3e79] [cursor=pointer]: A
+                - button "Leave — Aravind Balaji" [ref=f3e80] [cursor=pointer]: L
+            - listitem [ref=f3e81]:
+              - generic [ref=f3e82]: Nikhil Varma
+              - group "Attendance for Nikhil Varma" [ref=f3e83]:
+                - button "Present — Nikhil Varma" [pressed] [ref=f3e84] [cursor=pointer]: P
+                - button "Absent — Nikhil Varma" [ref=f3e85] [cursor=pointer]: A
+                - button "Leave — Nikhil Varma" [ref=f3e86] [cursor=pointer]: L
+            - listitem [ref=f3e87]:
+              - generic [ref=f3e88]: Aditya Suresh
+              - group "Attendance for Aditya Suresh" [ref=f3e89]:
+                - button "Present — Aditya Suresh" [pressed] [ref=f3e90] [cursor=pointer]: P
+                - button "Absent — Aditya Suresh" [ref=f3e91] [cursor=pointer]: A
+                - button "Leave — Aditya Suresh" [ref=f3e92] [cursor=pointer]: L
+            - listitem [ref=f3e93]:
+              - generic [ref=f3e94]: Sanjay Rao
+              - group "Attendance for Sanjay Rao" [ref=f3e95]:
+                - button "Present — Sanjay Rao" [pressed] [ref=f3e96] [cursor=pointer]: P
+                - button "Absent — Sanjay Rao" [ref=f3e97] [cursor=pointer]: A
+                - button "Leave — Sanjay Rao" [ref=f3e98] [cursor=pointer]: L
+        - generic [ref=f3e100]:
+          - paragraph [ref=f3e101]:
+            - generic [ref=f3e102]: 4/5
+            - text: present
+          - button "All present" [ref=f3e103] [cursor=pointer]
+          - button "Saved" [disabled] [ref=f3e104]
+  - generic [ref=f3e106]: 25k
