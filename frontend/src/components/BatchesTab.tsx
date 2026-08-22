@@ -41,27 +41,6 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
 
   return (
     <div className="space-y-6 md:space-y-8 pb-12">
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-950 via-brand-900 to-brand-700 text-white p-6 md:p-8 shadow-xl shadow-brand-900/10">
-        <div className="absolute -right-12 -top-16 w-64 h-64 rounded-full bg-brand-300/15 blur-2xl" />
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-5">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/10 px-3 py-1 text-[11px] font-semibold text-brand-100 mb-3">
-              <span className="material-symbols-outlined text-[15px]">calendar_view_week</span>
-              Class operations
-            </div>
-            <h2 className="font-heading text-2xl md:text-3xl font-extrabold">Courses, staff & batches</h2>
-            <p className="text-xs md:text-sm text-brand-100/80 mt-2 max-w-xl">
-              Set up courses and mentors, then schedule batches with their days, timing, and enrollment window.
-            </p>
-          </div>
-          {canManage && <button type="button" onClick={onOpenAddBatch}
-            className="btn-brand rounded-xl px-5 py-3 text-sm font-bold flex items-center justify-center gap-2 shrink-0">
-            <span className="material-symbols-outlined text-[20px]">add</span>
-            Create batch
-          </button>}
-        </div>
-      </section>
-
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <BatchStat icon="calendar_view_week" label="Total batches" value={batches.length} color="brand" />
         <BatchStat icon="school" label="Students enrolled" value={totalStudents} color="blue" />
@@ -74,9 +53,11 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
         <section className="premium-card rounded-3xl overflow-hidden">
           <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
             <h3 className="font-heading text-lg font-extrabold text-slate-900 dark:text-white">Courses</h3>
-            {canManage && <button type="button" onClick={onOpenAddCourse} className="min-h-10 rounded-xl px-3 text-xs font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 flex items-center gap-1">
-              <span className="material-symbols-outlined text-[16px]">add</span>New course
-            </button>}
+            {canManage && <div className="flex items-center">
+              <button type="button" onClick={onOpenAddCourse} className="btn-brand min-h-10 rounded-xl px-3 text-xs font-bold flex items-center gap-1">
+                <span className="material-symbols-outlined text-[16px]">add</span>Add course
+              </button>
+            </div>}
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
             {courses.length === 0 && <p className="p-5 text-xs text-slate-500">No courses yet. {canManage ? 'Create one to start scheduling batches.' : 'Ask your admin to add one.'}</p>}
@@ -98,8 +79,8 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
         <section className="premium-card rounded-3xl overflow-hidden">
           <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
             <h3 className="font-heading text-lg font-extrabold text-slate-900 dark:text-white">Staff & mentors</h3>
-            {canManage && <button type="button" onClick={onOpenAddStaff} className="min-h-10 rounded-xl px-3 text-xs font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 flex items-center gap-1">
-              <span className="material-symbols-outlined text-[16px]">add</span>New staff
+            {canManage && <button type="button" onClick={onOpenAddStaff} className="btn-brand min-h-10 rounded-xl px-3 text-xs font-bold flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px]">add</span>Add staff
             </button>}
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
@@ -128,6 +109,11 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{filteredBatches.length} of {batches.length} batches shown</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
+              {canManage && <button type="button" onClick={onOpenAddBatch}
+                className="btn-brand min-h-11 rounded-xl px-4 text-xs font-bold flex items-center justify-center gap-1.5 shrink-0">
+                <span className="material-symbols-outlined text-[17px]">add</span>
+                Add batch
+              </button>}
               <div className="relative flex-1 sm:w-72">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
                 <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search batch, course, staff…"
@@ -156,7 +142,6 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
             <p className="text-xs text-slate-500 mt-1">
               {batches.length ? 'Try a different search or course.' : canManage ? 'Add a course and a staff member, then schedule a batch.' : 'Ask your admin to schedule one.'}
             </p>
-            {!batches.length && canManage && <button type="button" onClick={onOpenAddBatch} className="btn-brand rounded-xl px-4 py-2.5 text-xs font-bold mt-4">Create batch</button>}
           </div>
         ) : (
           <div className="p-4 md:p-6 grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -220,16 +205,16 @@ function BatchStat({ icon, label, value, color }: {
   icon: string; label: string; value: number; color: 'brand' | 'blue' | 'violet' | 'amber';
 }) {
   const colors = {
-    brand: 'bg-brand-100 text-brand-700',
-    blue: 'bg-blue-100 text-blue-700',
-    violet: 'bg-violet-100 text-violet-700',
-    amber: 'bg-amber-100 text-amber-700'
+    brand: 'bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300',
+    blue: 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300',
+    violet: 'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300',
+    amber: 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
   };
   return <div className="premium-card p-4">
     <div className={'w-9 h-9 rounded-xl flex items-center justify-center ' + colors[color]}>
       <span className="material-symbols-outlined text-[20px]">{icon}</span>
     </div>
-    <div className="text-2xl font-black text-slate-900 dark:text-white mt-3">{value}</div>
-    <div className="text-[11px] font-semibold text-slate-500 mt-0.5">{label}</div>
+    <div className="text-2xl font-black text-slate-900 dark:text-white mt-3 tabular-nums">{value}</div>
+    <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">{label}</div>
   </div>;
 }

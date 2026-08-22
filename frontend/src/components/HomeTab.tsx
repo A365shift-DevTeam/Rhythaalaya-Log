@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Area,
   Bar,
@@ -15,7 +15,12 @@ import {
 } from 'recharts';
 import { AppTab, Student, Batch, Transaction, FeeDue, WEEKDAY_SHORT } from '../types';
 
-const chartColors = ['#45b080', '#2e8d72', '#83cfa6', '#c7a35a', '#64748b'];
+// Validated categorical palette (dataviz skill) — fixed order, CVD-checked against both
+// this app's light (#ffffff) and dark (#134232) card surfaces. Never reorder ad hoc;
+// re-run scripts/validate_palette.js first. Slots beyond 8 fold into "Other courses".
+const CATEGORICAL_LIGHT = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
+const CATEGORICAL_DARK = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'];
+
 const formatRupees = (value: number | null | undefined) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 const weekdayIndex = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const formatDays = (days: string[]) => days.map((d) => WEEKDAY_SHORT[weekdayIndex.indexOf(d)]).join('/');
@@ -26,22 +31,39 @@ const formatTime = (value: string) => {
   return `${hour}:${String(m).padStart(2, '0')} ${period}`;
 };
 
+const buildMonthBuckets = (count: number) => Array.from({ length: count }, (_, index) => {
+  const date = new Date();
+  date.setDate(1);
+  date.setMonth(date.getMonth() - (count - 1 - index));
+  return {
+    key: `${date.getFullYear()}-${date.getMonth()}`,
+    label: date.toLocaleDateString('en-IN', { month: 'short' }),
+    monthEnd: new Date(date.getFullYear(), date.getMonth() + 1, 0),
+    income: 0,
+    expense: 0
+  };
+});
+
 interface HomeTabProps {
   students: Student[];
   batches: Batch[];
   transactions: Transaction[];
   outstandingDues: FeeDue[];
+  darkMode: boolean;
   setCurrentTab: (tab: AppTab) => void;
   onOpenAddStudent: () => void;
   onOpenAddBatch: () => void;
   onOpenRecordFee: (student?: Student) => void;
 }
 
+const RANGE_OPTIONS = [3, 6, 12] as const;
+
 export const HomeTab: React.FC<HomeTabProps> = ({
   students,
   batches,
   transactions,
   outstandingDues,
+  darkMode,
   setCurrentTab,
   onOpenAddStudent,
   onOpenAddBatch,
@@ -49,6 +71,9 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 }) => {
   const reduceMotion = typeof window !== 'undefined'
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const categorical = darkMode ? CATEGORICAL_DARK : CATEGORICAL_LIGHT;
+  const [monthsRange, setMonthsRange] = useState<typeof RANGE_OPTIONS[number]>(6);
+
   const pendingStudents = students.filter((s) => s.outstandingBalance > 0);
   const pendingCount = pendingStudents.length;
   const pendingTotal = pendingStudents.reduce((acc, s) => acc + s.outstandingBalance, 0);
@@ -75,29 +100,14 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       && joined.getFullYear() === currentMonth.getFullYear();
   }).length;
 
-  const monthBuckets = Array.from({ length: 6 }, (_, index) => {
-    const date = new Date();
-    date.setDate(1);
-    date.setMonth(date.getMonth() - (5 - index));
-    return {
-      key: `${date.getFullYear()}-${date.getMonth()}`,
-      label: date.toLocaleDateString('en-IN', { month: 'short' }),
-      income: 0,
-      expense: 0
-    };
-  });
-
+  const monthBuckets = buildMonthBuckets(monthsRange);
   transactions.forEach((transaction) => {
     const date = new Date(transaction.occurredAt || transaction.date);
     if (Number.isNaN(date.getTime())) return;
     const bucket = monthBuckets.find((item) => item.key === `${date.getFullYear()}-${date.getMonth()}`);
     if (bucket) bucket[transaction.type] += transaction.amount;
   });
-
-  const financialTrend = monthBuckets.map((item) => ({
-    ...item,
-    net: item.income - item.expense
-  }));
+  const financialTrend = monthBuckets.map((item) => ({ ...item, net: item.income - item.expense }));
   const periodIncome = financialTrend.reduce((sum, item) => sum + item.income, 0);
   const periodExpenses = financialTrend.reduce((sum, item) => sum + item.expense, 0);
   const periodNet = periodIncome - periodExpenses;
@@ -105,6 +115,19 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   const feeSettlementRate = students.length
     ? Math.round(((students.length - pendingCount) / students.length) * 100)
     : 0;
+
+  // Fixed 6-month micro-trends for the KPI tiles — independent of the revenue chart's
+  // selectable range, so the tiles stay a stable, glanceable "last 6 months" read.
+  const sparkBuckets = buildMonthBuckets(6);
+  transactions.forEach((transaction) => {
+    const date = new Date(transaction.occurredAt || transaction.date);
+    if (Number.isNaN(date.getTime()) || transaction.type !== 'income') return;
+    const bucket = sparkBuckets.find((item) => item.key === `${date.getFullYear()}-${date.getMonth()}`);
+    if (bucket) bucket.income += transaction.amount;
+  });
+  const feesSparkline = sparkBuckets.map((item) => item.income);
+  const studentsSparkline = sparkBuckets.map((item) =>
+    students.filter((s) => s.joinDate && new Date(s.joinDate) <= item.monthEnd).length);
 
   const enrollmentCounts = new Map<string, number>();
   students.forEach((student) => {
@@ -114,8 +137,8 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   });
   const enrollmentEntries: [string, number][] = Array.from(enrollmentCounts.entries())
     .sort((a, b) => b[1] - a[1]);
-  const topEnrollmentEntries = enrollmentEntries.slice(0, 4);
-  const otherEnrollment: number = enrollmentEntries.slice(4).reduce((sum, entry) => sum + entry[1], 0);
+  const topEnrollmentEntries = enrollmentEntries.slice(0, 7);
+  const otherEnrollment: number = enrollmentEntries.slice(7).reduce((sum, entry) => sum + entry[1], 0);
   const enrollmentByCourse = [
     ...topEnrollmentEntries,
     ...(otherEnrollment ? [['Other courses', otherEnrollment] as [string, number]] : [])
@@ -123,7 +146,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
     id: label,
     label,
     value,
-    color: chartColors[index % chartColors.length]
+    color: index < categorical.length ? categorical[index] : '#94a3b8'
   }));
   const totalEnrollments: number = enrollmentEntries.reduce((sum, entry) => sum + entry[1], 0);
   const leadingCourse = enrollmentEntries[0];
@@ -156,7 +179,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           </button>
           <button type="button" onClick={() => setCurrentTab('log')}
             className="min-h-11 flex-1 sm:flex-initial bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-95 border border-slate-200/80 dark:border-slate-700">
-            <span className="material-symbols-outlined text-[18px]">fact_check</span><span>Roll Call</span>
+            <span className="material-symbols-outlined text-[18px]">fact_check</span><span>Attendance</span>
           </button>
         </div>
       </div>
@@ -177,6 +200,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
               <span className="material-symbols-outlined text-[14px]">person_add</span>{newStudentsThisMonth} joined this month
             </p>
           </div>
+          <Sparkline data={studentsSparkline} className="mt-3 -mb-1" />
         </button>
 
         <button type="button" onClick={() => setCurrentTab('batches')}
@@ -205,6 +229,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             <p className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">₹{totalCollected.toLocaleString('en-IN')}</p>
             <p className="font-sans text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">Year to date</p>
           </div>
+          <Sparkline data={feesSparkline} className="mt-3 -mb-1" />
         </button>
 
         <button type="button" onClick={() => setCurrentTab('log')}
@@ -236,24 +261,34 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                   Executive financial view
                 </span>
                 <h4 className="font-heading text-xl md:text-2xl font-extrabold mt-3">Revenue performance</h4>
-                <p className="text-xs text-emerald-100/65 mt-1.5">Six-month income, operating cost, and net position</p>
+                <p className="text-xs text-emerald-100/65 mt-1.5">{monthsRange}-month income, operating cost, and net position</p>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 sm:gap-3 min-w-0 lg:min-w-[330px]" aria-label="Six-month financial summary">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 min-w-0 lg:min-w-[330px]" aria-label={`${monthsRange}-month financial summary`}>
                 <ExecutiveMetric label="Revenue" value={formatRupees(periodIncome)} tone="green" />
                 <ExecutiveMetric label="Net" value={formatRupees(periodNet)} tone={periodNet >= 0 ? 'gold' : 'rose'} />
                 <ExecutiveMetric label="Settled" value={`${feeSettlementRate}%`} tone="neutral" />
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-6 text-[10px] font-semibold uppercase tracking-wider text-emerald-100/70" aria-label="Financial chart legend">
-              <span className="inline-flex items-center gap-2"><span className="w-5 h-0.5 rounded-full bg-[#62d4a0]" />Collected revenue</span>
-              <span className="inline-flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-[3px] bg-slate-500" />Operating cost</span>
-              <span className="inline-flex items-center gap-2"><span className="w-5 h-0.5 rounded-full bg-[#dfbd72]" />Net position</span>
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-100/70" aria-label="Financial chart legend">
+                <span className="inline-flex items-center gap-2"><span className="w-5 h-0.5 rounded-full bg-[#62d4a0]" />Collected revenue</span>
+                <span className="inline-flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-[3px] bg-slate-500" />Operating cost</span>
+                <span className="inline-flex items-center gap-2"><span className="w-5 h-0.5 rounded-full bg-[#dfbd72]" />Net position</span>
+              </div>
+              <div className="inline-flex rounded-lg border border-white/10 bg-white/[0.04] p-0.5" role="group" aria-label="Chart range">
+                {RANGE_OPTIONS.map((option) => (
+                  <button key={option} type="button" onClick={() => setMonthsRange(option)} aria-pressed={monthsRange === option}
+                    className={`min-h-7 px-2.5 rounded-md text-[10px] font-bold transition-colors ${monthsRange === option ? 'bg-white/15 text-white' : 'text-emerald-100/60 hover:text-emerald-100'}`}>
+                    {option}mo
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="relative h-[300px] md:h-[330px] w-full px-1 sm:px-3 pb-4" role="img" aria-label={`Six-month financial chart. Revenue ${formatRupees(periodIncome)}, expenses ${formatRupees(periodExpenses)}, net ${formatRupees(periodNet)}.`}>
+          <div className="relative h-[300px] md:h-[330px] w-full px-1 sm:px-3 pb-4" role="img" aria-label={`${monthsRange}-month financial chart. Revenue ${formatRupees(periodIncome)}, expenses ${formatRupees(periodExpenses)}, net ${formatRupees(periodNet)}.`}>
             {hasFinancialData ? <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={financialTrend} margin={{ top: 28, right: 18, bottom: 8, left: 4 }}>
                 <defs>
@@ -377,7 +412,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                     {b.enrolledCount} Enrolled
                   </span>
                   <button type="button" onClick={() => setCurrentTab('log')} className="btn-brand min-h-11 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">fact_check</span><span>Roll</span>
+                    <span className="material-symbols-outlined text-sm">fact_check</span><span>Attendance</span>
                   </button>
                 </div>
               </div>
@@ -463,6 +498,37 @@ function ExecutiveMetric({ label, value, tone }: { label: string; value: string;
       <span className="block text-[9px] uppercase tracking-wider font-semibold text-emerald-100/55 truncate">{label}</span>
       <span className={`block text-xs sm:text-sm font-extrabold tabular-nums mt-1 truncate ${tones[tone]}`} title={value}>{value}</span>
     </div>
+  );
+}
+
+/** Minimal inline sparkline — a single-series micro-trend, so it carries the brand
+ * identity color rather than a categorical hue (single series needs no legend). */
+function Sparkline({ data, className }: { data: number[]; className?: string }) {
+  if (data.length < 2 || data.every((v) => v === data[0])) return null;
+  const width = 100;
+  const height = 28;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const points = data.map((value, index) => {
+    const x = (index / (data.length - 1)) * width;
+    const y = height - ((value - min) / range) * (height - 4) - 2;
+    return `${x},${y}`;
+  });
+  const areaPoints = `0,${height} ${points.join(' ')} ${width},${height}`;
+  const gradientId = `spark-${Math.round(min)}-${Math.round(max)}-${data.length}`;
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className={`w-full h-7 ${className || ''}`} aria-hidden="true">
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={areaPoints} fill={`url(#${gradientId})`} className="text-brand-500 dark:text-brand-400" />
+      <polyline points={points.join(' ')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-brand-500 dark:text-brand-400" vectorEffect="non-scaling-stroke" />
+    </svg>
   );
 }
 

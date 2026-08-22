@@ -1,21 +1,22 @@
-import React, { useState } from 'react';
-import { Course, FeeDue, FeeFrequency, FeeStructure, FEE_FREQUENCY_LABELS, Student, Transaction } from '../types';
+import React from 'react';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { FeeDue, Student, Transaction } from '../types';
+
+// Validated categorical palette (dataviz skill) — same fixed order as Home's enrollment
+// donut, CVD-checked against this app's light/dark card surfaces. Keep in sync.
+const CATEGORICAL_LIGHT = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
+const CATEGORICAL_DARK = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'];
 
 interface FinanceTabProps {
   students: Student[];
   transactions: Transaction[];
   outstandingDues: FeeDue[];
-  courses: Course[];
-  feeStructures: FeeStructure[];
   canManage: boolean;
+  darkMode: boolean;
   onOpenRecordFee: (student?: Student) => void;
   onOpenWhatsAppAll: () => void;
   onOpenAddTransaction: () => void;
   onEditTransaction: (transaction: Transaction) => void;
-  onAddFeeStructure: (payload: {
-    courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string; effectiveTo?: string | null;
-  }) => Promise<void>;
-  onUpdateFeeStructure: (structureId: string, payload: { name: string; effectiveTo?: string | null; isActive: boolean }) => Promise<void>;
 }
 
 const DUE_STATUS_STYLE: Record<string, string> = {
@@ -25,9 +26,10 @@ const DUE_STATUS_STYLE: Record<string, string> = {
 };
 
 export const FinanceTab: React.FC<FinanceTabProps> = ({
-  students, transactions, outstandingDues, courses, feeStructures, canManage,
-  onOpenRecordFee, onOpenWhatsAppAll, onOpenAddTransaction, onEditTransaction, onAddFeeStructure, onUpdateFeeStructure
+  students, transactions, outstandingDues, canManage, darkMode,
+  onOpenRecordFee, onOpenWhatsAppAll, onOpenAddTransaction, onEditTransaction
 }) => {
+  const categorical = darkMode ? CATEGORICAL_DARK : CATEGORICAL_LIGHT;
   const pendingStudents = students.filter((s) => s.outstandingBalance > 0);
   const totalDuePending = outstandingDues.reduce((sum, due) => sum + due.balanceAmount, 0);
 
@@ -37,6 +39,25 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
   const marginPercentage = totalIncome > 0 ? Math.round((netProfit / totalIncome) * 100) : 0;
   const isNetLoss = netProfit < 0;
   const marginBarWidth = Math.min(100, Math.abs(marginPercentage));
+
+  const expenseCategoryTotals = new Map<string, number>();
+  transactions.filter((t) => t.type === 'expense').forEach((t) => {
+    expenseCategoryTotals.set(t.category, (expenseCategoryTotals.get(t.category) || 0) + t.amount);
+  });
+  const expenseEntries = Array.from(expenseCategoryTotals.entries()).sort((a, b) => b[1] - a[1]);
+  const topExpenseEntries = expenseEntries.slice(0, 7);
+  const otherExpense = expenseEntries.slice(7).reduce((sum, [, value]) => sum + value, 0);
+  const expenseByCategory = [
+    ...topExpenseEntries,
+    ...(otherExpense ? [['Other', otherExpense] as [string, number]] : [])
+  ].map(([label, value], index) => ({
+    id: label, label, value,
+    color: index < categorical.length ? categorical[index] : '#94a3b8'
+  }));
+  const topExpenseCategory = expenseEntries[0];
+  const topExpenseShare = topExpenseCategory && totalExpense
+    ? Math.round((topExpenseCategory[1] / totalExpense) * 100)
+    : 0;
 
   return (
     <div className="space-y-6 md:space-y-8 pb-12">
@@ -105,12 +126,67 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
         </div>
       </div>
 
+      {/* Spending by category */}
+      {expenseByCategory.length > 0 && (
+        <article className="premium-card rounded-3xl overflow-hidden">
+          <div className="p-5 md:p-7 pb-2 flex items-start justify-between gap-4">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Cost breakdown</span>
+              <h4 className="font-heading text-xl font-extrabold text-slate-950 dark:text-white mt-2">Spending by category</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Where operating costs are going, year to date</p>
+            </div>
+            <span className="shrink-0 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40 px-3 py-2 text-right">
+              <span className="block text-lg font-black text-rose-700 dark:text-rose-300 tabular-nums">{expenseEntries.length}</span>
+              <span className="block text-[9px] uppercase tracking-wider font-bold text-slate-500">Categories</span>
+            </span>
+          </div>
+
+          <div className="px-4 md:px-6 pb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-[minmax(190px,1fr)_minmax(170px,0.9fr)] items-center">
+              <div className="relative h-[220px] min-w-0" role="img" aria-label={`Spending breakdown across ${expenseEntries.length} categories. ${topExpenseCategory?.[0] || 'No category'} is the largest at ${topExpenseShare} percent.`}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Tooltip content={<CategoryTooltip />} />
+                    <Pie data={expenseByCategory} dataKey="value" nameKey="label" cx="50%" cy="50%" innerRadius="68%" outerRadius="91%" paddingAngle={4} cornerRadius={7} stroke="none">
+                      {expenseByCategory.map((item) => <Cell key={item.id} fill={item.color} />)}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
+                  <span className="text-2xl font-black text-slate-950 dark:text-white tabular-nums">₹{totalExpense >= 1000 ? `${Math.round(totalExpense / 1000)}k` : totalExpense}</span>
+                  <span className="text-[9px] uppercase tracking-[0.16em] font-bold text-slate-400 mt-1">Total spend</span>
+                </div>
+              </div>
+
+              <div className="space-y-2.5 px-2" role="table" aria-label="Spending by category">
+                {expenseByCategory.map((item) => (
+                  <div key={item.id} role="row" className="flex items-center justify-between gap-3 rounded-xl px-2.5 py-2">
+                    <span role="cell" className="min-w-0 inline-flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                      <span className="truncate" title={item.label}>{item.label}</span>
+                    </span>
+                    <span role="cell" className="text-right">
+                      <span className="block font-extrabold tabular-nums text-xs text-slate-950 dark:text-white">₹{item.value.toLocaleString('en-IN')}</span>
+                      <span className="block text-[9px] text-slate-400 tabular-nums">{totalExpense ? Math.round(item.value / totalExpense * 100) : 0}%</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </article>
+      )}
+
       {/* Bottom Row: Recent Transactions & Pending Fee Reminders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="premium-card p-6">
           <div className="flex justify-between items-center mb-5">
             <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Financial Logs</h3>
-            {canManage && <button onClick={onOpenAddTransaction} className="font-sans text-xs font-bold text-brand-500 dark:text-brand-400 hover:underline uppercase tracking-wider">+ Record Entry</button>}
+            {canManage && <button type="button" onClick={onOpenAddTransaction}
+              className="btn-brand min-h-10 rounded-xl px-3 font-sans text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px]">add</span>
+              <span>Record entry</span>
+            </button>}
           </div>
           <div className="space-y-3">
             {transactions.length === 0 && <p className="text-xs text-slate-500">No transactions recorded yet.</p>}
@@ -200,181 +276,19 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
         </div>
       </div>
 
-      {/* Fee structures (admin setup, tucked away since it's rarely touched) */}
-      <FeeStructuresPanel courses={courses} feeStructures={feeStructures} canManage={canManage} onAdd={onAddFeeStructure} onUpdate={onUpdateFeeStructure} />
     </div>
   );
 };
 
-function FeeStructuresPanel({ courses, feeStructures, canManage, onAdd, onUpdate }: {
-  courses: Course[]; feeStructures: FeeStructure[]; canManage: boolean;
-  onAdd: (payload: { courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string; effectiveTo?: string | null }) => Promise<void>;
-  onUpdate: (structureId: string, payload: { name: string; effectiveTo?: string | null; isActive: boolean }) => Promise<void>;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [courseId, setCourseId] = useState('');
-  const [name, setName] = useState('');
-  const [amount, setAmount] = useState('');
-  const [frequency, setFrequency] = useState<FeeFrequency>('Monthly');
-  const [effectiveFrom, setEffectiveFrom] = useState(new Date().toISOString().split('T')[0]);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editEffectiveTo, setEditEffectiveTo] = useState('');
-  const [editIsActive, setEditIsActive] = useState(true);
-  const [editSubmitting, setEditSubmitting] = useState(false);
-  const [editError, setEditError] = useState('');
-
-  const startEdit = (structure: FeeStructure) => {
-    setEditingId(structure.id);
-    setEditName(structure.name);
-    setEditEffectiveTo(structure.effectiveTo || '');
-    setEditIsActive(structure.isActive);
-    setEditError('');
-  };
-
-  const handleEditSubmit = async (event: React.FormEvent, structureId: string) => {
-    event.preventDefault();
-    if (!editName.trim()) return;
-    setEditSubmitting(true);
-    setEditError('');
-    try {
-      await onUpdate(structureId, { name: editName.trim(), effectiveTo: editEffectiveTo || null, isActive: editIsActive });
-      setEditingId(null);
-    } catch (requestError) {
-      setEditError(requestError instanceof Error ? requestError.message : 'Could not save changes.');
-    } finally {
-      setEditSubmitting(false);
-    }
-  };
-
-  const handleOpen = () => {
-    setCourseId(courses[0]?.id || '');
-    setName('');
-    setAmount('');
-    setFrequency('Monthly');
-    setEffectiveFrom(new Date().toISOString().split('T')[0]);
-    setError('');
-    setOpen(true);
-  };
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const parsedAmount = Number(amount);
-    if (!courseId || !name.trim() || !Number.isFinite(parsedAmount) || parsedAmount <= 0) return;
-    setSubmitting(true);
-    setError('');
-    try {
-      await onAdd({ courseId, name: name.trim(), amount: parsedAmount, frequency, effectiveFrom });
-      setOpen(false);
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not save the fee structure.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+function CategoryTooltip({ active, payload }: { active?: boolean; payload?: readonly { name?: string; value?: number | string }[] }) {
+  if (!active || !payload?.length) return null;
+  const item = payload[0];
+  const amount = Number(item.value || 0);
 
   return (
-    <section className="premium-card p-6">
-      <button type="button" onClick={() => setExpanded((value) => !value)}
-        aria-expanded={expanded} className="flex w-full items-center justify-between gap-3 text-left">
-        <div>
-          <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Fee structures</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {feeStructures.length} plan{feeStructures.length === 1 ? '' : 's'} · what each course charges and how often
-          </p>
-        </div>
-        <span className={`material-symbols-outlined shrink-0 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`}>expand_more</span>
-      </button>
-
-      {expanded && (
-      <div className="mt-4">
-      <div className="flex justify-end mb-4">
-        {canManage && <button type="button" onClick={handleOpen} disabled={courses.length === 0}
-          className="btn-brand min-h-10 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:opacity-50">
-          <span className="material-symbols-outlined text-[16px]">add</span>Add fee plan
-        </button>}
-      </div>
-
-      {open && (
-        <form onSubmit={handleSubmit} className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 rounded-xl bg-slate-50 dark:bg-slate-800 p-4">
-          <select value={courseId} onChange={(event) => setCourseId(event.target.value)} required
-            className="min-h-10 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white">
-            {courses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}
-          </select>
-          <input value={name} onChange={(event) => setName(event.target.value)} required placeholder="Name e.g. Standard Fee"
-            className="min-h-10 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white" />
-          <input type="number" min="1" step="1" value={amount} onChange={(event) => setAmount(event.target.value)} required placeholder="Amount ₹"
-            className="min-h-10 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white" />
-          <select value={frequency} onChange={(event) => setFrequency(event.target.value as FeeFrequency)}
-            className="min-h-10 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white">
-            {(Object.keys(FEE_FREQUENCY_LABELS) as FeeFrequency[]).map((f) => <option key={f} value={f}>{FEE_FREQUENCY_LABELS[f]}</option>)}
-          </select>
-          <input type="date" value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} required
-            className="min-h-10 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white" />
-          <div className="sm:col-span-2 lg:col-span-5 flex items-center gap-2 justify-end">
-            {error && <span className="text-xs text-rose-600 mr-auto">{error}</span>}
-            <button type="button" onClick={() => setOpen(false)} className="min-h-10 px-3 rounded-lg text-xs font-semibold text-slate-600 hover:bg-white dark:hover:bg-slate-700">Cancel</button>
-            <button type="submit" disabled={submitting} className="btn-brand min-h-10 px-4 rounded-lg text-xs font-bold disabled:opacity-50">{submitting ? 'Saving…' : 'Save'}</button>
-          </div>
-        </form>
-      )}
-
-      {feeStructures.length === 0 ? (
-        <p className="text-xs text-slate-500">No fee structures yet. {!canManage ? 'Ask your admin to add one.' : courses.length === 0 ? 'Create a course first.' : 'Add one to start generating dues.'}</p>
-      ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {feeStructures.map((structure) => (
-            <div key={structure.id} className={`rounded-xl border p-3.5 ${structure.isActive ? 'border-brand-200 dark:border-brand-800 bg-brand-50/50 dark:bg-brand-950/30' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 opacity-70'}`}>
-              {editingId === structure.id ? (
-                <form onSubmit={(event) => handleEditSubmit(event, structure.id)} className="space-y-2">
-                  <input value={editName} onChange={(event) => setEditName(event.target.value)} required
-                    className="w-full min-h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white" />
-                  <label className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                    Ends on
-                    <input type="date" value={editEffectiveTo} onChange={(event) => setEditEffectiveTo(event.target.value)}
-                      className="min-h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white" />
-                  </label>
-                  <label className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                    <input type="checkbox" checked={editIsActive} onChange={(event) => setEditIsActive(event.target.checked)} className="h-3.5 w-3.5 accent-emerald-600" />
-                    Plan is active
-                  </label>
-                  {editError && <p className="text-[11px] text-rose-600">{editError}</p>}
-                  <div className="flex items-center gap-2 justify-end pt-1">
-                    <button type="button" onClick={() => setEditingId(null)} className="min-h-8 px-2.5 rounded-lg text-[11px] font-semibold text-slate-600 hover:bg-white dark:hover:bg-slate-700">Cancel</button>
-                    <button type="submit" disabled={editSubmitting} className="btn-brand min-h-8 px-3 rounded-lg text-[11px] font-bold disabled:opacity-50">{editSubmitting ? 'Saving…' : 'Save'}</button>
-                  </div>
-                </form>
-              ) : (
-                <>
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="text-xs font-bold text-slate-900 dark:text-white">{structure.courseName}</div>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      {!structure.isActive && <span className="text-[10px] font-bold text-slate-500">Superseded</span>}
-                      {canManage && (
-                        <button type="button" onClick={() => startEdit(structure)} aria-label={`Edit ${structure.name}`}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-brand-600 hover:bg-white dark:hover:bg-slate-700">
-                          <span className="material-symbols-outlined text-[15px]">edit</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">{structure.name}</div>
-                  <div className="mt-2 flex items-baseline gap-1.5">
-                    <span className="text-lg font-extrabold text-brand-700 dark:text-brand-300 tabular-nums">₹{structure.amount.toLocaleString('en-IN')}</span>
-                    <span className="text-[11px] text-slate-500">/ {FEE_FREQUENCY_LABELS[structure.frequency]}</span>
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-      </div>
-      )}
-    </section>
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 px-3 py-2.5 shadow-xl backdrop-blur-md">
+      <div className="text-xs font-bold text-slate-900 dark:text-white">{item.name}</div>
+      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">₹{amount.toLocaleString('en-IN')}</div>
+    </div>
   );
 }

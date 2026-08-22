@@ -124,18 +124,29 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   // Actions
   const handleAddStudent = async (payload: {
     name: string; dateOfBirth: string | null; parentName: string; phone: string; email: string; address: string;
-  }, enrollBatchId: string | null) => {
+  }, batchIds: string[]) => {
     const created = await api.createStudent(session.token, payload);
-    if (enrollBatchId) await api.enrollStudent(session.token, created.id, enrollBatchId);
+    for (const targetBatchId of [...new Set(batchIds)]) await api.enrollStudent(session.token, created.id, targetBatchId);
     await reload();
   };
 
   const handleUpdateStudent = async (studentId: string, payload: {
     name: string; dateOfBirth: string | null; parentName: string; phone: string; email: string; address: string;
-  }) => {
+  }, batchIds: string[]) => {
     const existing = students.find((s) => s.id === studentId);
-    const updated = await api.updateStudent(session.token, studentId, { ...payload, isActive: existing?.isActive ?? true });
-    setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s));
+    let updated = await api.updateStudent(session.token, studentId, { ...payload, isActive: existing?.isActive ?? true });
+    const requestedBatchIds = [...new Set(batchIds)];
+    const activeEnrollments = existing?.enrollments.filter((enrollment) => enrollment.status === 'Active') || [];
+    const activeBatchIds = new Set(activeEnrollments.map((enrollment) => enrollment.batchId));
+
+    for (const targetBatchId of requestedBatchIds.filter((id) => !activeBatchIds.has(id))) {
+      updated = await api.enrollStudent(session.token, studentId, targetBatchId);
+    }
+    for (const enrollment of activeEnrollments.filter((item) => !requestedBatchIds.includes(item.batchId))) {
+      updated = await api.endEnrollment(session.token, enrollment.id, 'Withdrawn');
+    }
+
+    await reload();
     setDetailsTargetStudent((prev) => prev && prev.id === updated.id ? updated : prev);
   };
 
@@ -290,7 +301,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
 
       <main id="main-content" tabIndex={-1} className="md:ml-[270px] min-h-screen px-4 sm:px-6 lg:px-8 py-5 md:py-8 pb-28 md:pb-12">
         <div className="mx-auto w-full max-w-[1440px]">
-        <header className="mb-5 flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-brand-200/60 bg-white/80 px-3 py-2.5 shadow-xs backdrop-blur-sm dark:border-brand-800 dark:bg-slate-900/80 sm:px-4">
+        <header className="relative z-30 mb-5 flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-brand-200/60 bg-white/80 px-3 py-2.5 shadow-xs backdrop-blur-sm dark:border-brand-800 dark:bg-slate-900/80 sm:px-4">
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-slate-800 dark:text-white">{session.user.tenantName}</p>
             <p className="truncate text-xs text-slate-500 dark:text-slate-400">Signed in as {session.user.fullName}</p>
@@ -322,6 +333,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
               batches={batches}
               transactions={transactions}
               outstandingDues={outstandingDues}
+              darkMode={settings.darkMode}
               setCurrentTab={setCurrentTab}
               onOpenAddStudent={openAddStudent}
               onOpenAddBatch={() => { setEditingBatch(null); setIsAddBatchOpen(true); }}
@@ -360,15 +372,12 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             students={students}
             transactions={transactions}
             outstandingDues={outstandingDues}
-            courses={courses}
-            feeStructures={feeStructures}
             canManage={isAdmin}
+            darkMode={settings.darkMode}
             onOpenRecordFee={openRecordFee}
             onOpenWhatsAppAll={() => openWhatsApp(undefined)}
             onOpenAddTransaction={openAddTransaction}
             onEditTransaction={openEditTransaction}
-            onAddFeeStructure={handleAddFeeStructure}
-            onUpdateFeeStructure={handleUpdateFeeStructure}
           />
         )}
 
@@ -406,6 +415,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         isOpen={isRecordFeeOpen}
         onClose={() => setIsRecordFeeOpen(false)}
         students={students}
+        feeStructures={feeStructures}
         initialStudent={feeTargetStudent}
         token={session.token}
         onRecordFee={handleRecordFee}
@@ -442,8 +452,11 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         isOpen={isAddCourseOpen}
         onClose={() => setIsAddCourseOpen(false)}
         editingCourse={editingCourse}
+        feeStructures={feeStructures}
         onSave={handleSaveCourse}
         onArchive={handleArchiveCourse}
+        onAddFeeStructure={handleAddFeeStructure}
+        onUpdateFeeStructure={handleUpdateFeeStructure}
       />
 
       <AddStaffModal

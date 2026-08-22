@@ -59,15 +59,15 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-brand-200/60 dark:border-brand-800 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-xs">
             <span className="w-2 h-2 rounded-full bg-brand-500"></span>
-            Total: {students.length}
+            Total: <span className="tabular-nums">{students.length}</span>
           </div>
           <div className="inline-flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1.5 rounded-xl border border-emerald-200/60 dark:border-emerald-900/50 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            Paid: {paidCount}
+            Paid: <span className="tabular-nums">{paidCount}</span>
           </div>
           <div className="inline-flex items-center gap-2 bg-rose-50 dark:bg-rose-950/50 px-3 py-1.5 rounded-xl border border-rose-200/60 dark:border-rose-900/50 text-xs font-semibold text-rose-700 dark:text-rose-300">
             <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-            Pending: {pendingCount}
+            Pending: <span className="tabular-nums">{pendingCount}</span>
           </div>
 
           <button

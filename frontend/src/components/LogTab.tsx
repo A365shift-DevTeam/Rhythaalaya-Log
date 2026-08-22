@@ -15,12 +15,14 @@ interface RosterEntry {
   studentName: string;
 }
 
+type RollCallStatus = Extract<AttendanceStatus, 'P' | 'A'>;
+
 export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent }) => {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>(batches[0]?.id || '');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [roster, setRoster] = useState<RosterEntry[]>([]);
-  const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
+  const [attendance, setAttendance] = useState<Record<string, RollCallStatus>>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -34,9 +36,9 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
       const nextRoster: RosterEntry[] = result.entries.map((entry: any) => ({
         enrollmentId: entry.enrollmentId, studentId: entry.studentId, studentName: entry.studentName
       }));
-      const nextAttendance: Record<string, AttendanceStatus> = {};
+      const nextAttendance: Record<string, RollCallStatus> = {};
       result.entries.forEach((entry: any) => {
-        nextAttendance[entry.enrollmentId] = entry.status === 'Present' ? 'P' : entry.status === 'Absent' ? 'A' : 'L';
+        nextAttendance[entry.enrollmentId] = entry.status === 'Present' ? 'P' : 'A';
       });
       setRoster(nextRoster);
       setAttendance(nextAttendance);
@@ -44,12 +46,12 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
       .finally(() => setLoading(false));
   }, [token, selectedDate, selectedBatchId]);
 
-  const setStatus = (enrollmentId: string, status: AttendanceStatus) => {
+  const setStatus = (enrollmentId: string, status: RollCallStatus) => {
     setAttendance((prev) => ({ ...prev, [enrollmentId]: status }));
   };
 
   const markAllPresent = () => {
-    const next: Record<string, AttendanceStatus> = {};
+    const next: Record<string, RollCallStatus> = {};
     roster.forEach((entry) => { next[entry.enrollmentId] = 'P'; });
     setAttendance(next);
     setToastMessage('Marked all students as Present!');
@@ -58,7 +60,6 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
 
   const presentCount = Object.values(attendance).filter((s) => s === 'P').length;
   const absentCount = Object.values(attendance).filter((s) => s === 'A').length;
-  const leaveCount = Object.values(attendance).filter((s) => s === 'L').length;
   const totalStudents = roster.length || 1;
   const presentPct = Math.round((presentCount / totalStudents) * 100);
 
@@ -86,7 +87,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
       <div className="premium-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-5">
         <div>
           <h2 className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Attendance Log</h2>
-          <p className="font-sans text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Record daily student roll call and track attendance trends</p>
+          <p className="font-sans text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Record daily student attendance and track trends</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -123,7 +124,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
         <div className="lg:col-span-2 space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">Roll List ({roster.length})</h3>
-            <span className="font-sans text-xs text-slate-500 font-medium">Click P (Present), A (Absent), L (Leave)</span>
+            <span className="font-sans text-xs text-slate-500 font-medium">Toggle each student between Present and Absent</span>
           </div>
 
           <div className="premium-card overflow-hidden">
@@ -141,20 +142,20 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
                       <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">{entry.studentName}</div>
                     </div>
 
-                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full sm:w-60" role="group" aria-label={`Attendance status for ${entry.studentName}`}>
-                      <button type="button" onClick={() => setStatus(entry.enrollmentId, 'P')} aria-pressed={currentStatus === 'P'}
-                        className={`min-h-11 flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${currentStatus === 'P' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'}`}>
-                        <span>P</span><span className="text-[10px] font-normal opacity-80">Present</span>
-                      </button>
-                      <button type="button" onClick={() => setStatus(entry.enrollmentId, 'A')} aria-pressed={currentStatus === 'A'}
-                        className={`min-h-11 flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${currentStatus === 'A' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'}`}>
-                        <span>A</span><span className="text-[10px] font-normal opacity-80">Absent</span>
-                      </button>
-                      <button type="button" onClick={() => setStatus(entry.enrollmentId, 'L')} aria-pressed={currentStatus === 'L'}
-                        className={`min-h-11 flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${currentStatus === 'L' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'}`}>
-                        <span>L</span><span className="text-[10px] font-normal opacity-80">Leave</span>
-                      </button>
-                    </div>
+                    <label className="inline-flex min-h-11 w-full sm:w-auto items-center justify-end gap-3 cursor-pointer">
+                      <span className={`min-w-14 text-right font-sans text-xs font-bold transition-colors ${currentStatus === 'P' ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>
+                        {currentStatus === 'P' ? 'Present' : 'Absent'}
+                      </span>
+                      <input
+                        type="checkbox"
+                        role="switch"
+                        aria-label={`Mark ${entry.studentName} present`}
+                        checked={currentStatus === 'P'}
+                        onChange={(event) => setStatus(entry.enrollmentId, event.target.checked ? 'P' : 'A')}
+                        className="sr-only peer"
+                      />
+                      <span className="relative h-7 w-12 shrink-0 rounded-full bg-rose-500 transition-colors after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:content-[''] peer-checked:bg-emerald-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500 peer-focus-visible:ring-offset-2 dark:peer-focus-visible:ring-offset-slate-900" />
+                    </label>
                   </div>
                 );
               })}
@@ -167,20 +168,16 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
             <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <h3 className="font-heading text-lg font-bold opacity-90">Session Summary</h3>
             <div className="flex items-end gap-2">
-              <span className="font-heading text-5xl font-extrabold leading-none">{presentCount}</span>
-              <span className="font-heading text-lg font-bold opacity-70 mb-1">/ {roster.length}</span>
+              <span className="font-heading text-5xl font-extrabold leading-none tabular-nums">{presentCount}</span>
+              <span className="font-heading text-lg font-bold opacity-70 mb-1 tabular-nums">/ {roster.length}</span>
             </div>
             <div className="flex items-center gap-2 font-sans text-xs font-bold bg-white/20 w-max px-3 py-1 rounded-full backdrop-blur-md">
               <span className="material-symbols-outlined text-[16px]">trending_up</span><span>{presentPct}% Present Today</span>
             </div>
-            <div className="grid grid-cols-2 gap-3 mt-1">
+            <div className="grid grid-cols-1 gap-3 mt-1">
               <div className="bg-black/20 rounded-xl p-3 border border-white/10">
                 <div className="text-[10px] uppercase tracking-wider opacity-70 font-bold mb-0.5">Absent</div>
-                <div className="font-heading text-xl font-extrabold text-rose-300">{absentCount}</div>
-              </div>
-              <div className="bg-black/20 rounded-xl p-3 border border-white/10">
-                <div className="text-[10px] uppercase tracking-wider opacity-70 font-bold mb-0.5">On Leave</div>
-                <div className="font-heading text-xl font-extrabold text-amber-300">{leaveCount}</div>
+                <div className="font-heading text-xl font-extrabold text-rose-300 tabular-nums">{absentCount}</div>
               </div>
             </div>
             <button onClick={handleSubmitAttendance} disabled={roster.length === 0}

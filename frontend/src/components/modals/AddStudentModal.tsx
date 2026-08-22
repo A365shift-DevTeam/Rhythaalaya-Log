@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Batch, Student } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
 
@@ -11,23 +11,20 @@ interface AddStudentModalProps {
   onClose: () => void;
   batches: Batch[];
   editingStudent?: Student | null;
-  onAddStudent: (student: StudentFields, enrollBatchId: string | null) => Promise<void>;
-  onUpdateStudent: (studentId: string, student: StudentFields) => Promise<void>;
+  onAddStudent: (student: StudentFields, batchIds: string[]) => Promise<void>;
+  onUpdateStudent: (studentId: string, student: StudentFields, batchIds: string[]) => Promise<void>;
 }
 
 export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   isOpen, onClose, batches, editingStudent, onAddStudent, onUpdateStudent
 }) => {
-  const activeBatches = useMemo(() => batches.filter((b) => b.isActive), [batches]);
-
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [parentName, setParentName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
-  const [enrollNow, setEnrollNow] = useState(true);
-  const [batchId, setBatchId] = useState('');
+  const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const dialogRef = useDialogLifecycle(isOpen, onClose);
@@ -40,8 +37,9 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     setPhone(editingStudent?.phone || '');
     setEmail(editingStudent?.email || '');
     setAddress(editingStudent?.address || '');
-    setEnrollNow(activeBatches.length > 0);
-    setBatchId(activeBatches[0]?.id || '');
+    setSelectedBatchIds(editingStudent?.enrollments
+      .filter((enrollment) => enrollment.status === 'Active')
+      .map((enrollment) => enrollment.batchId) || []);
     setError('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, editingStudent]);
@@ -58,14 +56,24 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       phone: phone.trim(), email: email.trim(), address: address.trim()
     };
     try {
-      if (editingStudent) await onUpdateStudent(editingStudent.id, fields);
-      else await onAddStudent(fields, enrollNow && batchId ? batchId : null);
+      if (editingStudent) await onUpdateStudent(editingStudent.id, fields, selectedBatchIds);
+      else await onAddStudent(fields, selectedBatchIds);
       onClose();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not save the student.');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const existingActiveBatchIds = editingStudent?.enrollments
+    .filter((enrollment) => enrollment.status === 'Active')
+    .map((enrollment) => enrollment.batchId) || [];
+  const editableBatches = batches.filter((batch) => batch.isActive || existingActiveBatchIds.includes(batch.id));
+  const toggleBatch = (targetBatchId: string) => {
+    setSelectedBatchIds((previous) => previous.includes(targetBatchId)
+      ? previous.filter((id) => id !== targetBatchId)
+      : [...previous, targetBatchId]);
   };
 
   return (
@@ -149,39 +157,50 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
               </div>
             </section>
 
-            {!editingStudent && (
-              <>
-                <div className="h-px bg-slate-100 dark:bg-slate-800" />
+            <div className="h-px bg-slate-100 dark:bg-slate-800" />
 
-                <section aria-labelledby="enrollment-details-heading">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="w-7 h-7 rounded-lg bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 inline-flex items-center justify-center text-xs font-extrabold">2</span>
-                    <h4 id="enrollment-details-heading" className="font-heading text-sm font-bold text-slate-900 dark:text-white">Enroll in a batch (optional)</h4>
-                  </div>
+            <section aria-labelledby="batch-enrollment-heading">
+              <div className="flex items-center gap-3 mb-4">
+                {editingStudent ? (
+                  <span className="w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 inline-flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[18px]">calendar_view_week</span>
+                  </span>
+                ) : (
+                  <span className="w-7 h-7 rounded-lg bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 inline-flex items-center justify-center text-xs font-extrabold">2</span>
+                )}
+                <div>
+                  <h4 id="batch-enrollment-heading" className="font-heading text-sm font-bold text-slate-900 dark:text-white">
+                    {editingStudent ? 'Batch enrollment' : 'Enroll in batches (optional)'}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Select every batch this student should attend.</p>
+                </div>
+              </div>
 
-                  {activeBatches.length === 0 ? (
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900" role="alert">
-                      No active batches yet. You can save the student now and enroll them from the Students tab once a batch exists.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        <input type="checkbox" checked={enrollNow} onChange={(event) => setEnrollNow(event.target.checked)} className="h-4 w-4 accent-emerald-600" />
-                        Enroll this student in a batch right away
+              {editableBatches.length === 0 ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200" role="alert">
+                  {editingStudent
+                    ? 'No active batches are available. Create a batch before assigning this student.'
+                    : 'No active batches yet. You can save the student now and enroll them from the Students tab once a batch exists.'}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {editableBatches.map((batch) => {
+                    const isSelected = selectedBatchIds.includes(batch.id);
+                    return (
+                      <label key={batch.id} className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors ${isSelected
+                        ? 'border-brand-400 bg-brand-50 dark:border-brand-600 dark:bg-brand-950/40'
+                        : 'border-slate-200 bg-slate-50 hover:border-brand-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-brand-700'}`}>
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleBatch(batch.id)} className="h-4 w-4 shrink-0 accent-emerald-600" />
+                        <span className="min-w-0">
+                          <span className="block truncate text-xs font-bold text-slate-900 dark:text-white">{batch.name}</span>
+                          <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">{batch.courseName}{!batch.isActive ? ' - Inactive' : ''}</span>
+                        </span>
                       </label>
-                      {enrollNow && (
-                        <select value={batchId} onChange={(event) => setBatchId(event.target.value)}
-                          className="w-full min-h-11 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-950 dark:text-white">
-                          {activeBatches.map((batch) => (
-                            <option key={batch.id} value={batch.id}>{batch.name} — {batch.courseName}</option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                  )}
-                </section>
-              </>
-            )}
+                    );
+                  })}
+                </div>
+              )}
+            </section>
 
             {error && <div role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs">{error}</div>}
           </div>

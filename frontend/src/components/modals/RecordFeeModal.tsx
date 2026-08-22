@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FeeDue, FeePayment, PAYMENT_METHOD_LABELS, PaymentMethod, Student } from '../../types';
+import { FeeDue, FeePayment, FeeStructure, PAYMENT_METHOD_LABELS, PaymentMethod, Student } from '../../types';
 import { api } from '../../api';
 import { useDialogLifecycle } from './useDialogLifecycle';
 
@@ -7,12 +7,23 @@ interface RecordFeeModalProps {
   isOpen: boolean;
   onClose: () => void;
   students: Student[];
+  feeStructures: FeeStructure[];
   initialStudent?: Student;
   token: string;
   onRecordFee: (payload: {
     studentId: string; feeDueId: string | null; amount: number; method: PaymentMethod; remarks?: string;
   }) => Promise<FeePayment>;
 }
+
+/** Sums the active fee-structure amount for each course the student is actively enrolled in —
+ * used to suggest an amount when no formal due has been generated for them yet. */
+const courseFeeTotal = (student: Student | undefined, feeStructures: FeeStructure[]) => {
+  if (!student) return 0;
+  const activeCourseIds = new Set(student.enrollments.filter((e) => e.status === 'Active').map((e) => e.courseId));
+  return feeStructures
+    .filter((structure) => structure.isActive && activeCourseIds.has(structure.courseId))
+    .reduce((sum, structure) => sum + structure.amount, 0);
+};
 
 const METHODS: { value: PaymentMethod; icon: string }[] = [
   { value: 'Cash', icon: 'payments' },
@@ -23,20 +34,12 @@ const METHODS: { value: PaymentMethod; icon: string }[] = [
   { value: 'Other', icon: 'more_horiz' },
 ];
 
-const STATUS_STYLE: Record<string, string> = {
-  Overdue: 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300',
-  Partial: 'bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300',
-  Pending: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-};
-
-export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose, students, initialStudent, token, onRecordFee }) => {
+export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose, students, feeStructures, initialStudent, token, onRecordFee }) => {
   const eligibleStudents = useMemo(() => students.filter((student) => student.isActive), [students]);
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [dues, setDues] = useState<FeeDue[]>([]);
-  const [loadingDues, setLoadingDues] = useState(false);
-  const [feeDueId, setFeeDueId] = useState<string>('advance');
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('Cash');
   const [remarks, setRemarks] = useState('');
@@ -50,6 +53,8 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
     setSelectedStudentId(initial?.id ?? '');
     setPickerOpen(!initial);
     setQuery('');
+    const suggested = initial?.outstandingBalance || courseFeeTotal(initial, feeStructures);
+    setAmount(suggested > 0 ? String(suggested) : '');
     setMethod('Cash');
     setRemarks('');
     setError('');
@@ -60,7 +65,6 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
   useEffect(() => {
     if (!isOpen || !selectedStudentId) { setDues([]); return; }
     let ignore = false;
-    setLoadingDues(true);
     api.studentDues(token, selectedStudentId)
       .then((rows) => {
         if (ignore) return;
@@ -68,20 +72,25 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
           .filter((due) => due.status !== 'Paid' && due.status !== 'Cancelled')
           .sort((a, b) => (a.status === 'Overdue' ? -1 : b.status === 'Overdue' ? 1 : 0) || a.dueDate.localeCompare(b.dueDate));
         setDues(outstanding);
-        const firstDue = outstanding[0];
-        setFeeDueId(firstDue ? firstDue.id : 'advance');
-        setAmount(firstDue ? String(firstDue.balanceAmount) : '');
+        const total = outstanding.reduce((sum, due) => sum + due.balanceAmount, 0);
+        if (total > 0) {
+          setAmount(String(total));
+        } else {
+          // No due generated for this student yet — suggest the course's configured fee instead.
+          const suggested = courseFeeTotal(eligibleStudents.find((s) => s.id === selectedStudentId), feeStructures);
+          if (suggested > 0) setAmount(String(suggested));
+        }
       })
-      .catch((requestError) => { if (!ignore) setError(requestError instanceof Error ? requestError.message : 'Unable to load fee dues.'); })
-      .finally(() => { if (!ignore) setLoadingDues(false); });
+      .catch((requestError) => { if (!ignore) setError(requestError instanceof Error ? requestError.message : 'Unable to load fee dues.'); });
     return () => { ignore = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, selectedStudentId, token]);
 
   if (!isOpen) return null;
 
   const selectedStudent = eligibleStudents.find((student) => student.id === selectedStudentId);
-  const selectedDue = dues.find((due) => due.id === feeDueId);
   const totalOutstanding = dues.reduce((sum, due) => sum + due.balanceAmount, 0);
+  const suggestedCourseFee = totalOutstanding === 0 ? courseFeeTotal(selectedStudent, feeStructures) : 0;
 
   const filteredStudents = query.trim()
     ? eligibleStudents.filter((student) => {
@@ -92,14 +101,11 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
 
   const handlePickStudent = (id: string) => {
     setSelectedStudentId(id);
+    const stu = eligibleStudents.find((s) => s.id === id);
+    const suggested = stu?.outstandingBalance || courseFeeTotal(stu, feeStructures);
+    setAmount(suggested > 0 ? String(suggested) : '');
     setPickerOpen(false);
     setQuery('');
-  };
-
-  const handleDueChange = (id: string) => {
-    setFeeDueId(id);
-    const due = dues.find((item) => item.id === id);
-    setAmount(due ? String(due.balanceAmount) : '');
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -107,14 +113,16 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
     const paymentAmount = Number(amount);
     if (!selectedStudent) { setError('Select a student.'); return; }
     if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) { setError('Enter a valid payment amount.'); return; }
-    if (selectedDue && paymentAmount > selectedDue.balanceAmount) { setError('Payment cannot exceed this due\'s remaining balance.'); return; }
 
     setSubmitting(true);
     setError('');
     try {
       await onRecordFee({
-        studentId: selectedStudent.id, feeDueId: feeDueId === 'advance' ? null : feeDueId,
-        amount: paymentAmount, method, remarks: remarks.trim() || undefined
+        studentId: selectedStudent.id,
+        feeDueId: null,
+        amount: paymentAmount,
+        method,
+        remarks: remarks.trim() || undefined,
       });
       onClose();
     } catch (requestError) {
@@ -193,76 +201,41 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
             )}
           </div>
 
-          {/* Step 2: what for */}
-          {selectedStudentId && (
-            <div>
-              <span className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                <StepBadge n={2} /> What's this for?
-              </span>
-
-              {loadingDues && <p className="text-xs text-slate-400">Loading dues…</p>}
-
-              {!loadingDues && (
-                <>
-                  {dues.length > 0 && (
-                    <div className="mb-2 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs dark:bg-slate-800">
-                      <span className="font-semibold text-slate-600 dark:text-slate-300">Total outstanding</span>
-                      <span className="font-extrabold text-rose-600 dark:text-rose-400">₹{totalOutstanding.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    {dues.map((due) => {
-                      const active = feeDueId === due.id;
-                      return (
-                        <button key={due.id} type="button" onClick={() => handleDueChange(due.id)}
-                          className={`flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition-all ${active ? 'border-brand-500 bg-brand-50/80 ring-2 ring-brand-500/20 dark:border-brand-500 dark:bg-brand-900/40' : 'border-slate-200 hover:border-brand-300 dark:border-slate-700 dark:hover:border-brand-700'}`}>
-                          <div className="min-w-0">
-                            <div className="truncate text-xs font-bold text-slate-900 dark:text-white">{due.courseName}</div>
-                            <div className="mt-1 flex items-center gap-1.5">
-                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLE[due.status] ?? STATUS_STYLE.Pending}`}>{due.status}</span>
-                              <span className="text-[11px] text-slate-500 dark:text-slate-400">due {new Date(due.dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
-                            </div>
-                          </div>
-                          <span className="shrink-0 text-sm font-extrabold text-slate-900 dark:text-white">₹{due.balanceAmount.toLocaleString('en-IN')}</span>
-                        </button>
-                      );
-                    })}
-
-                    <button type="button" onClick={() => handleDueChange('advance')}
-                      className={`flex w-full items-center gap-2.5 rounded-xl border p-3 text-left transition-all ${feeDueId === 'advance' ? 'border-brand-500 bg-brand-50/80 ring-2 ring-brand-500/20 dark:border-brand-500 dark:bg-brand-900/40' : 'border-dashed border-slate-200 hover:border-brand-300 dark:border-slate-700 dark:hover:border-brand-700'}`}>
-                      <span className="material-symbols-outlined text-[18px] text-brand-500">savings</span>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-900 dark:text-white">Advance payment</div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">Not tied to a due yet — applied automatically later</div>
-                      </div>
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Step 3: amount & method */}
+          {/* Step 2: amount & method */}
           {selectedStudentId && (
             <div className="space-y-3">
               <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                <StepBadge n={3} /> How much & how?
+                <StepBadge n={2} /> How much & how?
               </span>
 
               <div>
                 <div className="mb-1 flex items-center justify-between">
                   <label htmlFor="fee-amount" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Amount received (₹)</label>
-                  {selectedDue && Number(amount) !== selectedDue.balanceAmount && (
-                    <button type="button" onClick={() => setAmount(String(selectedDue.balanceAmount))} className="text-[11px] font-bold text-brand-600 hover:underline dark:text-brand-400">
-                      Use full ₹{selectedDue.balanceAmount.toLocaleString('en-IN')}
+                  {totalOutstanding > 0 && Number(amount) !== totalOutstanding && (
+                    <button type="button" onClick={() => setAmount(String(totalOutstanding))} className="text-[11px] font-bold text-brand-600 hover:underline dark:text-brand-400">
+                      Use full ₹{totalOutstanding.toLocaleString('en-IN')}
+                    </button>
+                  )}
+                  {totalOutstanding === 0 && suggestedCourseFee > 0 && Number(amount) !== suggestedCourseFee && (
+                    <button type="button" onClick={() => setAmount(String(suggestedCourseFee))} className="text-[11px] font-bold text-brand-600 hover:underline dark:text-brand-400">
+                      Use course fee ₹{suggestedCourseFee.toLocaleString('en-IN')}
                     </button>
                   )}
                 </div>
                 <input id="fee-amount" type="number" required min="0.01" step="0.01" value={amount} disabled={submitting}
                   onChange={(event) => setAmount(event.target.value)}
+                  placeholder="Enter amount"
                   className="w-full min-h-12 p-3 text-lg font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white disabled:opacity-60" />
-                {selectedDue && <div className="mt-1 text-xs text-slate-500">Balance on this due: ₹{selectedDue.balanceAmount.toLocaleString('en-IN')}</div>}
+                {totalOutstanding > 0 && (
+                  <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Total outstanding: <span className="font-semibold text-rose-600 dark:text-rose-400">₹{totalOutstanding.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                {totalOutstanding === 0 && suggestedCourseFee > 0 && (
+                  <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    No due generated yet — suggested from the course fee: <span className="font-semibold text-brand-600 dark:text-brand-400">₹{suggestedCourseFee.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
               </div>
 
               <div>
