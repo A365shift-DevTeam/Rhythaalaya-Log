@@ -1,6 +1,0 @@
-{
-  "name": "StudioSync",
-  "description": "Academy management app for students, fees, batches, and attendance tracking.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
