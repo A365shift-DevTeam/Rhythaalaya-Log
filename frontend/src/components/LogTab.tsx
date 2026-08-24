@@ -3,6 +3,9 @@ import { JisIcon } from './JisIcon';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Student, Batch, AttendanceStatus } from '../types';
 import { api } from '../api';
+import {
+  addDaysToIso, isBatchScheduledOn, nextSessionDate, todayIsoDate, weekdayLabelFor,
+} from '../lib/schedule';
 
 interface LogTabProps {
   students: Student[];
@@ -20,8 +23,8 @@ interface RosterEntry {
 type RollCallStatus = Extract<AttendanceStatus, 'P' | 'A'>;
 
 export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent }) => {
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [selectedBatchId, setSelectedBatchId] = useState<string>(batches[0]?.id || '');
+  const [selectedDate, setSelectedDate] = useState<string>(todayIsoDate());
+  const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [attendance, setAttendance] = useState<Record<string, RollCallStatus>>({});
@@ -30,9 +33,17 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'P' | 'A'>('ALL');
 
+  // Only batches that actually hold a class on the selected date can be rolled.
+  const scheduledBatches = useMemo(
+    () => batches.filter((b) => isBatchScheduledOn(b, selectedDate)), [batches, selectedDate]);
+
+  // Keep the selection inside that list: fall to the day's first class, or to nothing
+  // at all on a day no batch runs, so the selector never shows a batch it cannot offer.
   useEffect(() => {
-    if (!selectedBatchId && batches[0]) setSelectedBatchId(batches[0].id);
-  }, [batches, selectedBatchId]);
+    const stillOffered = scheduledBatches.some((b) => b.id === selectedBatchId);
+    if (stillOffered) return;
+    setSelectedBatchId(scheduledBatches[0]?.id || '');
+  }, [scheduledBatches, selectedBatchId]);
 
   useEffect(() => {
     if (!selectedBatchId) { setRoster([]); setAttendance({}); return; }
@@ -84,19 +95,21 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
     });
   }, [roster, searchQuery, filterStatus, attendance]);
 
-  const todayIso = new Date().toISOString().split('T')[0];
+  const todayIso = todayIsoDate();
 
-  const handlePrevDay = () => {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() - 1);
-    setSelectedDate(d.toISOString().split('T')[0]);
-  };
+  // Soonest day any batch runs, used to get out of an empty day in one click.
+  const nextClassDate = useMemo(() => {
+    if (batches.length === 0) return null;
+    const soonest = batches
+      .map((b) => nextSessionDate(b, addDaysToIso(selectedDate, 1), 400))
+      .filter((iso): iso is string => iso !== null)
+      .sort();
+    return soonest[0] || null;
+  }, [batches, selectedDate]);
 
-  const handleNextDay = () => {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + 1);
-    setSelectedDate(d.toISOString().split('T')[0]);
-  };
+  // Step one calendar day; the batch selector re-homes itself to that day's classes.
+  const handlePrevDay = () => setSelectedDate(addDaysToIso(selectedDate, -1));
+  const handleNextDay = () => setSelectedDate(addDaysToIso(selectedDate, 1));
 
   const formatDisplayDate = (iso: string) => {
     try {
@@ -105,7 +118,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
       const isToday = iso === todayIso;
       const dayName = date.toLocaleDateString('en-IN', { weekday: 'short' });
       const formatted = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-      return isToday ? `Today (${formatted})` : `${dayName}, ${formatted}`;
+      return isToday ? `Today · ${dayName}, ${formatted}` : `${dayName}, ${formatted}`;
     } catch {
       return iso;
     }
@@ -216,11 +229,15 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
               aria-label="Select attendance batch"
               className="w-full min-h-11 pl-10 pr-9 py-2 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-xs sm:text-sm font-bold text-[#212121] dark:text-white focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] outline-none appearance-none cursor-pointer truncate transition-all"
             >
-              {batches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name} ({b.enrolledCount} enrolled)
-                </option>
-              ))}
+              {scheduledBatches.length === 0 ? (
+                <option value="">No class on {weekdayLabelFor(selectedDate)}</option>
+              ) : (
+                scheduledBatches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} ({b.enrolledCount} enrolled)
+                  </option>
+                ))
+              )}
             </select>
             <JisIcon className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] pointer-events-none text-[20px]">
               expand_more
@@ -249,6 +266,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
             </Button>
           </div>
         </div>
+
       </div>
 
       {batches.length === 0 ? (
@@ -259,6 +277,25 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
           <Button type="button" onClick={onOpenAddStudent} className="btn-brand mt-4 rounded-2xl px-4 py-2.5 text-xs font-bold">
             Add student
           </Button>
+        </div>
+      ) : scheduledBatches.length === 0 ? (
+        <div className="premium-card text-center py-12 px-4">
+          <JisIcon className="text-4xl text-[#9e9e9e]">event_busy</JisIcon>
+          <p className="font-heading text-lg font-bold text-[#212121] dark:text-white mt-2">
+            No class on {weekdayLabelFor(selectedDate)}
+          </p>
+          <p className="font-sans text-xs text-[#808080] mt-1 max-w-sm mx-auto">
+            None of your batches meet on {formatDisplayDate(selectedDate)}. Pick a day a class runs to take the roll.
+          </p>
+          {nextClassDate && (
+            <Button
+              type="button"
+              onClick={() => setSelectedDate(nextClassDate)}
+              className="btn-brand mt-4 rounded-2xl px-4 py-2.5 text-xs font-bold"
+            >
+              Go to {formatDisplayDate(nextClassDate)}
+            </Button>
+          )}
         </div>
       ) : (
         <>
