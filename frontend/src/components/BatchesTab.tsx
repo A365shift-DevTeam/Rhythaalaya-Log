@@ -1,3 +1,5 @@
+import { Button } from './ui/button';
+import { JisIcon } from './JisIcon';
 import React, { useMemo, useState } from 'react';
 import { Batch, Course, Staff, WEEKDAY_SHORT } from '../types';
 
@@ -74,14 +76,14 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
               <p className="text-xs text-[#808080] dark:text-[#94a3b8]">{courses.length} active programs</p>
             </div>
             {canManage && (
-              <button
+              <Button
                 type="button"
                 onClick={onOpenAddCourse}
                 className="btn-brand min-h-10 rounded-2xl px-3.5 text-xs font-semibold flex items-center gap-1 active:scale-95"
               >
-                <span className="material-symbols-outlined text-[16px]">add</span>
+                <JisIcon className="text-[16px]">add</JisIcon>
                 <span>Add course</span>
-              </button>
+              </Button>
             )}
           </div>
           <div className="divide-y divide-[#dbdbdb]/60 dark:divide-[#243244] max-h-72 overflow-y-auto">
@@ -91,7 +93,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
               </p>
             )}
             {courses.map((course) => (
-              <button
+              <Button
                 key={course.id}
                 type="button"
                 onClick={() => canManage && onEditCourse(course)}
@@ -111,7 +113,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
                 >
                   {course.batchCount} batch{course.batchCount === 1 ? '' : 'es'}
                 </span>
-              </button>
+              </Button>
             ))}
           </div>
         </section>
@@ -124,14 +126,14 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
               <p className="text-xs text-[#808080] dark:text-[#94a3b8]">{staff.length} instructors</p>
             </div>
             {canManage && (
-              <button
+              <Button
                 type="button"
                 onClick={onOpenAddStaff}
                 className="btn-brand min-h-10 rounded-2xl px-3.5 text-xs font-semibold flex items-center gap-1 active:scale-95"
               >
-                <span className="material-symbols-outlined text-[16px]">add</span>
+                <JisIcon className="text-[16px]">add</JisIcon>
                 <span>Add staff</span>
-              </button>
+              </Button>
             )}
           </div>
           <div className="divide-y divide-[#dbdbdb]/60 dark:divide-[#243244] max-h-72 overflow-y-auto">
@@ -141,7 +143,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
               </p>
             )}
             {staff.map((member) => (
-              <button
+              <Button
                 key={member.id}
                 type="button"
                 onClick={() => canManage && onEditStaff(member)}
@@ -161,7 +163,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
                 >
                   {member.batchCount} batch{member.batchCount === 1 ? '' : 'es'}
                 </span>
-              </button>
+              </Button>
             ))}
           </div>
         </section>
@@ -178,20 +180,20 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
 
             <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2">
               {canManage && (
-                <button
+                <Button
                   type="button"
                   onClick={onOpenAddBatch}
                   className="btn-brand min-h-11 rounded-2xl px-4 text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 active:scale-95"
                 >
-                  <span className="material-symbols-outlined text-[17px]">add</span>
+                  <JisIcon className="text-[17px]">add</JisIcon>
                   <span>Add batch</span>
-                </button>
+                </Button>
               )}
 
               <div className="relative flex-1 sm:w-64">
-                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9e9e9e] text-[18px] pointer-events-none">
+                <JisIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9e9e9e] text-[18px] pointer-events-none">
                   search
-                </span>
+                </JisIcon>
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
@@ -199,14 +201,14 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
                   className="w-full rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-[#f0f0f0] dark:bg-[#0b1422] pl-10 pr-9 py-2.5 min-h-11 text-xs text-[#212121] dark:text-white outline-none focus:border-[#3fc073] focus:bg-white focus:ring-4 focus:ring-[#3fc073]/15 transition-all"
                 />
                 {search && (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setSearch('')}
                     aria-label="Clear search"
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#808080] hover:text-[#212121]"
                   >
-                    <span className="material-symbols-outlined text-[17px]">close</span>
-                  </button>
+                    <JisIcon className="text-[17px]">close</JisIcon>
+                  </Button>
                 )}
               </div>
 
@@ -228,9 +230,9 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
         {filteredBatches.length === 0 ? (
           <div className="text-center py-12 px-4">
             <div className="w-12 h-12 rounded-2xl bg-[#f0f0f0] dark:bg-[#111c2b] text-[#808080] mx-auto flex items-center justify-center">
-              <span className="material-symbols-outlined text-[24px]">
+              <JisIcon className="text-[24px]">
                 {batches.length ? 'search_off' : 'calendar_add_on'}
-              </span>
+              </JisIcon>
             </div>
             <h4 className="font-heading font-bold text-[#212121] dark:text-white mt-3">
               {batches.length ? 'No batches match your filters' : 'Create your first batch'}
@@ -261,7 +263,7 @@ function BatchCard({ batch, canManage, onEdit }: { batch: Batch; canManage: bool
       <div>
         <div className="flex items-start justify-between gap-3">
           <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] dark:text-[#b3e6c7] flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[20px]">calendar_view_week</span>
+            <JisIcon className="text-[20px]">calendar_view_week</JisIcon>
           </div>
           <div className="flex items-center gap-1.5">
             <span
@@ -275,14 +277,14 @@ function BatchCard({ batch, canManage, onEdit }: { batch: Batch; canManage: bool
               {batch.isActive ? 'Active' : 'Inactive'}
             </span>
             {canManage && (
-              <button
+              <Button
                 type="button"
                 onClick={() => onEdit(batch)}
                 aria-label={`Edit ${batch.name}`}
                 className="w-8 h-8 inline-flex items-center justify-center rounded-xl text-[#9e9e9e] hover:text-[#3fc073] hover:bg-[#e9f7ee] dark:hover:bg-[#172435] transition-colors"
               >
-                <span className="material-symbols-outlined text-[18px]">edit</span>
-              </button>
+                <JisIcon className="text-[18px]">edit</JisIcon>
+              </Button>
             )}
           </div>
         </div>
@@ -312,7 +314,7 @@ function BatchCard({ batch, canManage, onEdit }: { batch: Batch; canManage: bool
       <div className="mt-4 pt-3 border-t border-[#dbdbdb]/60 dark:border-[#243244] flex items-center justify-between">
         <div className="text-xs text-[#808080] font-medium">Enrollment</div>
         <div className="inline-flex items-center gap-1.5 rounded-full bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#35a160] dark:text-[#b3e6c7] px-2.5 py-0.5 text-xs font-bold">
-          <span className="material-symbols-outlined text-[15px]">groups</span>
+          <JisIcon className="text-[15px]">groups</JisIcon>
           {batch.enrolledCount} student{batch.enrolledCount === 1 ? '' : 's'}
         </div>
       </div>
@@ -323,7 +325,7 @@ function BatchCard({ batch, canManage, onEdit }: { batch: Batch; canManage: bool
 function BatchInfo({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <div className="flex items-start gap-2">
-      <span className="material-symbols-outlined text-[16px] text-[#9e9e9e] mt-0.5 shrink-0">{icon}</span>
+      <JisIcon className="text-[16px] text-[#9e9e9e] mt-0.5 shrink-0">{icon}</JisIcon>
       <div className="min-w-0">
         <div className="text-xs uppercase tracking-wider font-bold text-[#9e9e9e]">{label}</div>
         <div className="text-xs font-semibold text-[#575757] dark:text-[#cbd5e1] break-words">{value}</div>
@@ -352,7 +354,7 @@ function BatchStat({
   return (
     <div className="premium-card p-3.5 sm:p-4 flex flex-col justify-between">
       <div className={'w-8 h-8 sm:w-9 sm:h-9 rounded-2xl flex items-center justify-center ' + colors[color]}>
-        <span className="material-symbols-outlined text-[18px] sm:text-[20px]">{icon}</span>
+        <JisIcon className="text-[18px] sm:text-[20px]">{icon}</JisIcon>
       </div>
       <div className="text-xl sm:text-2xl font-bold text-[#212121] dark:text-white mt-2 sm:mt-3 tabular-nums">{value}</div>
       <div className="text-xs sm:text-xs font-semibold text-[#808080] dark:text-[#94a3b8] mt-0.5 truncate">{label}</div>

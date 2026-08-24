@@ -1,3 +1,5 @@
+import { Button } from '../ui/button';
+import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { Transaction } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
@@ -93,10 +95,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           <h3 id="transaction-modal-title" className="font-heading text-xl font-bold text-[#212121] dark:text-white">
             {editingTransaction ? 'Edit financial entry' : 'Add financial entry'}
           </h3>
-          <button type="button" onClick={onClose} aria-label="Close"
+          <Button type="button" onClick={onClose} aria-label="Close"
             className="flex h-9 w-9 items-center justify-center rounded-2xl text-[#808080] hover:text-[#ef4444] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] transition-all active:scale-95">
-            <span className="material-symbols-outlined text-[19px]">close</span>
-          </button>
+            <JisIcon className="text-[19px]">close</JisIcon>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 font-sans text-sm">
@@ -168,19 +170,19 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
             {editingTransaction && onDelete ? (
-              <button type="button" onClick={handleDelete} disabled={submitting || deleting}
+              <Button type="button" onClick={handleDelete} disabled={submitting || deleting}
                 className="min-h-11 px-3 py-2 rounded-2xl text-xs font-bold text-[#ef4444] hover:bg-rose-50 dark:hover:bg-rose-950/40 disabled:opacity-50 flex items-center justify-center gap-1.5 sm:justify-start transition-colors">
-                <span className="material-symbols-outlined text-[16px]">delete</span>
+                <JisIcon className="text-[16px]">delete</JisIcon>
                 {deleting ? 'Deleting…' : 'Delete entry'}
-              </button>
+              </Button>
             ) : <span />}
             <div className="flex flex-col-reverse gap-2 sm:flex-row">
-              <button type="button" onClick={onClose} disabled={submitting || deleting} className="min-h-11 px-4 py-2 rounded-2xl text-xs font-semibold text-[#575757] hover:bg-[#f0f0f0] dark:hover:bg-[#172435]">
+              <Button type="button" onClick={onClose} disabled={submitting || deleting} className="min-h-11 px-4 py-2 rounded-2xl text-xs font-semibold text-[#575757] hover:bg-[#f0f0f0] dark:hover:bg-[#172435]">
                 Cancel
-              </button>
-              <button type="submit" disabled={submitting || deleting} className="btn-brand min-h-11 px-5 py-2 rounded-2xl text-xs font-bold disabled:opacity-50">
+              </Button>
+              <Button type="submit" disabled={submitting || deleting} className="btn-brand min-h-11 px-5 py-2 rounded-2xl text-xs font-bold disabled:opacity-50">
                 {submitting ? 'Saving…' : editingTransaction ? 'Save changes' : 'Save entry'}
-              </button>
+              </Button>
             </div>
           </div>
         </form>

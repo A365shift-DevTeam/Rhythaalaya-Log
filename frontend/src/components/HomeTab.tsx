@@ -1,3 +1,6 @@
+import { Button } from './ui/button';
+import { Card } from './ui/card';
+import { JisIcon } from './JisIcon';
 import React, { useState } from 'react';
 import {
   Area,
@@ -153,7 +156,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   return (
     <div className="space-y-6 md:space-y-8 pb-12">
       {/* Top Banner Greeting */}
-      <div className="premium-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 md:p-6">
+      <Card className="premium-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 md:p-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="font-sans text-xs font-semibold uppercase tracking-wider text-[#3fc073]">
@@ -169,56 +172,56 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-          <button type="button" onClick={onOpenAddStudent}
+          <Button type="button" onClick={onOpenAddStudent}
             className="btn-brand min-h-11 flex-1 sm:flex-initial px-4 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">person_add</span><span>Add Student</span>
-          </button>
-          <button type="button" onClick={() => setCurrentTab('log')}
+            <JisIcon className="text-[18px]">person_add</JisIcon><span>Add Student</span>
+          </Button>
+          <Button type="button" onClick={() => setCurrentTab('log')}
             className="min-h-11 flex-1 sm:flex-initial bg-[#f0f0f0] dark:bg-[#111c2b] text-[#212121] dark:text-[#e2e8f0] hover:bg-[#dbdbdb] dark:hover:bg-[#223148] px-4 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-95 border border-[#dbdbdb]/60 dark:border-[#243244]">
-            <span className="material-symbols-outlined text-[18px]">fact_check</span><span>Attendance</span>
-          </button>
+            <JisIcon className="text-[18px]">fact_check</JisIcon><span>Attendance</span>
+          </Button>
         </div>
-      </div>
+      </Card>
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
-        <button type="button" onClick={() => setCurrentTab('students')}
-          className="premium-card-interactive p-4 sm:p-5 flex flex-col justify-between text-left">
+        <Button type="button" onClick={() => setCurrentTab('students')}
+          className="premium-card-interactive min-h-[150px] p-4 sm:p-5 flex flex-col justify-between text-left">
           <div className="flex items-center justify-between">
             <span className="font-sans text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Active Students</span>
             <div className="w-8 h-8 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">group</span>
+              <JisIcon className="text-[18px]">group</JisIcon>
             </div>
           </div>
           <div className="mt-3">
             <p className="font-heading text-2xl md:text-3xl font-bold text-[#212121] dark:text-white tracking-tight">{students.length}</p>
             <p className="font-sans text-xs text-[#22c55e] mt-1 font-semibold flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px]">person_add</span>{newStudentsThisMonth} joined this month
+              <JisIcon className="text-[14px]">person_add</JisIcon>{newStudentsThisMonth} joined this month
             </p>
           </div>
           <Sparkline data={studentsSparkline} className="mt-3 -mb-1" strokeColor="#3fc073" />
-        </button>
+        </Button>
 
-        <button type="button" onClick={() => setCurrentTab('batches')}
-          className="premium-card-interactive p-4 sm:p-5 flex flex-col justify-between text-left">
+        <Button type="button" onClick={() => setCurrentTab('batches')}
+          className="premium-card-interactive min-h-[150px] p-4 sm:p-5 flex flex-col justify-between text-left">
           <div className="flex items-center justify-between">
             <span className="font-sans text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Batches</span>
             <div className="w-8 h-8 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">calendar_view_week</span>
+              <JisIcon className="text-[18px]">calendar_view_week</JisIcon>
             </div>
           </div>
           <div className="mt-3">
             <p className="font-heading text-2xl md:text-3xl font-bold text-[#212121] dark:text-white tracking-tight">{batches.length}</p>
             <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] mt-1 font-medium">Schedules active</p>
           </div>
-        </button>
+        </Button>
 
-        <button type="button" onClick={() => setCurrentTab('finance')}
-          className="premium-card-interactive p-4 sm:p-5 flex flex-col justify-between text-left">
+        <Button type="button" onClick={() => setCurrentTab('finance')}
+          className="premium-card-interactive min-h-[150px] p-4 sm:p-5 flex flex-col justify-between text-left">
           <div className="flex items-center justify-between">
             <span className="font-sans text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Fees Collected</span>
             <div className="w-8 h-8 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-[#22c55e] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">payments</span>
+              <JisIcon className="text-[18px]">payments</JisIcon>
             </div>
           </div>
           <div className="mt-3">
@@ -226,21 +229,21 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] mt-1 font-medium">Year to date</p>
           </div>
           <Sparkline data={feesSparkline} className="mt-3 -mb-1" strokeColor="#22c55e" />
-        </button>
+        </Button>
 
-        <button type="button" onClick={() => setCurrentTab('log')}
-          className="premium-card-interactive p-4 sm:p-5 flex flex-col justify-between text-left">
+        <Button type="button" onClick={() => setCurrentTab('log')}
+          className="premium-card-interactive min-h-[150px] p-4 sm:p-5 flex flex-col justify-between text-left">
           <div className="flex items-center justify-between">
             <span className="font-sans text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Attendance Avg</span>
             <div className="w-8 h-8 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
+              <JisIcon className="text-[18px]">how_to_reg</JisIcon>
             </div>
           </div>
           <div className="mt-3">
             <p className="font-heading text-2xl md:text-3xl font-bold text-[#212121] dark:text-white tracking-tight">{averageAttendance}%</p>
             <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] mt-1 font-medium">Overall student roll</p>
           </div>
-        </button>
+        </Button>
       </div>
 
       {/* Executive insights row */}
@@ -275,10 +278,10 @@ export const HomeTab: React.FC<HomeTabProps> = ({
               </div>
               <div className="inline-flex rounded-xl border border-white/10 bg-white/[0.06] p-0.5" role="group" aria-label="Chart range">
                 {RANGE_OPTIONS.map((option) => (
-                  <button key={option} type="button" onClick={() => setMonthsRange(option)} aria-pressed={monthsRange === option}
+                  <Button key={option} type="button" onClick={() => setMonthsRange(option)} aria-pressed={monthsRange === option}
                     className={`min-h-7 px-2.5 rounded-lg text-xs font-bold transition-colors ${monthsRange === option ? 'bg-white/20 text-white shadow-xs' : 'text-[#9e9e9e] hover:text-white'}`}>
                     {option}mo
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -303,7 +306,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
               </ComposedChart>
             </ResponsiveContainer> : (
               <div className="h-full flex flex-col items-center justify-center text-center px-6 text-[#9e9e9e]">
-                <span className="material-symbols-outlined text-3xl text-[#3fc073]/70 mb-2">query_stats</span>
+                <JisIcon className="text-3xl text-[#3fc073]/70 mb-2">query_stats</JisIcon>
                 <p className="text-sm font-semibold text-white">No financial activity yet</p>
                 <p className="text-xs mt-1">Income and cost trends will appear after the first transaction.</p>
               </div>
@@ -359,7 +362,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
               </div>
 
               <div className="rounded-2xl bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] px-4 py-3 flex items-start gap-3">
-                <span className="material-symbols-outlined text-[19px] text-[#3fc073] mt-0.5">insights</span>
+                <JisIcon className="text-[19px] text-[#3fc073] mt-0.5">insights</JisIcon>
                 <p className="text-xs leading-relaxed text-[#575757] dark:text-[#cbd5e1]">
                   <span className="font-bold text-[#212121] dark:text-white">Portfolio signal:</span>{' '}
                   {leadingCourse ? `${leadingCourse[0]} leads enrollment with ${leadingCourse[1]} students (${leadingCourseShare}%).` : 'Enrollment data will appear after the first student is enrolled.'}
@@ -368,7 +371,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             </div>
           ) : (
             <div className="min-h-[290px] flex flex-col items-center justify-center text-center px-6 text-[#808080]">
-              <span className="material-symbols-outlined text-3xl text-[#b3e6c7] mb-2">data_usage</span>
+              <JisIcon className="text-3xl text-[#b3e6c7] mb-2">data_usage</JisIcon>
               <p className="text-sm font-semibold">No enrollment data yet</p>
               <p className="text-xs mt-1">Enroll a student in a batch to populate the portfolio.</p>
             </div>
@@ -378,16 +381,16 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 
       {/* Main Row: Batches Schedule & Overdue Alert */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="premium-card lg:col-span-2 p-6 flex flex-col justify-between">
+        <Card className="premium-card lg:col-span-2 gap-0 p-6 flex flex-col justify-between">
           <div className="flex justify-between items-center mb-5">
             <div>
               <h3 className="font-heading text-lg font-bold text-[#212121] dark:text-white">Active Batches</h3>
               <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">Current academy courses & schedules</p>
             </div>
-            <button type="button" onClick={onOpenAddBatch}
+            <Button type="button" onClick={onOpenAddBatch}
               className="min-h-11 rounded-2xl px-2 text-[#3fc073] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 font-sans text-xs font-bold uppercase tracking-wider flex items-center gap-1 transition-colors">
-              <span className="material-symbols-outlined text-sm">add</span><span>New Batch</span>
-            </button>
+              <JisIcon className="text-sm">add</JisIcon><span>New Batch</span>
+            </Button>
           </div>
 
           <div className="space-y-3">
@@ -407,14 +410,14 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                   <span className="font-sans text-xs font-semibold bg-white dark:bg-[#0b1422] text-[#35a160] dark:text-[#b3e6c7] px-3 py-1 rounded-full border border-[#dbdbdb]/60 dark:border-[#243244]">
                     {b.enrolledCount} Enrolled
                   </span>
-                  <button type="button" onClick={() => setCurrentTab('log')} className="btn-brand min-h-10 px-3 py-1.5 rounded-2xl text-xs font-semibold flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">fact_check</span><span>Attendance</span>
-                  </button>
+                  <Button type="button" onClick={() => setCurrentTab('log')} className="btn-brand min-h-10 px-3 py-1.5 rounded-2xl text-xs font-semibold flex items-center gap-1">
+                    <JisIcon className="text-sm">fact_check</JisIcon><span>Attendance</span>
+                  </Button>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </Card>
 
         <div className="bg-gradient-to-br from-[#3fc073] via-[#35a160] to-[#2b824e] text-white rounded-3xl p-6 shadow-xl shadow-[#3fc073]/20 flex flex-col justify-between relative overflow-hidden">
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -430,29 +433,29 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           </div>
 
           <div className="mt-6 space-y-2.5">
-            <button type="button" onClick={() => setCurrentTab('finance')}
+            <Button type="button" onClick={() => setCurrentTab('finance')}
               className="w-full min-h-11 bg-white text-[#35a160] py-2.5 rounded-2xl font-sans text-xs font-bold uppercase tracking-wider hover:bg-[#f4fbf7] transition-colors shadow-sm active:scale-[0.98]">
               Manage Reminders
-            </button>
-            <button type="button" onClick={() => onOpenRecordFee()}
+            </Button>
+            <Button type="button" onClick={() => onOpenRecordFee()}
               className="w-full min-h-11 bg-black/20 text-white py-2 rounded-2xl font-sans text-xs font-semibold hover:bg-black/30 transition-colors border border-white/20 active:scale-[0.98]">
               + Record Fee Payment
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Recent Activity Feed */}
-      <div className="premium-card p-6">
+      <Card className="premium-card gap-0 p-6">
         <div className="flex justify-between items-center mb-5">
           <div>
             <h3 className="font-heading text-lg font-bold text-[#212121] dark:text-white">Recent Academy Activity</h3>
             <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">Live updates on payments and logs</p>
           </div>
-          <button type="button" onClick={() => setCurrentTab('finance')}
+          <Button type="button" onClick={() => setCurrentTab('finance')}
             className="min-h-11 rounded-2xl px-2 font-sans text-xs font-bold text-[#3fc073] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 uppercase tracking-wider transition-colors">
             View All
-          </button>
+          </Button>
         </div>
 
         <div className="divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
@@ -461,7 +464,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             <div key={tx.id} className="py-3.5 flex items-center justify-between">
               <div className="flex items-center gap-3.5">
                 <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${tx.type === 'income' ? 'bg-emerald-50 text-[#22c55e] dark:bg-emerald-950/60 border border-emerald-100 dark:border-emerald-900/40' : 'bg-rose-50 text-[#ef4444] dark:bg-rose-950/60 border border-rose-100 dark:border-rose-900/40'}`}>
-                  <span className="material-symbols-outlined text-[18px]">{tx.type === 'income' ? 'arrow_downward' : 'arrow_upward'}</span>
+                  <JisIcon className="text-[18px]">{tx.type === 'income' ? 'arrow_downward' : 'arrow_upward'}</JisIcon>
                 </div>
                 <div>
                   <p className="font-sans text-sm font-bold text-[#212121] dark:text-white">{tx.title}</p>
@@ -474,7 +477,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             </div>
           ))}
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

@@ -16,7 +16,10 @@ public sealed record UpdateBatchRequest(string Name, Guid CourseId, Guid StaffId
 public sealed record CreateStudentRequest(string Name, DateOnly? DateOfBirth, string? ParentName, string? Phone,
     string? Email, string? Address, DateOnly? JoinDate);
 public sealed record UpdateStudentRequest(string Name, DateOnly? DateOfBirth, string? ParentName, string? Phone,
-    string? Email, string? Address, bool IsActive);
+    string? Email, string? Address, DateOnly? JoinDate, bool IsActive);
+
+public sealed record CreateAchievementRequest(string Title, AchievementCategory Category, string? Level,
+    DateOnly EventDate, string? Note);
 
 public sealed record CreateEnrollmentRequest(Guid StudentId, Guid BatchId, DateOnly? EnrolledOn);
 public sealed record EndEnrollmentRequest(EnrollmentStatus Status, DateOnly? EndedOn);

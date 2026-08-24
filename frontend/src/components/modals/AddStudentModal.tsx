@@ -1,3 +1,5 @@
+import { Button } from '../ui/button';
+import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { Batch, Student } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
@@ -5,7 +7,8 @@ import { useDialogLifecycle } from './useDialogLifecycle';
 interface AddStudentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddStudent: (studentData: any) => Promise<void>;
+  onAddStudent: (studentData: any, batchIds: string[]) => Promise<void>;
+  onUpdateStudent: (studentId: string, studentData: any, batchIds: string[]) => Promise<void>;
   editingStudent?: Student | null;
   batches: Batch[];
 }
@@ -14,11 +17,14 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   isOpen,
   onClose,
   onAddStudent,
+  onUpdateStudent,
   editingStudent,
   batches,
 }) => {
+  const todayIso = () => new Date().toISOString().slice(0, 10);
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [joinDate, setJoinDate] = useState(todayIso());
   const [parentName, setParentName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -32,6 +38,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     if (editingStudent) {
       setName(editingStudent.name);
       setDateOfBirth(editingStudent.dateOfBirth || '');
+      setJoinDate(editingStudent.joinDate || todayIso());
       setParentName(editingStudent.parentName || '');
       setPhone(editingStudent.phone || '');
       setEmail(editingStudent.email || '');
@@ -40,6 +47,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     } else {
       setName('');
       setDateOfBirth('');
+      setJoinDate(todayIso());
       setParentName('');
       setPhone('');
       setEmail('');
@@ -58,15 +66,20 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     setSubmitting(true);
     setError('');
     try {
-      await onAddStudent({
+      const payload = {
         name: name.trim(),
         dateOfBirth: dateOfBirth || undefined,
+        joinDate: joinDate || todayIso(),
         parentName: parentName.trim() || undefined,
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
         address: address.trim() || undefined,
-        batchIds: selectedBatchIds,
-      });
+      };
+      if (editingStudent) {
+        await onUpdateStudent(editingStudent.id, payload, selectedBatchIds);
+      } else {
+        await onAddStudent(payload, selectedBatchIds);
+      }
       onClose();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to save student.');
@@ -98,7 +111,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
         <div className="flex justify-between items-start gap-4 px-5 sm:px-7 py-5 border-b border-[#dbdbdb]/60 dark:border-[#243244]">
           <div className="pr-10">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#3fc073]">
-              <span className="material-symbols-outlined text-[16px]">{editingStudent ? 'edit' : 'person_add'}</span>
+              <JisIcon className="text-[16px]">{editingStudent ? 'edit' : 'person_add'}</JisIcon>
               {editingStudent ? 'Edit student' : 'New student'}
             </span>
             <h3 id="add-student-title" className="font-heading text-xl sm:text-2xl font-bold text-[#212121] dark:text-white mt-1">
@@ -106,15 +119,15 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
             </h3>
           </div>
           <div className="flex items-center shrink-0">
-            <button
+            <Button
               type="button"
               onClick={onClose}
               aria-label="Close"
               title="Close"
               className="flex h-9 w-9 items-center justify-center text-[#808080] hover:text-[#ef4444] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] rounded-2xl transition-all active:scale-95"
             >
-              <span className="material-symbols-outlined text-[19px]">close</span>
-            </button>
+              <JisIcon className="text-[19px]">close</JisIcon>
+            </Button>
           </div>
         </div>
 
@@ -140,6 +153,13 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                 <div>
                   <label htmlFor="student-dob" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Date of birth</label>
                   <input id="student-dob" type="date" value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)}
+                    className="settings-input" />
+                </div>
+                <div>
+                  <label htmlFor="student-join-date" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">
+                    Date of joining <span className="text-[#ef4444]" aria-hidden="true">*</span>
+                  </label>
+                  <input id="student-join-date" type="date" required value={joinDate} onChange={(event) => setJoinDate(event.target.value)}
                     className="settings-input" />
                 </div>
                 <div>
@@ -175,7 +195,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
               <div className="flex items-center gap-3 mb-4">
                 {editingStudent ? (
                   <span className="w-8 h-8 rounded-2xl bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20 inline-flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[18px]">calendar_view_week</span>
+                    <JisIcon className="text-[18px]">calendar_view_week</JisIcon>
                   </span>
                 ) : (
                   <span className="w-7 h-7 rounded-full bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20 inline-flex items-center justify-center text-xs font-bold">2</span>
@@ -218,15 +238,15 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
           </div>
 
           <div className="sticky bottom-0 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 px-5 sm:px-7 py-4 bg-white/95 dark:bg-[#0b1422]/95 backdrop-blur border-t border-[#dbdbdb]/60 dark:border-[#243244]">
-            <button type="button" onClick={onClose} disabled={submitting}
+            <Button type="button" onClick={onClose} disabled={submitting}
               className="min-h-11 px-5 rounded-2xl text-sm font-semibold text-[#575757] dark:text-[#cbd5e1] hover:bg-[#f0f0f0] dark:hover:bg-[#172435]">
               Cancel
-            </button>
-            <button type="submit" disabled={submitting || !name.trim()}
+            </Button>
+            <Button type="submit" disabled={submitting || !name.trim()}
               className="btn-brand min-h-11 px-6 rounded-2xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-45">
-              <span className="material-symbols-outlined text-[18px]">check_circle</span>
+              <JisIcon className="text-[18px]">check_circle</JisIcon>
               {submitting ? 'Saving…' : editingStudent ? 'Save changes' : 'Save student'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

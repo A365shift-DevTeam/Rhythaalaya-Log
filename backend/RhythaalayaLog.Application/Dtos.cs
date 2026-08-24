@@ -13,7 +13,12 @@ public sealed record EnrollmentSummaryDto(Guid Id, Guid BatchId, string BatchNam
 
 public sealed record StudentDto(Guid Id, string StudentNumber, string Name, DateOnly? DateOfBirth,
     string? ParentName, string? Address, string? Phone, string? Email, DateOnly JoinDate, bool IsActive,
-    decimal OutstandingBalance, decimal AttendancePercentage, IReadOnlyList<EnrollmentSummaryDto> Enrollments);
+    decimal OutstandingBalance, decimal AttendancePercentage, int WonCount, int ParticipatedCount,
+    IReadOnlyList<EnrollmentSummaryDto> Enrollments);
+
+public sealed record StudentAchievementDto(Guid Id, Guid StudentId, string Title, AchievementCategory Category,
+    string? Level, DateOnly EventDate, string? Note, string FileName, string ContentType, int FileSizeBytes,
+    DateTimeOffset CreatedAt);
 
 public sealed record AttendanceEntryDto(Guid EnrollmentId, AttendanceStatus Status);
 public sealed record AttendanceRecordDto(Guid EnrollmentId, Guid StudentId, string StudentName, AttendanceStatus Status);

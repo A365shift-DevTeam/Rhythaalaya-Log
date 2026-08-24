@@ -1,3 +1,5 @@
+import { Button } from './ui/button';
+import { JisIcon } from './JisIcon';
 import React, { useState } from 'react';
 import { Student } from '../types';
 
@@ -57,14 +59,14 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
           </p>
         </div>
 
-        <button
+        <Button
           type="button"
           onClick={onOpenAddStudent}
           className="btn-brand w-full sm:w-auto min-h-11 px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-wider rounded-2xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
         >
-          <span className="material-symbols-outlined text-[18px]">person_add</span>
+          <JisIcon className="text-[18px]">person_add</JisIcon>
           <span>Add Student</span>
-        </button>
+        </Button>
       </div>
 
       {/* Quick Summary Metrics */}
@@ -90,9 +92,9 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
         <div className="flex flex-col sm:flex-row gap-2.5">
           <div className="relative flex-1">
             <label htmlFor="student-search" className="sr-only">Search students</label>
-            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9e9e9e] pointer-events-none text-[18px]">
+            <JisIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9e9e9e] pointer-events-none text-[18px]">
               search
-            </span>
+            </JisIcon>
             <input
               id="student-search"
               type="text"
@@ -102,20 +104,20 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
               className="w-full min-h-11 pl-10 pr-16 py-2.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl font-sans text-xs sm:text-sm font-medium text-[#212121] dark:text-white placeholder:text-[#9e9e9e] focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] transition-all"
             />
             {searchQuery && (
-              <button
+              <Button
                 type="button"
                 onClick={() => setSearchQuery('')}
                 aria-label="Clear student search"
                 className="absolute right-2 top-1/2 min-h-8 -translate-y-1/2 rounded-xl px-2.5 text-xs font-semibold text-[#808080] hover:bg-[#f0f0f0] hover:text-[#212121] dark:hover:bg-[#172435]"
               >
                 Clear
-              </button>
+              </Button>
             )}
           </div>
 
           <div className="flex items-center justify-between sm:justify-start gap-2 overflow-x-auto pb-1 sm:pb-0">
             <div className="flex bg-[#f0f0f0] dark:bg-[#111c2b] p-1 rounded-2xl shrink-0" role="group" aria-label="Filter by fee status">
-              <button
+              <Button
                 type="button"
                 onClick={() => setFilterFeeStatus('All')}
                 aria-pressed={filterFeeStatus === 'All'}
@@ -126,8 +128,8 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                 }`}
               >
                 All
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => setFilterFeeStatus('Paid')}
                 aria-pressed={filterFeeStatus === 'Paid'}
@@ -138,8 +140,8 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                 }`}
               >
                 Paid
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => setFilterFeeStatus('Pending')}
                 aria-pressed={filterFeeStatus === 'Pending'}
@@ -150,20 +152,20 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                 }`}
               >
                 Pending
-              </button>
+              </Button>
             </div>
 
-            <button
+            <Button
               type="button"
               onClick={() => setSortBy(sortBy === 'name' ? 'attendance' : 'name')}
               className="min-h-10 px-3.5 py-1.5 bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl font-sans text-xs font-semibold text-[#575757] dark:text-[#cbd5e1] hover:bg-[#f0f0f0] dark:hover:bg-[#223148] transition-colors flex items-center gap-1.5 shrink-0"
             >
-              <span className="material-symbols-outlined text-[16px]">sort</span>
+              <JisIcon className="text-[16px]">sort</JisIcon>
               <span>{sortBy === 'name' ? 'Name' : 'Attendance'}</span>
-            </button>
+            </Button>
 
             <div className="hidden sm:flex bg-[#f0f0f0] dark:bg-[#111c2b] p-1 rounded-2xl shrink-0" role="group" aria-label="Student view">
-              <button
+              <Button
                 type="button"
                 onClick={() => setViewMode('grid')}
                 aria-label="Grid view"
@@ -173,9 +175,9 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                 }`}
                 title="Grid View"
               >
-                <span className="material-symbols-outlined text-[18px]">grid_view</span>
-              </button>
-              <button
+                <JisIcon className="text-[18px]">grid_view</JisIcon>
+              </Button>
+              <Button
                 type="button"
                 onClick={() => setViewMode('table')}
                 aria-label="Table view"
@@ -185,8 +187,8 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                 }`}
                 title="Table View"
               >
-                <span className="material-symbols-outlined text-[18px]">format_list_bulleted</span>
-              </button>
+                <JisIcon className="text-[18px]">format_list_bulleted</JisIcon>
+              </Button>
             </div>
           </div>
         </div>
@@ -197,7 +199,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
           {filteredStudents.length === 0 && (
             <div className="col-span-full premium-card p-10 text-center text-[#808080] dark:text-[#94a3b8]">
-              <span className="material-symbols-outlined text-4xl text-[#c2c2c2] dark:text-[#64748b] mb-2">person_search</span>
+              <JisIcon className="text-4xl text-[#c2c2c2] dark:text-[#64748b] mb-2">person_search</JisIcon>
               <p className="text-sm font-bold text-[#212121] dark:text-white">No students found</p>
               <p className="text-xs mt-1">Try changing your search query or filter options.</p>
             </div>
@@ -217,14 +219,14 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start">
                         <h3 className="font-heading text-base font-bold text-[#212121] dark:text-white truncate">{student.name}</h3>
-                        <button
+                        <Button
                           type="button"
                           onClick={() => onViewStudent(student)}
                           aria-label={`Open details for ${student.name}`}
                           className="-mr-1.5 -mt-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[#9e9e9e] hover:text-[#3fc073] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] transition-colors"
                         >
-                          <span className="material-symbols-outlined text-[18px]">more_vert</span>
-                        </button>
+                          <JisIcon className="text-[18px]">more_vert</JisIcon>
+                        </Button>
                       </div>
                       <p className="font-sans text-xs text-[#3fc073] font-semibold truncate mt-0.5">{courseNames(student)}</p>
                       <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] truncate">{student.studentNumber}</p>
@@ -263,15 +265,15 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                 </div>
 
                 <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-[#dbdbdb]/60 dark:border-[#243244]">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => onViewStudent(student)}
                     className="min-h-10 py-1.5 px-2 flex items-center justify-center gap-1 text-[#575757] dark:text-[#cbd5e1] hover:text-[#3fc073] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 rounded-xl transition-colors font-sans text-xs font-semibold active:scale-95"
                   >
-                    <span className="material-symbols-outlined text-[16px]">visibility</span>
+                    <JisIcon className="text-[16px]">visibility</JisIcon>
                     <span>View</span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={() => onOpenRecordFee(student)}
                     disabled={!isPending}
@@ -282,17 +284,17 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                         : 'text-[#9e9e9e] bg-[#f0f0f0] dark:bg-[#111c2b] cursor-not-allowed opacity-50'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[16px]">receipt_long</span>
+                    <JisIcon className="text-[16px]">receipt_long</JisIcon>
                     <span>Fee</span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={() => onSendMessage(student)}
                     className="min-h-10 py-1.5 px-2 flex items-center justify-center gap-1 text-[#575757] dark:text-[#cbd5e1] hover:text-[#22c55e] hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-xl transition-colors font-sans text-xs font-semibold active:scale-95"
                   >
-                    <span className="material-symbols-outlined text-[16px]">forum</span>
+                    <JisIcon className="text-[16px]">forum</JisIcon>
                     <span>Msg</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
             );
@@ -348,31 +350,31 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button
+                          <Button
                             type="button"
                             onClick={() => onViewStudent(student)}
                             className="p-1.5 hover:bg-[#f0f0f0] dark:hover:bg-[#172435] rounded-xl text-[#808080] hover:text-[#3fc073]"
                             title="View student"
                           >
-                            <span className="material-symbols-outlined text-[18px]">visibility</span>
-                          </button>
-                          <button
+                            <JisIcon className="text-[18px]">visibility</JisIcon>
+                          </Button>
+                          <Button
                             type="button"
                             onClick={() => onOpenRecordFee(student)}
                             disabled={!isPending}
                             className={`p-1.5 rounded-xl ${isPending ? 'text-[#3fc073] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20' : 'text-[#c2c2c2] dark:text-[#64748b] opacity-40 cursor-not-allowed'}`}
                             title="Record fee"
                           >
-                            <span className="material-symbols-outlined text-[18px]">receipt_long</span>
-                          </button>
-                          <button
+                            <JisIcon className="text-[18px]">receipt_long</JisIcon>
+                          </Button>
+                          <Button
                             type="button"
                             onClick={() => onSendMessage(student)}
                             className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-[#808080] hover:text-[#22c55e] rounded-xl"
                             title="WhatsApp"
                           >
-                            <span className="material-symbols-outlined text-[18px]">forum</span>
-                          </button>
+                            <JisIcon className="text-[18px]">forum</JisIcon>
+                          </Button>
                         </div>
                       </td>
                     </tr>

@@ -1,7 +1,14 @@
+import { Button } from '../ui/button';
+import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
-import { FeeDue, FeePayment, PAYMENT_METHOD_LABELS, Student } from '../../types';
+import { Achievement, FeeDue, FeePayment, PAYMENT_METHOD_LABELS, Student } from '../../types';
 import { api } from '../../api';
 import { useDialogLifecycle } from './useDialogLifecycle';
+import { AddAchievementModal } from './AddAchievementModal';
+
+const ACHIEVEMENT_ICONS: Record<Achievement['category'], string> = {
+  Won: 'workspace_premium', Participated: 'how_to_reg', Other: 'category',
+};
 
 interface StudentDetailsModalProps {
   isOpen: boolean;
@@ -12,24 +19,49 @@ interface StudentDetailsModalProps {
   onSendMessage: (student: Student) => void;
   onDeleteStudent: (studentId: string) => void;
   onEdit: (student: Student) => void;
+  onAchievementsChanged: () => void;
 }
 
 export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
-  isOpen, onClose, student, token, onRecordFee, onSendMessage, onDeleteStudent, onEdit
+  isOpen, onClose, student, token, onRecordFee, onSendMessage, onDeleteStudent, onEdit, onAchievementsChanged
 }) => {
   const dialogRef = useDialogLifecycle(isOpen, onClose);
   const [dues, setDues] = useState<FeeDue[]>([]);
   const [payments, setPayments] = useState<FeePayment[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isAddAchievementOpen, setIsAddAchievementOpen] = useState(false);
+  const [achievementError, setAchievementError] = useState('');
 
   useEffect(() => {
     if (!isOpen || !student) return;
     setLoading(true);
-    Promise.all([api.studentDues(token, student.id), api.studentPayments(token, student.id)])
-      .then(([dueRows, paymentRows]) => { setDues(dueRows); setPayments(paymentRows); })
-      .catch(() => { setDues([]); setPayments([]); })
+    Promise.all([api.studentDues(token, student.id), api.studentPayments(token, student.id), api.achievements(token, student.id)])
+      .then(([dueRows, paymentRows, achievementRows]) => { setDues(dueRows); setPayments(paymentRows); setAchievements(achievementRows); })
+      .catch(() => { setDues([]); setPayments([]); setAchievements([]); })
       .finally(() => setLoading(false));
   }, [isOpen, student, token]);
+
+  const handleViewCertificate = async (achievement: Achievement) => {
+    if (!student) return;
+    try {
+      const url = await api.achievementFileBlobUrl(token, student.id, achievement.id);
+      window.open(url, '_blank', 'noopener');
+    } catch (requestError) {
+      setAchievementError(requestError instanceof Error ? requestError.message : 'Could not open that certificate.');
+    }
+  };
+
+  const handleDeleteCertificate = async (achievement: Achievement) => {
+    if (!student || !confirm(`Remove "${achievement.title}"?`)) return;
+    try {
+      await api.deleteAchievement(token, student.id, achievement.id);
+      setAchievements((prev) => prev.filter((item) => item.id !== achievement.id));
+      onAchievementsChanged();
+    } catch (requestError) {
+      setAchievementError(requestError instanceof Error ? requestError.message : 'Could not remove that certificate.');
+    }
+  };
 
   if (!isOpen || !student) return null;
 
@@ -64,14 +96,14 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <button type="button" onClick={() => { onClose(); onEdit(student); }} aria-label="Edit student details" title="Edit details"
+            <Button type="button" onClick={() => { onClose(); onEdit(student); }} aria-label="Edit student details" title="Edit details"
               className="flex h-9 w-9 items-center justify-center rounded-2xl text-[#575757] dark:text-[#cbd5e1] hover:text-[#3fc073] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 transition-all active:scale-95">
-              <span className="material-symbols-outlined text-[19px]">edit</span>
-            </button>
-            <button type="button" onClick={onClose} aria-label="Close student details" title="Close"
+              <JisIcon className="text-[19px]">edit</JisIcon>
+            </Button>
+            <Button type="button" onClick={onClose} aria-label="Close student details" title="Close"
               className="flex h-9 w-9 items-center justify-center rounded-2xl text-[#808080] hover:text-[#ef4444] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] transition-all active:scale-95">
-              <span className="material-symbols-outlined text-[19px]">close</span>
-            </button>
+              <JisIcon className="text-[19px]">close</JisIcon>
+            </Button>
           </div>
         </div>
 
@@ -139,24 +171,74 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
           )}
         </section>
 
+        {/* Achievements & certificates */}
+        <section>
+          <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#808080]">Achievements & certificates</h4>
+          {achievementError && <div role="alert" className="mb-2 p-2.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-[#ef4444] text-xs font-bold">{achievementError}</div>}
+          {loading ? <p className="text-xs text-[#9e9e9e]">Loading…</p> : achievements.length === 0 ? (
+            <p className="text-xs text-[#808080]">No certificates uploaded yet.</p>
+          ) : (
+            <div className="space-y-1.5 max-h-52 overflow-y-auto">
+              {achievements.map((achievement) => (
+                <div key={achievement.id} className="flex items-center justify-between gap-2 rounded-2xl bg-[#f0f0f0] dark:bg-[#111c2b] px-3 py-2.5 text-xs border border-[#dbdbdb]/60 dark:border-[#243244]">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20">
+                      <JisIcon className="text-[16px]">{ACHIEVEMENT_ICONS[achievement.category]}</JisIcon>
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate font-bold text-[#212121] dark:text-white">{achievement.title}</div>
+                      <div className="truncate text-[#808080] dark:text-[#94a3b8]">
+                        {achievement.category}{achievement.level ? ` · ${achievement.level}` : ''} · {new Date(achievement.eventDate).toLocaleDateString('en-IN')}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button type="button" onClick={() => handleViewCertificate(achievement)} title="View certificate"
+                      className="p-1.5 hover:bg-[#f0f0f0] dark:hover:bg-[#172435] rounded-xl text-[#808080] hover:text-[#3fc073]">
+                      <JisIcon className="text-[16px]">{achievement.contentType === 'application/pdf' ? 'picture_as_pdf' : 'image'}</JisIcon>
+                    </Button>
+                    <Button type="button" onClick={() => handleDeleteCertificate(achievement)} title="Remove certificate"
+                      className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl text-[#808080] hover:text-[#ef4444]">
+                      <JisIcon className="text-[16px]">delete</JisIcon>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <Button type="button" onClick={() => setIsAddAchievementOpen(true)}
+            className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#b9e6cb] bg-[#e9f7ee] px-4 py-2.5 text-xs font-bold text-[#257347] shadow-sm hover:bg-[#d9f2e3] dark:border-[#3fc073]/35 dark:bg-[#3fc073]/15 dark:text-[#b3e6c7] dark:hover:bg-[#3fc073]/25">
+            <JisIcon className="text-[18px]">add</JisIcon>
+            <span>Add achievement or certificate</span>
+          </Button>
+        </section>
+
         {/* Action Toolbar */}
         <div className="grid grid-cols-1 gap-2 pt-2 border-t border-[#dbdbdb]/60 dark:border-[#243244] sm:grid-cols-2">
-          <button onClick={() => { onClose(); onSendMessage(student); }}
+          <Button onClick={() => { onClose(); onSendMessage(student); }}
             className="min-h-11 py-2 px-3 bg-[#25D366]/15 text-[#13773a] dark:text-emerald-300 hover:bg-[#25D366]/25 text-xs font-bold rounded-2xl flex items-center justify-center gap-1.5 transition-colors">
-            <span className="material-symbols-outlined text-[18px]">chat</span><span>WhatsApp Msg</span>
-          </button>
-          <button onClick={() => { onClose(); onRecordFee(student); }}
+            <JisIcon className="text-[18px]">chat</JisIcon><span>WhatsApp Msg</span>
+          </Button>
+          <Button onClick={() => { onClose(); onRecordFee(student); }}
             className="btn-brand min-h-11 py-2 px-3 text-xs font-bold rounded-2xl flex items-center justify-center gap-1.5">
-            <span className="material-symbols-outlined text-[18px]">receipt_long</span><span>Record fee payment</span>
-          </button>
-          <button onClick={() => {
+            <JisIcon className="text-[18px]">receipt_long</JisIcon><span>Record fee payment</span>
+          </Button>
+          <Button onClick={() => {
               if (confirm(`Are you sure you want to remove ${student.name} from the academy?`)) { onDeleteStudent(student.id); onClose(); }
             }}
             className="min-h-11 py-2 px-3 text-[#ef4444] hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold rounded-2xl flex items-center justify-center gap-1 sm:col-span-2 transition-colors">
-            <span className="material-symbols-outlined text-[18px]">delete</span><span>Remove</span>
-          </button>
+            <JisIcon className="text-[18px]">delete</JisIcon><span>Remove</span>
+          </Button>
         </div>
       </div>
+
+      <AddAchievementModal
+        isOpen={isAddAchievementOpen}
+        onClose={() => setIsAddAchievementOpen(false)}
+        studentId={student.id}
+        token={token}
+        onCreated={(achievement) => { setAchievements((prev) => [achievement, ...prev]); onAchievementsChanged(); }}
+      />
     </div>
   );
 };

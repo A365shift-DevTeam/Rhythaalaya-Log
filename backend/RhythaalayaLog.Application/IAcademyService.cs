@@ -26,6 +26,12 @@ public interface IAcademyService
     Task<StudentDto> CreateEnrollmentAsync(CreateEnrollmentRequest request, CancellationToken ct);
     Task<StudentDto> EndEnrollmentAsync(Guid enrollmentId, EndEnrollmentRequest request, CancellationToken ct);
 
+    Task<IReadOnlyList<StudentAchievementDto>> GetAchievementsAsync(Guid studentId, CancellationToken ct);
+    Task<StudentAchievementDto> CreateAchievementAsync(Guid studentId, CreateAchievementRequest request,
+        Stream fileStream, string fileName, string contentType, long fileLength, CancellationToken ct);
+    Task DeleteAchievementAsync(Guid studentId, Guid achievementId, CancellationToken ct);
+    Task<(byte[] Data, string ContentType, string FileName)> GetAchievementFileAsync(Guid studentId, Guid achievementId, CancellationToken ct);
+
     Task<AttendanceLogDto> GetAttendanceAsync(DateOnly date, Guid batchId, CancellationToken ct);
     Task<AttendanceLogDto> SubmitAttendanceAsync(SubmitAttendanceRequest request, CancellationToken ct);
 

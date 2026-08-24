@@ -1,3 +1,5 @@
+import { Button } from './ui/button';
+import { JisIcon } from './JisIcon';
 import React from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { FeeDue, Student, Transaction } from '../types';
@@ -81,23 +83,23 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {canManage && (
-            <button
+            <Button
               type="button"
               onClick={onOpenAddTransaction}
               className="btn-brand flex-1 sm:flex-initial min-h-11 px-4 py-2 rounded-2xl font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95"
             >
-              <span className="material-symbols-outlined text-[18px]">add</span>
+              <JisIcon className="text-[18px]">add</JisIcon>
               <span>Record entry</span>
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
             onClick={() => onOpenRecordFee()}
             className="min-h-11 flex-1 sm:flex-initial bg-white dark:bg-[#0b1422] text-[#3fc073] dark:text-[#b3e6c7] border border-[#dbdbdb] dark:border-[#243244] px-4 py-2 rounded-2xl font-sans text-xs font-bold uppercase tracking-wider hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 transition-colors flex items-center justify-center gap-1.5 active:scale-95"
           >
-            <span className="material-symbols-outlined text-[18px]">payments</span>
+            <JisIcon className="text-[18px]">payments</JisIcon>
             <span>Collect Fee</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -109,7 +111,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
               <span className="w-2 h-2 rounded-full bg-[#22c55e]" /> Total Revenue
             </span>
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-emerald-50 text-[#22c55e] dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">trending_up</span>
+              <JisIcon className="text-[18px] sm:text-[20px]">trending_up</JisIcon>
             </div>
           </div>
           <div className="mt-3 sm:mt-4">
@@ -126,7 +128,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
               <span className="w-2 h-2 rounded-full bg-[#ef4444]" /> Operating Costs
             </span>
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-rose-50 text-[#ef4444] dark:bg-rose-950/60 dark:text-rose-400 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">trending_down</span>
+              <JisIcon className="text-[18px] sm:text-[20px]">trending_down</JisIcon>
             </div>
           </div>
           <div className="mt-3 sm:mt-4">
@@ -143,7 +145,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
               {isNetLoss ? 'Net Loss' : 'Net Profit'}
             </span>
             <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-2xl flex items-center justify-center ${isNetLoss ? 'bg-rose-50 text-[#ef4444] dark:bg-rose-950/60' : 'bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20'}`}>
-              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">account_balance_wallet</span>
+              <JisIcon className="text-[18px] sm:text-[20px]">account_balance_wallet</JisIcon>
             </div>
           </div>
           <div className="mt-3 sm:mt-4">
@@ -233,14 +235,14 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                 <p className="text-xs text-[#808080] dark:text-[#94a3b8]">Recent cash inflows and expenses</p>
               </div>
               {canManage && (
-                <button
+                <Button
                   type="button"
                   onClick={onOpenAddTransaction}
                   className="btn-brand min-h-9 sm:min-h-10 rounded-2xl px-3.5 font-sans text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1 active:scale-95"
                 >
-                  <span className="material-symbols-outlined text-[16px]">add</span>
+                  <JisIcon className="text-[16px]">add</JisIcon>
                   <span>Entry</span>
-                </button>
+                </Button>
               )}
             </div>
 
@@ -267,9 +269,9 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                             : 'bg-rose-50 text-[#ef4444] dark:bg-rose-950/60'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-[18px]">
+                        <JisIcon className="text-[18px]">
                           {item.type === 'income' ? 'arrow_downward' : 'arrow_upward'}
-                        </span>
+                        </JisIcon>
                       </div>
                       <div className="min-w-0">
                         <div className="font-sans text-xs sm:text-sm font-bold text-[#212121] dark:text-white truncate">{item.title}</div>
@@ -284,7 +286,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                       >
                         {item.type === 'income' ? '+' : '-'}₹{item.amount.toLocaleString('en-IN')}
                       </div>
-                      {editable && <span className="material-symbols-outlined text-[16px] text-[#9e9e9e]">edit</span>}
+                      {editable && <JisIcon className="text-[16px] text-[#9e9e9e]">edit</JisIcon>}
                     </div>
                   </div>
                 );
@@ -337,13 +339,13 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                       <span className="font-sans text-xs font-bold text-[#212121] dark:text-white tabular-nums">
                         ₹{due.balanceAmount.toLocaleString('en-IN')}
                       </span>
-                      <button
+                      <Button
                         type="button"
                         onClick={() => onOpenRecordFee(student)}
                         className="min-h-9 px-3 py-1 bg-white dark:bg-[#0b1422] text-[#3fc073] dark:text-[#b3e6c7] hover:bg-[#3fc073] hover:text-white dark:hover:bg-[#3fc073] dark:hover:text-white rounded-2xl border border-[#dbdbdb] dark:border-[#243244] text-xs font-bold transition-all active:scale-95 shadow-xs"
                       >
                         Collect
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 );
@@ -353,13 +355,13 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
 
           <div className="mt-4 pt-3 border-t border-[#dbdbdb]/60 dark:border-[#243244] flex flex-col items-start justify-between gap-2 text-xs text-[#808080] sm:flex-row sm:items-center">
             <span>Dues are generated automatically from fee structures</span>
-            <button
+            <Button
               type="button"
               onClick={() => onOpenRecordFee()}
               className="min-h-9 rounded-2xl px-2 text-[#3fc073] dark:text-[#b3e6c7] font-bold hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 transition-colors"
             >
               Manual Collect &rarr;
-            </button>
+            </Button>
           </div>
         </div>
       </div>

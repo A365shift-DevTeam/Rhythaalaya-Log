@@ -8,6 +8,7 @@ public enum SubscriptionStatus { Trial, Active, PastDue, Cancelled, Expired }
 public enum EnrollmentStatus { Active, Completed, Withdrawn }
 public enum FeeFrequency { Monthly, Quarterly, HalfYearly, Yearly, OneTime }
 public enum FeeDueStatus { Pending, Partial, Paid, Overdue, Cancelled }
+public enum AchievementCategory { Won, Participated, Other }
 
 [Flags]
 public enum BatchDays
@@ -245,6 +246,24 @@ public sealed class FinancialTransaction : ITenantOwned
     public DateTimeOffset OccurredAt { get; set; } = DateTimeOffset.UtcNow;
     public Guid? FeePaymentId { get; set; }
     public FeePayment? FeePayment { get; set; }
+}
+
+public sealed class StudentAchievement : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid StudentId { get; set; }
+    public Student Student { get; set; } = null!;
+    public required string Title { get; set; }
+    public AchievementCategory Category { get; set; }
+    public string? Level { get; set; }
+    public DateOnly EventDate { get; set; }
+    public string? Note { get; set; }
+    public required string FileName { get; set; }
+    public required string ContentType { get; set; }
+    public required byte[] FileData { get; set; }
+    public int FileSizeBytes { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
 public sealed class OrganizationSettings : ITenantOwned

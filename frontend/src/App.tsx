@@ -1,3 +1,5 @@
+import { Button } from './components/ui/button';
+import { JisIcon } from './components/JisIcon';
 import React, { useState, useEffect } from 'react';
 import {
   Student,
@@ -25,6 +27,7 @@ import { FinanceTab } from './components/FinanceTab';
 import { LogTab } from './components/LogTab';
 import { MenuTab } from './components/MenuTab';
 import { BatchesTab } from './components/BatchesTab';
+import { ReportsTab } from './components/ReportsTab';
 
 import { AddStudentModal } from './components/modals/AddStudentModal';
 import { RecordFeeModal } from './components/modals/RecordFeeModal';
@@ -127,7 +130,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
 
   // Actions
   const handleAddStudent = async (payload: {
-    name: string; dateOfBirth: string | null; parentName: string; phone: string; email: string; address: string;
+    name: string; dateOfBirth: string | null; joinDate: string; parentName: string; phone: string; email: string; address: string;
   }, batchIds: string[]) => {
     const created = await api.createStudent(session.token, payload);
     for (const targetBatchId of [...new Set(batchIds)]) await api.enrollStudent(session.token, created.id, targetBatchId);
@@ -135,7 +138,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   };
 
   const handleUpdateStudent = async (studentId: string, payload: {
-    name: string; dateOfBirth: string | null; parentName: string; phone: string; email: string; address: string;
+    name: string; dateOfBirth: string | null; joinDate: string; parentName: string; phone: string; email: string; address: string;
   }, batchIds: string[]) => {
     const existing = students.find((s) => s.id === studentId);
     let updated = await api.updateStudent(session.token, studentId, { ...payload, isActive: existing?.isActive ?? true });
@@ -313,19 +316,19 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <NotificationCenter tenantKey={session.user.tenantId || session.user.email} preferences={settings.notifications}
               students={students} transactions={transactions} onNavigate={setCurrentTab} />
-            <button type="button" onClick={onLogout} aria-label="Sign out" className="min-h-9 sm:min-h-11 shrink-0 rounded-2xl border border-[#dbdbdb] px-2.5 sm:px-3.5 text-xs font-semibold bg-white text-[#212121] transition-all hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-[#243244] dark:bg-[#111c2b] dark:text-[#e2e8f0] dark:hover:bg-rose-950/40 flex items-center gap-1 active:scale-95">
+            <Button type="button" onClick={onLogout} aria-label="Sign out" className="min-h-9 sm:min-h-11 shrink-0 rounded-2xl border border-[#dbdbdb] px-2.5 sm:px-3.5 text-xs font-semibold bg-white text-[#212121] transition-all hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-[#243244] dark:bg-[#111c2b] dark:text-[#e2e8f0] dark:hover:bg-rose-950/40 flex items-center gap-1 active:scale-95">
               <span className="hidden sm:inline">Sign out</span>
-              <span className="material-symbols-outlined text-[17px] sm:hidden">logout</span>
-            </button>
+              <JisIcon className="text-[17px] sm:hidden">logout</JisIcon>
+            </Button>
           </div>
         </header>
         {loadError && <div role="alert" className="mb-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200">
-          <span className="material-symbols-outlined mt-0.5 text-[20px]" aria-hidden="true">error</span>
+          <JisIcon className="mt-0.5 text-[20px]" aria-hidden="true">error</JisIcon>
           <span className="min-w-0 flex-1 py-1">{loadError}</span>
-          <button type="button" onClick={() => void reload()} className="min-h-9 rounded-xl px-2.5 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50">Retry</button>
-          <button type="button" onClick={() => setLoadError('')} aria-label="Dismiss error" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl hover:bg-rose-100 dark:hover:bg-rose-900/50">
-            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
-          </button>
+          <Button type="button" onClick={() => void reload()} className="min-h-9 rounded-xl px-2.5 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50">Retry</Button>
+          <Button type="button" onClick={() => setLoadError('')} aria-label="Dismiss error" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl hover:bg-rose-100 dark:hover:bg-rose-900/50">
+            <JisIcon className="text-[20px]" aria-hidden="true">close</JisIcon>
+          </Button>
         </div>}
         {currentTab === 'home' && (
           <React.Suspense fallback={
@@ -392,6 +395,15 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             batches={batches}
             token={session.token}
             onOpenAddStudent={openAddStudent}
+          />
+        )}
+
+        {currentTab === 'reports' && (
+          <ReportsTab
+            students={students}
+            batches={batches}
+            courses={courses}
+            onViewStudent={openStudentDetails}
           />
         )}
 
@@ -481,6 +493,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         onSendMessage={(student) => openWhatsApp(student)}
         onDeleteStudent={handleDeleteStudent}
         onEdit={openEditStudent}
+        onAchievementsChanged={() => void reload()}
       />
       <FeeReceiptModal isOpen={isReceiptOpen} onClose={() => setIsReceiptOpen(false)} receipt={lastReceipt} />
     </div>

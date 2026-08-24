@@ -1,3 +1,5 @@
+import { Button } from '../ui/button';
+import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { Batch, Course, Staff, WEEKDAY_LABELS, WEEKDAY_SHORT } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
@@ -94,10 +96,10 @@ export const AddBatchModal: React.FC<AddBatchModalProps> = ({ isOpen, onClose, c
           <h3 id="add-batch-title" className="font-heading text-xl font-bold text-[#212121] dark:text-white">
             {editingBatch ? 'Edit batch' : 'Create batch'}
           </h3>
-          <button type="button" onClick={onClose} aria-label="Close"
+          <Button type="button" onClick={onClose} aria-label="Close"
             className="flex h-9 w-9 items-center justify-center rounded-2xl text-[#808080] hover:text-[#ef4444] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] transition-all active:scale-95">
-            <span className="material-symbols-outlined text-[19px]">close</span>
-          </button>
+            <JisIcon className="text-[19px]">close</JisIcon>
+          </Button>
         </div>
 
         {noPrerequisites ? (
@@ -134,14 +136,14 @@ export const AddBatchModal: React.FC<AddBatchModalProps> = ({ isOpen, onClose, c
               <span className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Days of the week *</span>
               <div className="flex flex-wrap gap-1.5" role="group" aria-label="Select batch days">
                 {WEEKDAY_LABELS.map((day, index) => (
-                  <button key={day} type="button" onClick={() => toggleDay(day)} aria-pressed={days.includes(day)}
+                  <Button key={day} type="button" onClick={() => toggleDay(day)} aria-pressed={days.includes(day)}
                     className={`min-h-10 min-w-11 px-2.5 rounded-2xl text-xs font-bold border transition-all ${
                       days.includes(day)
                         ? 'bg-[#3fc073] border-[#3fc073] text-white shadow-xs'
                         : 'bg-[#f0f0f0] dark:bg-[#111c2b] border-[#dbdbdb] dark:border-[#243244] text-[#575757] dark:text-[#cbd5e1] hover:border-[#3fc073]/40'
                     }`}>
                     {WEEKDAY_SHORT[index]}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -183,17 +185,17 @@ export const AddBatchModal: React.FC<AddBatchModalProps> = ({ isOpen, onClose, c
 
             <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
               {editingBatch && onArchive ? (
-                <button type="button" onClick={handleArchive} disabled={submitting || archiving}
+                <Button type="button" onClick={handleArchive} disabled={submitting || archiving}
                   className="min-h-11 px-3 py-2 rounded-2xl text-xs font-bold text-[#ef4444] hover:bg-rose-50 dark:hover:bg-rose-950/40 disabled:opacity-50 flex items-center justify-center gap-1.5 sm:justify-start transition-colors">
-                  <span className="material-symbols-outlined text-[16px]">archive</span>
+                  <JisIcon className="text-[16px]">archive</JisIcon>
                   {archiving ? 'Archiving…' : 'Archive batch'}
-                </button>
+                </Button>
               ) : <span />}
               <div className="flex flex-col-reverse gap-2 sm:flex-row">
-                <button type="button" onClick={onClose} disabled={submitting || archiving} className="min-h-11 px-4 py-2 rounded-2xl text-xs font-semibold text-[#575757] hover:bg-[#f0f0f0] dark:hover:bg-[#172435]">Cancel</button>
-                <button type="submit" disabled={submitting || archiving} className="btn-brand min-h-11 px-5 py-2 rounded-2xl text-xs font-bold disabled:opacity-50">
+                <Button type="button" onClick={onClose} disabled={submitting || archiving} className="min-h-11 px-4 py-2 rounded-2xl text-xs font-semibold text-[#575757] hover:bg-[#f0f0f0] dark:hover:bg-[#172435]">Cancel</Button>
+                <Button type="submit" disabled={submitting || archiving} className="btn-brand min-h-11 px-5 py-2 rounded-2xl text-xs font-bold disabled:opacity-50">
                   {submitting ? 'Saving…' : editingBatch ? 'Save changes' : 'Create batch'}
-                </button>
+                </Button>
               </div>
             </div>
           </form>

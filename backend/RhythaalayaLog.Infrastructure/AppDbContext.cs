@@ -20,6 +20,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     public DbSet<FeeDue> FeeDues => Set<FeeDue>();
     public DbSet<FeePayment> FeePayments => Set<FeePayment>();
     public DbSet<FeePaymentAllocation> FeePaymentAllocations => Set<FeePaymentAllocation>();
+    public DbSet<StudentAchievement> StudentAchievements => Set<StudentAchievement>();
     public DbSet<FinancialTransaction> Transactions => Set<FinancialTransaction>();
     public DbSet<OrganizationSettings> OrganizationSettings => Set<OrganizationSettings>();
 
@@ -31,6 +32,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         ConfigureStudentsAndEnrollments(modelBuilder);
         ConfigureAttendance(modelBuilder);
         ConfigureFees(modelBuilder);
+        ConfigureAchievements(modelBuilder);
         ConfigureFinance(modelBuilder);
         ConfigureSettings(modelBuilder);
         ApplyTenantFilters(modelBuilder);
@@ -160,6 +162,20 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         allocation.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
     }
 
+    private static void ConfigureAchievements(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<StudentAchievement>();
+        entity.HasIndex(x => new { x.TenantId, x.StudentId });
+        entity.Property(x => x.Title).HasMaxLength(200);
+        entity.Property(x => x.Category).HasConversion<string>().HasMaxLength(16);
+        entity.Property(x => x.Level).HasMaxLength(80);
+        entity.Property(x => x.Note).HasMaxLength(1000);
+        entity.Property(x => x.FileName).HasMaxLength(260);
+        entity.Property(x => x.ContentType).HasMaxLength(100);
+        entity.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
+    }
+
     private static void ConfigureFinance(ModelBuilder modelBuilder)
     {
         var transaction = modelBuilder.Entity<FinancialTransaction>();
@@ -199,6 +215,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         modelBuilder.Entity<FeeDue>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<FeePayment>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<FeePaymentAllocation>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
+        modelBuilder.Entity<StudentAchievement>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<FinancialTransaction>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<OrganizationSettings>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
     }

@@ -1,3 +1,5 @@
+import { Button } from './ui/button';
+import { JisIcon } from './JisIcon';
 import React, { useEffect, useState } from 'react';
 import { OrgSettings, ReceiptSettings } from '../types';
 
@@ -68,7 +70,7 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
           </div>
           <div className="mt-5 flex items-center justify-end gap-3 border-t border-[#dbdbdb]/60 pt-4 dark:border-[#243244]">
             {saved && <span role="status" className="text-xs font-semibold text-[#22c55e]">Receipt setup saved</span>}
-            <button type="submit" className="btn-brand min-h-11 rounded-2xl px-5 text-xs font-bold">Save receipt setup</button>
+            <Button type="submit" className="btn-brand min-h-11 rounded-2xl px-5 text-xs font-bold">Save receipt setup</Button>
           </div>
         </form>
       </section>
@@ -108,7 +110,7 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
 
 function SectionHeading({ id, icon, title, description }: { id: string; icon: string; title: string; description: string }) {
   return <div className="flex items-start gap-3 px-1">
-    <span className="material-symbols-outlined mt-0.5 text-[22px] text-[#3fc073]" aria-hidden="true">{icon}</span>
+    <JisIcon className="mt-0.5 text-[22px] text-[#3fc073]" aria-hidden="true">{icon}</JisIcon>
     <div><h3 id={id} className="text-sm font-bold text-[#212121] dark:text-white">{title}</h3>
       <p className="mt-0.5 text-xs leading-5 text-[#808080] dark:text-[#94a3b8]">{description}</p></div>
   </div>;
@@ -157,15 +159,15 @@ function CategoryEditor({ title, tone, categories, onChange }: { title: string; 
   return <div className="premium-card p-4 sm:p-5">
     <div className="flex items-center justify-between"><h4 className="text-sm font-bold text-[#212121] dark:text-white">{title}</h4><span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${toneClasses}`}>{categories.length}/20</span></div>
     <div className="mt-4 flex flex-wrap gap-2">{categories.map((category) => <span key={category} className="inline-flex min-h-9 items-center gap-1 rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-[#f0f0f0] pl-3 pr-1 text-xs font-semibold text-[#212121] dark:bg-[#0b1422] dark:text-[#e2e8f0]">{category}
-      <button type="button" disabled={categories.length === 1} onClick={() => onChange(categories.filter((item) => item !== category))} aria-label={`Remove ${category}`} className="flex h-8 w-8 items-center justify-center rounded-xl hover:bg-white disabled:opacity-30 dark:hover:bg-[#172435]"><span className="material-symbols-outlined text-[17px]">close</span></button></span>)}</div>
+      <Button type="button" disabled={categories.length === 1} onClick={() => onChange(categories.filter((item) => item !== category))} aria-label={`Remove ${category}`} className="flex h-8 w-8 items-center justify-center rounded-xl hover:bg-white disabled:opacity-30 dark:hover:bg-[#172435]"><JisIcon className="text-[17px]">close</JisIcon></Button></span>)}</div>
     <form onSubmit={add} className="mt-4 flex gap-2"><label className="sr-only" htmlFor={`new-${tone}-category`}>New {tone} category</label><input id={`new-${tone}-category`} maxLength={80} value={value} onChange={(event) => setValue(event.target.value)} className="settings-input min-w-0 flex-1" placeholder={`Add ${tone} category`} />
-      <button type="submit" disabled={!value.trim() || categories.length >= 20} className="min-h-11 rounded-2xl bg-[#212121] px-4 text-xs font-bold text-white disabled:opacity-40 dark:bg-white dark:text-[#212121]">Add</button></form>
+      <Button type="submit" disabled={!value.trim() || categories.length >= 20} className="min-h-11 rounded-2xl bg-[#212121] px-4 text-xs font-bold text-white disabled:opacity-40 dark:bg-white dark:text-[#212121]">Add</Button></form>
   </div>;
 }
 
 function PreferenceRow({ icon, title, description, checked, disabled, onChange }: { icon: string; title: string; description: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) {
   return <label className={`flex min-h-16 items-center gap-3 p-4 sm:px-6 cursor-pointer hover:bg-[#f0f0f0]/50 dark:hover:bg-[#172435]/40 transition-colors ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}>
-    <span className="material-symbols-outlined flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]">{icon}</span>
+    <JisIcon className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]">{icon}</JisIcon>
     <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-[#212121] dark:text-white">{title}</span><span className="mt-0.5 block text-xs text-[#808080] dark:text-[#94a3b8]">{description}</span></span>
     <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} className="h-5 w-5 shrink-0 accent-[#3fc073] rounded cursor-pointer" />
   </label>;

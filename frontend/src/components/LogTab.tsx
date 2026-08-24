@@ -1,3 +1,5 @@
+import { Button } from './ui/button';
+import { JisIcon } from './JisIcon';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Student, Batch, AttendanceStatus } from '../types';
 import { api } from '../api';
@@ -128,7 +130,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
     <div className="space-y-4 md:space-y-6 pb-24 md:pb-12 relative">
       {toastMessage && (
         <div className="fixed top-16 md:top-20 right-3 sm:right-6 md:right-8 z-50 bg-[#212121]/95 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 border border-[#333333] backdrop-blur-xl animate-bounce">
-          <span className="material-symbols-outlined text-[#22c55e] text-[20px]">check_circle</span>
+          <JisIcon className="text-[#22c55e] text-[20px]">check_circle</JisIcon>
           <span className="font-sans text-xs font-bold">{toastMessage}</span>
         </div>
       )}
@@ -150,20 +152,20 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-center gap-2.5 pt-1 border-t border-[#dbdbdb]/60 dark:border-[#243244]">
           {/* Enhanced Large Date Selector */}
           <div className="flex items-center gap-1 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl p-1 flex-1 lg:max-w-xs shadow-xs">
-            <button
+            <Button
               type="button"
               onClick={handlePrevDay}
               aria-label="Previous day"
               title="Previous day"
               className="h-9 w-9 flex items-center justify-center rounded-xl text-[#808080] hover:text-[#3fc073] hover:bg-white dark:hover:bg-[#172435] transition-colors shrink-0 active:scale-95"
             >
-              <span className="material-symbols-outlined text-[22px]">chevron_left</span>
-            </button>
+              <JisIcon className="text-[22px]">chevron_left</JisIcon>
+            </Button>
 
             <label className="relative flex-1 flex items-center justify-center gap-2 px-2 py-1.5 cursor-pointer min-h-9 select-none rounded-xl hover:bg-white/80 dark:hover:bg-[#172435]/80 transition-colors">
-              <span className="material-symbols-outlined text-[#3fc073] text-[22px] shrink-0">
+              <JisIcon className="text-[#3fc073] text-[22px] shrink-0">
                 calendar_month
-              </span>
+              </JisIcon>
               <span className="font-heading font-bold text-xs sm:text-sm text-[#212121] dark:text-white truncate">
                 {formatDisplayDate(selectedDate)}
               </span>
@@ -181,33 +183,33 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
               />
             </label>
 
-            <button
+            <Button
               type="button"
               onClick={handleNextDay}
               aria-label="Next day"
               title="Next day"
               className="h-9 w-9 flex items-center justify-center rounded-xl text-[#808080] hover:text-[#3fc073] hover:bg-white dark:hover:bg-[#172435] transition-colors shrink-0 active:scale-95"
             >
-              <span className="material-symbols-outlined text-[22px]">chevron_right</span>
-            </button>
+              <JisIcon className="text-[22px]">chevron_right</JisIcon>
+            </Button>
 
             {selectedDate !== todayIso && (
-              <button
+              <Button
                 type="button"
                 onClick={() => setSelectedDate(todayIso)}
                 className="px-2.5 py-1 text-xs font-bold text-[#35a160] dark:text-[#b3e6c7] bg-[#e9f7ee] dark:bg-[#3fc073]/20 hover:bg-[#cbecd8] rounded-xl transition-colors shrink-0 active:scale-95"
                 title="Jump to today"
               >
                 Today
-              </button>
+              </Button>
             )}
           </div>
 
           {/* Batch Selector */}
           <div className="relative flex-1 lg:max-w-xs">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] text-[20px] pointer-events-none">
+            <JisIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] text-[20px] pointer-events-none">
               groups
-            </span>
+            </JisIcon>
             <select
               value={selectedBatchId}
               onChange={(e) => setSelectedBatchId(e.target.value)}
@@ -220,49 +222,49 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
                 </option>
               ))}
             </select>
-            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] pointer-events-none text-[20px]">
+            <JisIcon className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] pointer-events-none text-[20px]">
               expand_more
-            </span>
+            </JisIcon>
           </div>
 
           {/* Quick Action Buttons */}
           <div className="flex items-center gap-2 sm:col-span-2 lg:col-auto">
-            <button
+            <Button
               type="button"
               onClick={markAllPresent}
               disabled={roster.length === 0}
               className="flex-1 lg:flex-initial min-h-11 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 text-[#22c55e] hover:bg-emerald-100 font-sans text-xs font-bold rounded-2xl border border-emerald-200/70 dark:border-emerald-900/50 transition-all flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50 active:scale-95"
             >
-              <span className="material-symbols-outlined text-[16px]">done_all</span>
+              <JisIcon className="text-[16px]">done_all</JisIcon>
               <span>All Present</span>
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={markAllAbsent}
               disabled={roster.length === 0}
               className="flex-1 lg:flex-initial min-h-11 px-3.5 py-2 bg-rose-50 dark:bg-rose-950/60 text-[#ef4444] hover:bg-rose-100 font-sans text-xs font-bold rounded-2xl border border-rose-200/70 dark:border-rose-900/50 transition-all flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50 active:scale-95"
             >
-              <span className="material-symbols-outlined text-[16px]">close</span>
+              <JisIcon className="text-[16px]">close</JisIcon>
               <span>All Absent</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       {batches.length === 0 ? (
         <div className="premium-card text-center py-12 px-4">
-          <span className="material-symbols-outlined text-4xl text-[#9e9e9e]">calendar_add_on</span>
+          <JisIcon className="text-4xl text-[#9e9e9e]">calendar_add_on</JisIcon>
           <p className="font-heading text-lg font-bold text-[#212121] dark:text-white mt-2">No batches yet</p>
           <p className="font-sans text-xs text-[#808080] mt-1 max-w-sm mx-auto">Create a batch first, then enroll students to take attendance.</p>
-          <button type="button" onClick={onOpenAddStudent} className="btn-brand mt-4 rounded-2xl px-4 py-2.5 text-xs font-bold">
+          <Button type="button" onClick={onOpenAddStudent} className="btn-brand mt-4 rounded-2xl px-4 py-2.5 text-xs font-bold">
             Add student
-          </button>
+          </Button>
         </div>
       ) : (
         <>
           {/* Mobile Quick Stats Summary */}
           <div className="lg:hidden grid grid-cols-3 gap-2 sm:gap-3">
-            <button
+            <Button
               type="button"
               onClick={() => setFilterStatus(filterStatus === 'P' ? 'ALL' : 'P')}
               className={`rounded-2xl p-3 sm:p-4 text-center transition-all border ${
@@ -273,9 +275,9 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
             >
               <div className="text-xs font-bold uppercase tracking-wider opacity-80">Present</div>
               <div className="font-heading text-xl sm:text-2xl font-bold tabular-nums mt-0.5">{presentCount}</div>
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
               onClick={() => setFilterStatus(filterStatus === 'A' ? 'ALL' : 'A')}
               className={`rounded-2xl p-3 sm:p-4 text-center transition-all border ${
@@ -286,7 +288,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
             >
               <div className="text-xs font-bold uppercase tracking-wider opacity-80">Absent</div>
               <div className="font-heading text-xl sm:text-2xl font-bold tabular-nums mt-0.5">{absentCount}</div>
-            </button>
+            </Button>
 
             <div className="bg-[#e9f7ee] dark:bg-[#3fc073]/20 border border-[#cbecd8] dark:border-[#3fc073]/30 rounded-2xl p-3 sm:p-4 text-center text-[#35a160] dark:text-[#b3e6c7] flex flex-col justify-center">
               <div className="text-xs font-bold uppercase tracking-wider opacity-80">Rate</div>
@@ -310,9 +312,9 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
 
                 {roster.length > 4 && (
                   <div className="relative flex-1 sm:max-w-xs">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] text-[16px] pointer-events-none">
+                    <JisIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] text-[16px] pointer-events-none">
                       search
-                    </span>
+                    </JisIcon>
                     <input
                       type="text"
                       value={searchQuery}
@@ -321,14 +323,14 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
                       className="w-full min-h-10 pl-8 pr-3 py-1.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-xs font-medium text-[#212121] dark:text-white outline-none focus:border-[#3fc073]"
                     />
                     {searchQuery && (
-                      <button
+                      <Button
                         type="button"
                         onClick={() => setSearchQuery('')}
                         aria-label="Clear search"
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9e9e9e] hover:text-[#212121] text-xs font-bold"
                       >
                         ×
-                      </button>
+                      </Button>
                     )}
                   </div>
                 )}
@@ -339,7 +341,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
                 <div className="divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
                   {loading && (
                     <div className="p-8 text-center text-xs font-semibold text-[#808080] dark:text-[#94a3b8] flex items-center justify-center gap-2">
-                      <span className="material-symbols-outlined animate-spin text-[18px] text-[#3fc073]">progress_activity</span>
+                      <JisIcon className="animate-spin text-[18px] text-[#3fc073]">progress_activity</JisIcon>
                       <span>Loading attendance roster…</span>
                     </div>
                   )}
@@ -432,7 +434,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
                   <span className="font-heading text-lg font-bold opacity-70 mb-1 tabular-nums">/ {roster.length}</span>
                 </div>
                 <div className="flex items-center gap-2 font-sans text-xs font-bold bg-white/20 w-max px-3 py-1 rounded-full backdrop-blur-md">
-                  <span className="material-symbols-outlined text-[16px]">trending_up</span>
+                  <JisIcon className="text-[16px]">trending_up</JisIcon>
                   <span>{presentPct}% Present Today</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-1">
@@ -445,15 +447,15 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
                     <div className="font-heading text-xl font-bold text-rose-200 tabular-nums">{absentCount}</div>
                   </div>
                 </div>
-                <button
+                <Button
                   type="button"
                   onClick={handleSubmitAttendance}
                   disabled={roster.length === 0 || saving}
                   className="w-full mt-2 bg-white text-[#35a160] font-sans text-xs font-bold uppercase tracking-wider py-3.5 rounded-2xl hover:bg-[#f4fbf7] transition-all shadow-md active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <span className="material-symbols-outlined text-[18px]">{saving ? 'progress_activity' : 'cloud_upload'}</span>
+                  <JisIcon className="text-[18px]">{saving ? 'progress_activity' : 'cloud_upload'}</JisIcon>
                   <span>{saving ? 'Saving…' : 'Submit Attendance Log'}</span>
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -473,15 +475,15 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
                   </div>
                 </div>
 
-                <button
+                <Button
                   type="button"
                   onClick={handleSubmitAttendance}
                   disabled={saving}
                   className="btn-brand min-h-11 px-4 py-2 rounded-2xl text-xs font-bold shrink-0 shadow-lg flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
                 >
-                  <span className="material-symbols-outlined text-[18px]">{saving ? 'progress_activity' : 'check_circle'}</span>
+                  <JisIcon className="text-[18px]">{saving ? 'progress_activity' : 'check_circle'}</JisIcon>
                   <span>{saving ? 'Saving…' : 'Submit'}</span>
-                </button>
+                </Button>
               </div>
             </div>
           )}

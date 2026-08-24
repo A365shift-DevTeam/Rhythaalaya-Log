@@ -585,5 +585,51 @@ BEGIN
     VALUES ('20260821104928_InitialCreate', '9.0.1');
     END IF;
 END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260824072747_AddStudentAchievements') THEN
+    CREATE TABLE "StudentAchievements" (
+        "Id" uuid NOT NULL,
+        "TenantId" uuid NOT NULL,
+        "StudentId" uuid NOT NULL,
+        "Title" character varying(200) NOT NULL,
+        "Category" character varying(16) NOT NULL,
+        "Level" character varying(80),
+        "EventDate" date NOT NULL,
+        "Note" character varying(1000),
+        "FileName" character varying(260) NOT NULL,
+        "ContentType" character varying(100) NOT NULL,
+        "FileData" bytea NOT NULL,
+        "FileSizeBytes" integer NOT NULL,
+        "CreatedAt" timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_StudentAchievements" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_StudentAchievements_Students_StudentId" FOREIGN KEY ("StudentId") REFERENCES "Students" ("Id") ON DELETE RESTRICT,
+        CONSTRAINT "FK_StudentAchievements_Tenants_TenantId" FOREIGN KEY ("TenantId") REFERENCES "Tenants" ("Id") ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260824072747_AddStudentAchievements') THEN
+    CREATE INDEX "IX_StudentAchievements_StudentId" ON "StudentAchievements" ("StudentId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260824072747_AddStudentAchievements') THEN
+    CREATE INDEX "IX_StudentAchievements_TenantId_StudentId" ON "StudentAchievements" ("TenantId", "StudentId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260824072747_AddStudentAchievements') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260824072747_AddStudentAchievements', '9.0.1');
+    END IF;
+END $EF$;
 COMMIT;
 

@@ -181,6 +181,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         student.Phone = Clean(request.Phone);
         student.Email = Clean(request.Email);
         student.Address = Clean(request.Address);
+        student.JoinDate = request.JoinDate ?? student.JoinDate;
         student.IsActive = request.IsActive;
         await db.SaveChangesAsync(ct);
         return await GetStudentAsync(id, ct);
@@ -222,6 +223,65 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         enrollment.EndedOn = request.EndedOn ?? DateOnly.FromDateTime(DateTime.UtcNow);
         await db.SaveChangesAsync(ct);
         return await GetStudentAsync(enrollment.StudentId, ct);
+    }
+
+    public async Task<IReadOnlyList<StudentAchievementDto>> GetAchievementsAsync(Guid studentId, CancellationToken ct)
+    {
+        if (!await db.Students.AnyAsync(x => x.Id == studentId, ct)) throw new NotFoundException(nameof(Student));
+        return await db.StudentAchievements.AsNoTracking().Where(x => x.StudentId == studentId)
+            .OrderByDescending(x => x.EventDate)
+            .Select(x => new StudentAchievementDto(x.Id, x.StudentId, x.Title, x.Category, x.Level, x.EventDate,
+                x.Note, x.FileName, x.ContentType, x.FileSizeBytes, x.CreatedAt))
+            .ToListAsync(ct);
+    }
+
+    public async Task<StudentAchievementDto> CreateAchievementAsync(Guid studentId, CreateAchievementRequest request,
+        Stream fileStream, string fileName, string contentType, long fileLength, CancellationToken ct)
+    {
+        RequireText(request.Title, nameof(request.Title));
+        var tenantId = RequireTenant();
+        if (!await db.Students.AnyAsync(x => x.Id == studentId, ct)) throw new NotFoundException(nameof(Student));
+        if (fileLength <= 0) throw new AppValidationException("A certificate file is required.");
+        const long hardCapBytes = 20 * 1024 * 1024;
+        if (fileLength > hardCapBytes) throw new AppValidationException("That file is too large.");
+
+        using var buffer = new MemoryStream();
+        await fileStream.CopyToAsync(buffer, ct);
+        var (data, storedContentType) = AchievementFileProcessor.Process(buffer.ToArray(), contentType, fileLength);
+
+        var cleanedFileName = string.IsNullOrWhiteSpace(fileName) ? "certificate" : fileName.Trim();
+        // Images are always re-encoded as JPEG, so swap the extension to match the stored bytes.
+        if (storedContentType == "image/jpeg")
+            cleanedFileName = Path.ChangeExtension(cleanedFileName, ".jpg");
+
+        var achievement = new StudentAchievement
+        {
+            TenantId = tenantId, StudentId = studentId, Title = request.Title.Trim(), Category = request.Category,
+            Level = Clean(request.Level), EventDate = request.EventDate, Note = Clean(request.Note),
+            FileName = cleanedFileName, ContentType = storedContentType, FileData = data, FileSizeBytes = data.Length
+        };
+        db.StudentAchievements.Add(achievement);
+        await db.SaveChangesAsync(ct);
+        return new StudentAchievementDto(achievement.Id, achievement.StudentId, achievement.Title,
+            achievement.Category, achievement.Level, achievement.EventDate, achievement.Note, achievement.FileName,
+            achievement.ContentType, achievement.FileSizeBytes, achievement.CreatedAt);
+    }
+
+    public async Task DeleteAchievementAsync(Guid studentId, Guid achievementId, CancellationToken ct)
+    {
+        var achievement = await db.StudentAchievements.SingleOrDefaultAsync(x => x.Id == achievementId && x.StudentId == studentId, ct)
+            ?? throw new NotFoundException(nameof(StudentAchievement));
+        db.StudentAchievements.Remove(achievement);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<(byte[] Data, string ContentType, string FileName)> GetAchievementFileAsync(Guid studentId, Guid achievementId, CancellationToken ct)
+    {
+        var achievement = await db.StudentAchievements.AsNoTracking()
+            .Where(x => x.Id == achievementId && x.StudentId == studentId)
+            .Select(x => new { x.FileData, x.ContentType, x.FileName })
+            .SingleOrDefaultAsync(ct) ?? throw new NotFoundException(nameof(StudentAchievement));
+        return (achievement.FileData, achievement.ContentType, achievement.FileName);
     }
 
     public async Task<AttendanceLogDto> GetAttendanceAsync(DateOnly date, Guid batchId, CancellationToken ct)
@@ -342,6 +402,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         var enrollmentIds = students.SelectMany(x => x.Enrollments).Select(x => x.Id).ToList();
         var studentBalances = await balances.ByStudentAsync(studentIds, ct);
         var enrollmentBalances = await balances.ByEnrollmentAsync(enrollmentIds, ct);
+        var achievementCounts = await AchievementCountsAsync(studentIds, ct);
         return students.Select(student =>
         {
             var records = student.Enrollments.SelectMany(x => x.AttendanceRecords).ToList();
@@ -352,10 +413,33 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
                     enrollment.CourseId, enrollment.Batch.Course.Name, enrollment.EnrolledOn, enrollment.EndedOn,
                     enrollment.Status, enrollmentBalances.GetValueOrDefault(enrollment.Id)))
                 .ToList();
+            var (wonCount, participatedCount) = achievementCounts.GetValueOrDefault(student.Id);
             return new StudentDto(student.Id, student.StudentNumber, student.Name, student.DateOfBirth,
                 student.ParentName, student.Address, student.Phone, student.Email, student.JoinDate, student.IsActive,
-                studentBalances.GetValueOrDefault(student.Id), attendancePercentage, enrollments);
+                studentBalances.GetValueOrDefault(student.Id), attendancePercentage, wonCount, participatedCount, enrollments);
         }).ToList();
+    }
+
+    private async Task<Dictionary<Guid, (int Won, int Participated)>> AchievementCountsAsync(
+        IReadOnlyCollection<Guid> studentIds, CancellationToken ct)
+    {
+        if (studentIds.Count == 0) return [];
+        var rows = await db.StudentAchievements.Where(x => studentIds.Contains(x.StudentId))
+            .GroupBy(x => new { x.StudentId, x.Category })
+            .Select(g => new { g.Key.StudentId, g.Key.Category, Count = g.Count() })
+            .ToListAsync(ct);
+        var result = new Dictionary<Guid, (int Won, int Participated)>();
+        foreach (var row in rows)
+        {
+            var current = result.GetValueOrDefault(row.StudentId);
+            result[row.StudentId] = row.Category switch
+            {
+                AchievementCategory.Won => (current.Won + row.Count, current.Participated),
+                AchievementCategory.Participated => (current.Won, current.Participated + row.Count),
+                _ => current
+            };
+        }
+        return result;
     }
 
     private static SettingsDto MapSettings(OrganizationSettings x) =>

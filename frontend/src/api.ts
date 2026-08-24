@@ -1,5 +1,5 @@
-import { Batch, Course, FeeDue, FeeDueStatus, FeeFrequency, FeePayment, FeeStructure, OrgSettings,
-  PaymentMethod, Receipt, Staff, Student, Transaction } from './types';
+import { Achievement, AchievementCategory, Batch, Course, FeeDue, FeeDueStatus, FeeFrequency, FeePayment,
+  FeeStructure, OrgSettings, PaymentMethod, Receipt, Staff, Student, Transaction } from './types';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5101/api').replace(/\/$/, '');
 const SESSION_KEY = 'rhythaalaya_session';
@@ -76,6 +76,25 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   return response.json() as Promise<T>;
 }
 
+async function requestForm<T>(path: string, form: FormData, token: string): Promise<T> {
+  const response = await fetch(API_URL + path, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token },
+    body: form
+  });
+  if (!response.ok) {
+    let message = response.statusText;
+    try {
+      const problem = await response.json();
+      message = problem.detail || problem.title || message;
+    } catch { /* response has no JSON body */ }
+    if (response.status === 403) message = 'You don\'t have permission to do that. Ask your academy admin.';
+    if (response.status === 401) authStore.clear();
+    throw new ApiError(message, response.status);
+  }
+  return response.json() as Promise<T>;
+}
+
 const isoStartOfYear = () => new Date(new Date().getFullYear(), 0, 1).toISOString();
 const isoNextYear = () => new Date(new Date().getFullYear() + 1, 0, 1).toISOString();
 
@@ -120,7 +139,7 @@ export const api = {
   }) => request<any>('/students', { method: 'POST', body: JSON.stringify(body) }, token).then(mapStudent),
   updateStudent: (token: string, id: string, body: {
     name: string; dateOfBirth?: string | null; parentName?: string; phone?: string; email?: string;
-    address?: string; isActive: boolean;
+    address?: string; joinDate?: string | null; isActive: boolean;
   }) => request<any>('/students/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapStudent),
   archiveStudent: (token: string, id: string) =>
     request<void>('/students/' + id, { method: 'DELETE' }, token),
@@ -128,6 +147,31 @@ export const api = {
     request<any>('/students/enrollments', { method: 'POST', body: JSON.stringify({ studentId, batchId, enrolledOn: enrolledOn || null }) }, token).then(mapStudent),
   endEnrollment: (token: string, enrollmentId: string, status: 'Completed' | 'Withdrawn', endedOn?: string) =>
     request<any>(`/students/enrollments/${enrollmentId}/end`, { method: 'PUT', body: JSON.stringify({ status, endedOn: endedOn || null }) }, token).then(mapStudent),
+
+  // Achievements & certificates
+  achievements: (token: string, studentId: string) =>
+    request<any[]>(`/students/${studentId}/achievements`, {}, token).then(rows => rows.map(mapAchievement)),
+  createAchievement: (token: string, studentId: string, fields: {
+    title: string; category: AchievementCategory; level?: string; eventDate: string; note?: string;
+  }, file: File) => {
+    const form = new FormData();
+    form.append('title', fields.title);
+    form.append('category', fields.category);
+    if (fields.level) form.append('level', fields.level);
+    form.append('eventDate', fields.eventDate);
+    if (fields.note) form.append('note', fields.note);
+    form.append('file', file);
+    return requestForm<any>(`/students/${studentId}/achievements`, form, token).then(mapAchievement);
+  },
+  deleteAchievement: (token: string, studentId: string, achievementId: string) =>
+    request<void>(`/students/${studentId}/achievements/${achievementId}`, { method: 'DELETE' }, token),
+  achievementFileBlobUrl: async (token: string, studentId: string, achievementId: string) => {
+    const response = await fetch(`${API_URL}/students/${studentId}/achievements/${achievementId}/file`, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!response.ok) throw new ApiError('Could not load that certificate.', response.status);
+    return URL.createObjectURL(await response.blob());
+  },
 
   // Attendance
   attendance: (token: string, date: string, batchId: string) =>
@@ -243,12 +287,20 @@ function mapBatch(x: any): Batch {
     isActive: x.isActive, enrolledCount: x.enrolledCount
   };
 }
+function mapAchievement(x: any): Achievement {
+  return {
+    id: x.id, studentId: x.studentId, title: x.title, category: x.category as AchievementCategory,
+    level: x.level || undefined, eventDate: x.eventDate, note: x.note || undefined, fileName: x.fileName,
+    contentType: x.contentType, fileSizeBytes: x.fileSizeBytes, createdAt: x.createdAt
+  };
+}
+
 function mapStudent(x: any): Student {
   return {
     id: x.id, studentNumber: x.studentNumber, name: x.name, dateOfBirth: x.dateOfBirth || undefined,
     parentName: x.parentName || undefined, address: x.address || undefined, phone: x.phone || undefined,
     email: x.email || undefined, joinDate: x.joinDate, isActive: x.isActive, outstandingBalance: x.outstandingBalance,
-    overallAttendance: x.attendancePercentage,
+    overallAttendance: x.attendancePercentage, wonCount: x.wonCount ?? 0, participatedCount: x.participatedCount ?? 0,
     enrollments: (x.enrollments || []).map((e: any) => ({
       id: e.id, batchId: e.batchId, batchName: e.batchName, courseId: e.courseId, courseName: e.courseName,
       enrolledOn: e.enrolledOn, endedOn: e.endedOn || undefined, status: e.status, outstandingBalance: e.outstandingBalance

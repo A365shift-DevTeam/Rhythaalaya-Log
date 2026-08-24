@@ -1,3 +1,6 @@
+import { Button } from './ui/button';
+import { Switch } from './ui/switch';
+import { JisIcon } from './JisIcon';
 import React, { useState } from 'react';
 import { OrgSettings } from '../types';
 import { FinancialSettings } from './FinancialSettings';
@@ -108,16 +111,16 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           <h3 className="font-heading text-xs font-bold text-[#808080] dark:text-[#94a3b8] uppercase tracking-wider">
             Studio Profile
           </h3>
-          <button
+          <Button
             type="button"
             onClick={() => isEditingOrg ? setIsEditingOrg(false) : openEditOrg()}
             className="min-h-10 rounded-2xl px-2.5 text-xs font-bold text-[#3fc073] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 flex items-center gap-1 transition-colors"
           >
-            <span className="material-symbols-outlined text-[16px]">
+            <JisIcon className="text-[16px]">
               {isEditingOrg ? 'close' : 'edit'}
-            </span>
+            </JisIcon>
             <span>{isEditingOrg ? 'Cancel' : 'Edit Profile'}</span>
-          </button>
+          </Button>
         </div>
 
         <div className="premium-card overflow-hidden">
@@ -156,19 +159,19 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                   <div className="w-16 h-16 rounded-2xl overflow-hidden border border-[#dbdbdb] dark:border-[#243244] shrink-0 flex items-center justify-center bg-[#f0f0f0] dark:bg-[#0b1422]">
                     {orgLogoUrl
                       ? <img src={orgLogoUrl} alt="Logo preview" className="w-full h-full object-contain" />
-                      : <span className="material-symbols-outlined text-[#3fc073] text-2xl">image</span>}
+                      : <JisIcon className="text-[#3fc073] text-2xl">image</JisIcon>}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <label className="min-h-11 inline-flex items-center gap-1.5 px-4 rounded-2xl text-xs font-bold text-[#3fc073] bg-[#e9f7ee] dark:bg-[#3fc073]/20 hover:bg-[#cbecd8] cursor-pointer transition-colors">
-                      <span className="material-symbols-outlined text-[16px]">{logoProcessing ? 'progress_activity' : 'upload'}</span>
+                      <JisIcon className="text-[16px]">{logoProcessing ? 'progress_activity' : 'upload'}</JisIcon>
                       <span>{logoProcessing ? 'Processing…' : orgLogoUrl ? 'Change logo' : 'Upload logo'}</span>
                       <input type="file" accept="image/*" onChange={handleLogoChange} disabled={logoProcessing} className="hidden" />
                     </label>
                     {orgLogoUrl && (
-                      <button type="button" onClick={() => setOrgLogoUrl('')} disabled={logoProcessing}
+                      <Button type="button" onClick={() => setOrgLogoUrl('')} disabled={logoProcessing}
                         className="min-h-11 px-3.5 rounded-2xl text-xs font-bold text-[#ef4444] hover:bg-rose-50 dark:hover:bg-rose-950/40 disabled:opacity-50">
                         Remove
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -176,21 +179,21 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 {logoError && <p className="mt-1 text-xs font-semibold text-[#ef4444]">{logoError}</p>}
               </div>
 
-              <button
+              <Button
                 type="button"
                 onClick={handleSaveOrg}
                 disabled={logoProcessing}
                 className="btn-brand min-h-11 px-5 py-2.5 rounded-2xl text-xs font-bold disabled:opacity-50"
               >
                 Save Profile
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
               <div className="p-4 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
                   <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined">storefront</span>
+                    <JisIcon className="">storefront</JisIcon>
                   </div>
                   <div>
                     <div className="font-sans text-xs text-[#808080] font-medium">Academy Name</div>
@@ -204,7 +207,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               <div className="p-4 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
                   <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined">category</span>
+                    <JisIcon className="">category</JisIcon>
                   </div>
                   <div>
                     <div className="font-sans text-xs text-[#808080] font-medium">Academy Type</div>
@@ -218,7 +221,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               <div className="p-4 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
                   <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined">image</span>
+                    <JisIcon className="">image</JisIcon>
                   </div>
                   <div>
                     <div className="font-sans text-xs text-[#808080] font-medium">Logo</div>
@@ -230,7 +233,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 <div className="w-9 h-9 rounded-2xl overflow-hidden border border-[#dbdbdb] dark:border-[#243244] shrink-0 flex items-center justify-center bg-[#f0f0f0] dark:bg-[#0b1422]">
                   {settings.logoUrl
                     ? <img src={settings.logoUrl} alt="Logo" className="w-full h-full object-contain" />
-                    : <span className="material-symbols-outlined text-[#3fc073] text-[18px]">image</span>}
+                    : <JisIcon className="text-[#3fc073] text-[18px]">image</JisIcon>}
                 </div>
               </div>
             </div>
@@ -247,7 +250,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           <div className="p-4 sm:px-6 flex items-center justify-between">
             <div className="flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined">dark_mode</span>
+                <JisIcon className="">dark_mode</JisIcon>
               </div>
               <div>
                 <div className="font-sans text-sm font-bold text-[#212121] dark:text-white">
@@ -258,16 +261,13 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 </div>
               </div>
             </div>
-            <label className="relative inline-flex min-h-11 items-center cursor-pointer">
-              <input
-                type="checkbox"
-                aria-label="Toggle dark mode"
-                checked={settings.darkMode}
-                onChange={handleToggleDarkMode}
-                className="sr-only peer"
-              />
-              <div className="relative w-12 h-7 bg-[#dbdbdb] dark:bg-[#111c2b] peer-focus:outline-none peer-focus-visible:ring-4 peer-focus-visible:ring-[#4d999d]/25 rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:shadow-sm after:transition-all peer-checked:bg-[#64a85a]"></div>
-            </label>
+            <Switch
+              size="lg"
+              aria-label="Toggle dark mode"
+              checked={settings.darkMode}
+              onCheckedChange={handleToggleDarkMode}
+              className="data-checked:bg-[#64a85a] data-unchecked:bg-[#dbdbdb] dark:data-unchecked:bg-[#243244]"
+            />
           </div>
         </div>
       </section>
@@ -280,13 +280,13 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           Data Management
         </h3>
         <div className="premium-card divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
-          <button type="button"
+          <Button type="button"
             onClick={onExportData}
             className="w-full p-4 sm:px-6 flex items-center justify-between text-left hover:bg-[#f0f0f0]/70 dark:hover:bg-[#172435]/60 cursor-pointer transition-colors"
           >
             <div className="flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-[#22c55e] flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined">file_download</span>
+                <JisIcon className="">file_download</JisIcon>
               </div>
               <div>
                 <div className="font-sans text-sm font-bold text-[#212121] dark:text-white">
@@ -297,13 +297,13 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 </div>
               </div>
             </div>
-            <span className="material-symbols-outlined text-[#9e9e9e]">chevron_right</span>
-          </button>
+            <JisIcon className="text-[#9e9e9e]">chevron_right</JisIcon>
+          </Button>
 
           <label className="min-h-16 p-4 sm:px-6 flex items-center justify-between hover:bg-[#f0f0f0]/70 dark:hover:bg-[#172435]/60 cursor-pointer transition-colors focus-within:ring-4 focus-within:ring-[#3fc073]/20">
             <div className="flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined">file_upload</span>
+                <JisIcon className="">file_upload</JisIcon>
               </div>
               <div>
                 <div className="font-sans text-sm font-bold text-[#212121] dark:text-white">
@@ -315,7 +315,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               </div>
             </div>
             <input type="file" accept=".json" onChange={onImportData} className="hidden" />
-            <span className="material-symbols-outlined text-[#9e9e9e]">chevron_right</span>
+            <JisIcon className="text-[#9e9e9e]">chevron_right</JisIcon>
           </label>
         </div>
       </section>

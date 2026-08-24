@@ -1,3 +1,5 @@
+import { Button } from '../ui/button';
+import { JisIcon } from '../JisIcon';
 import React, { useState } from 'react';
 import { Student } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
@@ -42,13 +44,13 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
       <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="whatsapp-modal-title" className="relative max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-[#dbdbdb] bg-white p-4 shadow-2xl dark:border-[#243244] dark:bg-[#0b1422] sm:rounded-3xl sm:p-6 space-y-4">
         <div className="flex justify-between items-center border-b border-[#dbdbdb]/60 dark:border-[#243244] pb-3 pt-1">
           <h3 id="whatsapp-modal-title" className="font-heading text-lg sm:text-xl font-bold text-[#212121] dark:text-white flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#25D366]">forum</span>
+            <JisIcon className="text-[#25D366]">forum</JisIcon>
             <span>{isBulk ? 'WhatsApp All Overdue' : `Message ${student?.name}`}</span>
           </h3>
-          <button type="button" onClick={onClose} aria-label="Close"
+          <Button type="button" onClick={onClose} aria-label="Close"
             className="flex h-9 w-9 items-center justify-center rounded-2xl text-[#808080] hover:text-[#ef4444] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] transition-all active:scale-95">
-            <span className="material-symbols-outlined text-[19px]">close</span>
-          </button>
+            <JisIcon className="text-[19px]">close</JisIcon>
+          </Button>
         </div>
 
         <div className="space-y-3 font-sans text-sm">
@@ -72,22 +74,22 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
           </div>
 
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-            <button
+            <Button
               type="button"
               onClick={onClose}
               className="min-h-11 px-4 py-2 rounded-2xl text-xs font-semibold text-[#575757] hover:bg-[#f0f0f0] dark:hover:bg-[#172435]"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={handleSend}
               disabled={!message.trim() || targetList.length === 0}
               className="min-h-11 px-5 py-2 rounded-2xl text-xs font-bold bg-[#25D366] text-white hover:bg-[#20bd5a] shadow-sm flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95 transition-all"
             >
-              <span className="material-symbols-outlined text-[18px]">send</span>
+              <JisIcon className="text-[18px]">send</JisIcon>
               <span>Send WhatsApp {isBulk ? `(${targetList.length})` : ''}</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>

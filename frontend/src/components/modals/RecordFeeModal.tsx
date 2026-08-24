@@ -1,3 +1,5 @@
+import { Button } from '../ui/button';
+import { JisIcon } from '../JisIcon';
 import React, { useEffect, useMemo, useState } from 'react';
 import { FeeDue, FeePayment, FeeStructure, PAYMENT_METHOD_LABELS, PaymentMethod, Student } from '../../types';
 import { api } from '../../api';
@@ -132,13 +134,13 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
       <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="record-fee-title" className="relative max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-[#dbdbdb] bg-white p-4 shadow-2xl dark:border-[#243244] dark:bg-[#0b1422] sm:rounded-3xl sm:p-6 space-y-5">
         <div className="flex justify-between items-center border-b border-[#dbdbdb]/60 dark:border-[#243244] pb-3 pt-1">
           <h3 id="record-fee-title" className="font-heading text-xl font-bold text-[#212121] dark:text-white flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#3fc073]">payments</span>
+            <JisIcon className="text-[#3fc073]">payments</JisIcon>
             <span>Collect fee</span>
           </h3>
-          <button type="button" onClick={onClose} disabled={submitting} aria-label="Close"
+          <Button type="button" onClick={onClose} disabled={submitting} aria-label="Close"
             className="flex h-9 w-9 items-center justify-center rounded-2xl text-[#808080] hover:text-[#ef4444] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] transition-all active:scale-95 disabled:opacity-50">
-            <span className="material-symbols-outlined text-[19px]">close</span>
-          </button>
+            <JisIcon className="text-[19px]">close</JisIcon>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 font-sans text-sm">
@@ -159,15 +161,15 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
                     <div className="text-xs text-[#808080]">{selectedStudent.studentNumber}</div>
                   </div>
                 </div>
-                <button type="button" onClick={() => setPickerOpen(true)} disabled={submitting}
+                <Button type="button" onClick={() => setPickerOpen(true)} disabled={submitting}
                   className="min-h-9 shrink-0 rounded-xl px-3 text-xs font-bold text-[#3fc073] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 transition-colors">
                   Change
-                </button>
+                </Button>
               </div>
             ) : (
               <div className="space-y-2">
                 <div className="relative">
-                  <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[#9e9e9e]">search</span>
+                  <JisIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[#9e9e9e]">search</JisIcon>
                   <input type="text" value={query} onChange={(event) => setQuery(event.target.value)} autoFocus={eligibleStudents.length > 6}
                     placeholder="Search by name or student ID"
                     className="w-full min-h-11 rounded-2xl border border-[#dbdbdb] bg-[#f0f0f0] py-2.5 pl-10 pr-3 text-[#212121] dark:border-[#243244] dark:bg-[#111c2b] dark:text-white outline-none focus:border-[#3fc073]" />
@@ -176,7 +178,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
                   {eligibleStudents.length === 0 && <p className="p-2 text-xs text-[#808080]">No active students.</p>}
                   {eligibleStudents.length > 0 && filteredStudents.length === 0 && <p className="p-2 text-xs text-[#808080]">No students match "{query}".</p>}
                   {filteredStudents.map((student) => (
-                    <button key={student.id} type="button" onClick={() => handlePickStudent(student.id)}
+                    <Button key={student.id} type="button" onClick={() => handlePickStudent(student.id)}
                       className="flex w-full items-center justify-between gap-3 rounded-xl px-2.5 py-2 text-left hover:bg-[#f0f0f0] dark:hover:bg-[#172435] transition-colors">
                       <div className="flex min-w-0 items-center gap-2.5">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#dbdbdb] text-xs font-bold text-[#575757] dark:bg-[#111c2b] dark:text-[#cbd5e1]">
@@ -190,7 +192,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
                       {student.outstandingBalance > 0 && (
                         <span className="shrink-0 text-xs font-bold text-[#ef4444]">₹{student.outstandingBalance.toLocaleString('en-IN')} due</span>
                       )}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -208,14 +210,14 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
                 <div className="mb-1 flex items-center justify-between">
                   <label htmlFor="fee-amount" className="text-xs font-semibold text-[#575757] dark:text-[#cbd5e1]">Amount received (₹)</label>
                   {totalOutstanding > 0 && Number(amount) !== totalOutstanding && (
-                    <button type="button" onClick={() => setAmount(String(totalOutstanding))} className="text-xs font-bold text-[#3fc073] hover:underline">
+                    <Button type="button" onClick={() => setAmount(String(totalOutstanding))} className="text-xs font-bold text-[#3fc073] hover:underline">
                       Use full ₹{totalOutstanding.toLocaleString('en-IN')}
-                    </button>
+                    </Button>
                   )}
                   {totalOutstanding === 0 && suggestedCourseFee > 0 && Number(amount) !== suggestedCourseFee && (
-                    <button type="button" onClick={() => setAmount(String(suggestedCourseFee))} className="text-xs font-bold text-[#3fc073] hover:underline">
+                    <Button type="button" onClick={() => setAmount(String(suggestedCourseFee))} className="text-xs font-bold text-[#3fc073] hover:underline">
                       Use course fee ₹{suggestedCourseFee.toLocaleString('en-IN')}
-                    </button>
+                    </Button>
                   )}
                 </div>
                 <input id="fee-amount" type="number" required min="0.01" step="0.01" value={amount} disabled={submitting}
@@ -238,11 +240,11 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
                 <label className="mb-1 block text-xs font-semibold text-[#575757] dark:text-[#cbd5e1]">Payment method</label>
                 <div className="grid grid-cols-3 gap-2">
                   {METHODS.map((item) => (
-                    <button key={item.value} type="button" disabled={submitting} onClick={() => setMethod(item.value)}
+                    <Button key={item.value} type="button" disabled={submitting} onClick={() => setMethod(item.value)}
                       className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl border text-xs font-bold transition-all ${method === item.value ? 'border-[#3fc073] bg-[#e9f7ee] text-[#35a160] dark:border-[#3fc073] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]' : 'border-[#dbdbdb] text-[#575757] hover:border-[#3fc073]/40 dark:border-[#243244] dark:text-[#cbd5e1]'}`}>
-                      <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                      <JisIcon className="text-[20px]">{item.icon}</JisIcon>
                       {PAYMENT_METHOD_LABELS[item.value]}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -259,13 +261,13 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
           {error && <div role="alert" className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-[#ef4444] text-xs font-bold">{error}</div>}
 
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-            <button type="button" onClick={onClose} disabled={submitting} className="min-h-11 px-4 py-2 rounded-2xl text-xs font-semibold text-[#575757] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] disabled:opacity-50">
+            <Button type="button" onClick={onClose} disabled={submitting} className="min-h-11 px-4 py-2 rounded-2xl text-xs font-semibold text-[#575757] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] disabled:opacity-50">
               Cancel
-            </button>
-            <button type="submit" disabled={submitting || !selectedStudentId} className="btn-brand min-h-11 px-5 py-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
-              <span className="material-symbols-outlined text-[16px]">{submitting ? 'progress_activity' : 'check'}</span>
+            </Button>
+            <Button type="submit" disabled={submitting || !selectedStudentId} className="btn-brand min-h-11 px-5 py-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+              <JisIcon className="text-[16px]">{submitting ? 'progress_activity' : 'check'}</JisIcon>
               <span>{submitting ? 'Recording…' : amount ? `Confirm ₹${Number(amount).toLocaleString('en-IN')}` : 'Confirm payment'}</span>
-            </button>
+            </Button>
           </div>
         </form>
       </div>

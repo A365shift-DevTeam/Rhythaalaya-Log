@@ -1,3 +1,5 @@
+import { Button } from './ui/button';
+import { JisIcon } from './JisIcon';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AppTab, NotificationSettings, Student, Transaction } from '../types';
 
@@ -47,16 +49,16 @@ export function NotificationCenter({ tenantKey, preferences, students, transacti
   };
 
   return <div className="relative" ref={containerRef}>
-    <button type="button" onClick={() => setOpen((value) => !value)} aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`} aria-expanded={open}
+    <Button type="button" onClick={() => setOpen((value) => !value)} aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`} aria-expanded={open}
       className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-[#dbdbdb] bg-white text-[#575757] transition-all hover:border-[#3fc073] hover:bg-[#e9f7ee] hover:text-[#3fc073] dark:border-[#243244] dark:bg-[#111c2b] dark:text-[#cbd5e1] dark:hover:bg-[#3fc073]/20 active:scale-95">
-      <span className="material-symbols-outlined text-[21px]" aria-hidden="true">notifications</span>
+      <JisIcon className="text-[21px]" aria-hidden="true">notifications</JisIcon>
       {unreadCount > 0 && <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#ef4444] px-1 text-xs font-bold text-white dark:border-[#1e293b]">{unreadCount > 9 ? '9+' : unreadCount}</span>}
-    </button>
+    </Button>
 
     {open && <section aria-label="Notifications" className="fixed left-3 right-3 top-[78px] z-[70] max-h-[min(520px,calc(100dvh-110px))] overflow-hidden rounded-3xl border border-[#dbdbdb] bg-white/90 shadow-2xl backdrop-blur-2xl dark:border-[#243244] dark:bg-[#0b1422]/90 sm:absolute sm:left-auto sm:right-0 sm:top-14 sm:w-[380px]">
       <div className="flex items-center justify-between border-b border-[#dbdbdb]/60 px-4 py-3 dark:border-[#243244]">
         <div><h2 className="text-sm font-bold text-[#212121] dark:text-white">Notifications</h2><p className="text-xs text-[#808080]">{unreadCount ? `${unreadCount} unread update${unreadCount === 1 ? '' : 's'}` : 'You are all caught up'}</p></div>
-        {unreadCount > 0 && <button type="button" onClick={() => setReadIds(notifications.map((item) => item.id))} className="min-h-9 rounded-2xl px-2.5 text-xs font-bold text-[#3fc073] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20">Mark all read</button>}
+        {unreadCount > 0 && <Button type="button" onClick={() => setReadIds(notifications.map((item) => item.id))} className="min-h-9 rounded-2xl px-2.5 text-xs font-bold text-[#3fc073] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20">Mark all read</Button>}
       </div>
       <div className="max-h-[420px] overflow-y-auto p-2 space-y-1">
         {!preferences.enabled ? <EmptyNotification icon="notifications_off" title="Notifications are disabled" description="Enable them from Settings to receive operational updates." />
@@ -64,11 +66,11 @@ export function NotificationCenter({ tenantKey, preferences, students, transacti
           : notifications.map((item) => {
             const unread = !readIds.includes(item.id);
             const tones = { warning: 'bg-amber-50 text-[#f59e0b] dark:bg-amber-950/50', success: 'bg-emerald-50 text-[#22c55e] dark:bg-emerald-950/50', info: 'bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20' };
-            return <button key={item.id} type="button" onClick={() => openItem(item)} className={`flex min-h-[72px] w-full items-start gap-3 rounded-2xl p-3 text-left transition-colors hover:bg-[#f0f0f0] dark:hover:bg-[#172435]/70 ${unread ? 'bg-[#f4fbf7] dark:bg-[#3fc073]/10' : ''}`}>
-              <span className={`material-symbols-outlined flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[20px] ${tones[item.tone]}`}>{item.icon}</span>
+            return <Button key={item.id} type="button" onClick={() => openItem(item)} className={`flex min-h-[72px] w-full items-start gap-3 rounded-2xl p-3 text-left transition-colors hover:bg-[#f0f0f0] dark:hover:bg-[#172435]/70 ${unread ? 'bg-[#f4fbf7] dark:bg-[#3fc073]/10' : ''}`}>
+              <JisIcon className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[20px] ${tones[item.tone]}`}>{item.icon}</JisIcon>
               <span className="min-w-0 flex-1"><span className="flex items-center gap-2"><span className="truncate text-xs font-bold text-[#212121] dark:text-white">{item.title}</span>{unread && <span className="h-2 w-2 shrink-0 rounded-full bg-[#3fc073]" />}</span><span className="mt-0.5 block text-xs leading-5 text-[#808080] dark:text-[#94a3b8]">{item.message}</span></span>
               <span className="shrink-0 text-xs font-semibold text-[#9e9e9e]">{item.time}</span>
-            </button>;
+            </Button>;
           })}
       </div>
     </section>}
@@ -94,5 +96,5 @@ function buildNotifications(preferences: NotificationSettings, students: Student
 }
 
 function EmptyNotification({ icon, title, description }: { icon: string; title: string; description: string }) {
-  return <div className="px-5 py-10 text-center"><span className="material-symbols-outlined text-4xl text-[#c2c2c2] dark:text-[#64748b]">{icon}</span><h3 className="mt-2 text-sm font-bold text-[#212121] dark:text-white">{title}</h3><p className="mx-auto mt-1 max-w-64 text-xs leading-5 text-[#808080]">{description}</p></div>;
+  return <div className="px-5 py-10 text-center"><JisIcon className="text-4xl text-[#c2c2c2] dark:text-[#64748b]">{icon}</JisIcon><h3 className="mt-2 text-sm font-bold text-[#212121] dark:text-white">{title}</h3><p className="mx-auto mt-1 max-w-64 text-xs leading-5 text-[#808080]">{description}</p></div>;
 }

@@ -1,3 +1,5 @@
+import { Button } from '../ui/button';
+import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { Course, FeeFrequency, FeeStructure, FEE_FREQUENCY_LABELS } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
@@ -167,10 +169,10 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
           <h3 id="add-course-title" className="font-heading text-xl font-bold text-[#212121] dark:text-white">
             {editingCourse ? 'Edit course' : 'New course'}
           </h3>
-          <button type="button" onClick={onClose} aria-label="Close"
+          <Button type="button" onClick={onClose} aria-label="Close"
             className="flex h-9 w-9 items-center justify-center rounded-2xl text-[#808080] hover:text-[#ef4444] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] transition-all active:scale-95">
-            <span className="material-symbols-outlined text-[19px]">close</span>
-          </button>
+            <JisIcon className="text-[19px]">close</JisIcon>
+          </Button>
         </div>
         <form onSubmit={handleSubmit} className="flex min-h-0 max-h-[calc(92dvh-86px)] flex-col font-sans text-sm">
           <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-7 space-y-4">
@@ -244,11 +246,11 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
               <div className="flex items-center justify-between gap-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-[#3fc073]">Fee plan</h4>
                 {!showNewPlanForm && !editingPlan && (
-                  <button type="button" onClick={openNewPlanForm}
+                  <Button type="button" onClick={openNewPlanForm}
                     className="min-h-8 px-2.5 rounded-xl text-xs font-bold text-[#3fc073] hover:bg-white dark:hover:bg-[#0f1a2a] flex items-center gap-1 transition-colors">
-                    <span className="material-symbols-outlined text-[14px]">add</span>
+                    <JisIcon className="text-[14px]">add</JisIcon>
                     {activePlan ? 'Change price' : 'Set up fee plan'}
-                  </button>
+                  </Button>
                 )}
               </div>
 
@@ -263,10 +265,10 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                       </div>
                       <div className="text-xs text-[#9e9e9e] mt-0.5">Due {new Date(activePlan.effectiveFrom).toLocaleDateString('en-IN')}</div>
                     </div>
-                    <button type="button" onClick={openEditPlan} aria-label="Edit fee plan"
+                    <Button type="button" onClick={openEditPlan} aria-label="Edit fee plan"
                       className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-[#808080] hover:text-[#3fc073] hover:bg-[#f0f0f0] dark:hover:bg-[#172435]">
-                      <span className="material-symbols-outlined text-[15px]">edit</span>
-                    </button>
+                      <JisIcon className="text-[15px]">edit</JisIcon>
+                    </Button>
                   </div>
                 ) : (
                   <p className="text-xs text-[#808080] dark:text-[#94a3b8]">No fee plan set for this course yet — students won't be billed until one is added.</p>
@@ -288,8 +290,8 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                   </label>
                   {planError && <p className="text-xs text-[#ef4444] font-bold">{planError}</p>}
                   <div className="flex items-center gap-2 justify-end pt-1">
-                    <button type="button" onClick={() => setEditingPlan(false)} className="min-h-8 px-2.5 rounded-xl text-xs font-semibold text-[#575757] hover:bg-white dark:hover:bg-[#172435]">Cancel</button>
-                    <button type="button" onClick={handleEditPlanSubmit} disabled={planSubmitting || !editPlanName.trim()} className="btn-brand min-h-8 px-3 rounded-xl text-xs font-bold disabled:opacity-50">{planSubmitting ? 'Saving…' : 'Save'}</button>
+                    <Button type="button" onClick={() => setEditingPlan(false)} className="min-h-8 px-2.5 rounded-xl text-xs font-semibold text-[#575757] hover:bg-white dark:hover:bg-[#172435]">Cancel</Button>
+                    <Button type="button" onClick={handleEditPlanSubmit} disabled={planSubmitting || !editPlanName.trim()} className="btn-brand min-h-8 px-3 rounded-xl text-xs font-bold disabled:opacity-50">{planSubmitting ? 'Saving…' : 'Save'}</Button>
                   </div>
                 </div>
               )}
@@ -315,19 +317,19 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                     className="w-full min-h-9 px-2 rounded-xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] text-xs text-[#212121] dark:text-white" />
                   {planError && <p className="text-xs text-[#ef4444] font-bold">{planError}</p>}
                   <div className="flex items-center gap-2 justify-end">
-                    <button type="button" onClick={() => setShowNewPlanForm(false)} className="min-h-8 px-2.5 rounded-xl text-xs font-semibold text-[#575757] hover:bg-white dark:hover:bg-[#172435]">Cancel</button>
-                    <button type="button" onClick={handleNewPlanSubmit} disabled={planSubmitting || !feeName.trim() || !feeAmount} className="btn-brand min-h-8 px-3 rounded-xl text-xs font-bold disabled:opacity-50">{planSubmitting ? 'Saving…' : 'Save plan'}</button>
+                    <Button type="button" onClick={() => setShowNewPlanForm(false)} className="min-h-8 px-2.5 rounded-xl text-xs font-semibold text-[#575757] hover:bg-white dark:hover:bg-[#172435]">Cancel</Button>
+                    <Button type="button" onClick={handleNewPlanSubmit} disabled={planSubmitting || !feeName.trim() || !feeAmount} className="btn-brand min-h-8 px-3 rounded-xl text-xs font-bold disabled:opacity-50">{planSubmitting ? 'Saving…' : 'Save plan'}</Button>
                   </div>
                 </div>
               )}
 
               {pastPlans.length > 0 && (
                 <div>
-                  <button type="button" onClick={() => setShowHistory((value) => !value)}
+                  <Button type="button" onClick={() => setShowHistory((value) => !value)}
                     className="flex items-center gap-1 text-xs font-bold text-[#808080] hover:text-[#212121] dark:hover:text-white">
-                    <span className={`material-symbols-outlined text-[14px] transition-transform ${showHistory ? 'rotate-180' : ''}`}>expand_more</span>
+                    <JisIcon className={`text-[14px] transition-transform ${showHistory ? 'rotate-180' : ''}`}>expand_more</JisIcon>
                     Past plans ({pastPlans.length})
-                  </button>
+                  </Button>
                   {showHistory && (
                     <div className="mt-2 space-y-1.5">
                       {pastPlans.map((plan) => (
@@ -346,17 +348,17 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
           </div>
           <div className="shrink-0 flex flex-col-reverse gap-2.5 border-t border-[#dbdbdb]/60 bg-white/95 px-5 py-4 backdrop-blur dark:border-[#243244] dark:bg-[#0b1422]/95 sm:flex-row sm:items-center sm:justify-between sm:px-7">
             {editingCourse && onArchive ? (
-              <button type="button" onClick={handleArchive} disabled={submitting || archiving}
+              <Button type="button" onClick={handleArchive} disabled={submitting || archiving}
                 className="min-h-11 px-3 py-2 rounded-2xl text-xs font-bold text-[#ef4444] hover:bg-rose-50 dark:hover:bg-rose-950/40 disabled:opacity-50 flex items-center justify-center gap-1.5 sm:justify-start transition-colors">
-                <span className="material-symbols-outlined text-[16px]">archive</span>
+                <JisIcon className="text-[16px]">archive</JisIcon>
                 {archiving ? 'Archiving…' : 'Archive course'}
-              </button>
+              </Button>
             ) : <span />}
             <div className="flex flex-col-reverse gap-2 sm:flex-row">
-              <button type="button" onClick={onClose} disabled={submitting || archiving} className="min-h-11 px-4 py-2 rounded-2xl text-xs font-semibold text-[#575757] hover:bg-[#f0f0f0] dark:hover:bg-[#172435]">Cancel</button>
-              <button type="submit" disabled={submitting || archiving || !name.trim()} className="btn-brand min-h-11 px-5 py-2 rounded-2xl text-xs font-bold disabled:opacity-50">
+              <Button type="button" onClick={onClose} disabled={submitting || archiving} className="min-h-11 px-4 py-2 rounded-2xl text-xs font-semibold text-[#575757] hover:bg-[#f0f0f0] dark:hover:bg-[#172435]">Cancel</Button>
+              <Button type="submit" disabled={submitting || archiving || !name.trim()} className="btn-brand min-h-11 px-5 py-2 rounded-2xl text-xs font-bold disabled:opacity-50">
                 {submitting ? 'Saving…' : editingCourse ? 'Save changes' : 'Create course'}
-              </button>
+              </Button>
             </div>
           </div>
         </form>

@@ -1,10 +1,11 @@
 export type AttendanceStatus = 'P' | 'A' | 'L';
-export type AppTab = 'home' | 'students' | 'batches' | 'finance' | 'log' | 'menu';
+export type AppTab = 'home' | 'students' | 'batches' | 'finance' | 'log' | 'reports' | 'menu';
 
 export type EnrollmentStatus = 'Active' | 'Completed' | 'Withdrawn';
 export type FeeFrequency = 'Monthly' | 'Quarterly' | 'HalfYearly' | 'Yearly' | 'OneTime';
 export type FeeDueStatus = 'Pending' | 'Partial' | 'Paid' | 'Overdue' | 'Cancelled';
 export type PaymentMethod = 'Cash' | 'Upi' | 'Card' | 'BankTransfer' | 'Cheque' | 'Other';
+export type AchievementCategory = 'Won' | 'Participated' | 'Other';
 
 export const FEE_FREQUENCY_LABELS: Record<FeeFrequency, string> = {
   Monthly: 'Monthly', Quarterly: 'Quarterly', HalfYearly: 'Half-Yearly', Yearly: 'Yearly', OneTime: 'One-Time'
@@ -74,7 +75,23 @@ export interface Student {
   isActive: boolean;
   outstandingBalance: number;
   overallAttendance: number;
+  wonCount: number;
+  participatedCount: number;
   enrollments: EnrollmentSummary[];
+}
+
+export interface Achievement {
+  id: string;
+  studentId: string;
+  title: string;
+  category: AchievementCategory;
+  level?: string;
+  eventDate: string;
+  note?: string;
+  fileName: string;
+  contentType: string;
+  fileSizeBytes: number;
+  createdAt: string;
 }
 
 export interface FeeStructure {
