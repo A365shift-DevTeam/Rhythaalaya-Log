@@ -281,20 +281,20 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   const openStudentDetails = (student: Student) => { setDetailsTargetStudent(student); setIsStudentDetailsOpen(true); };
 
   if (loading) return (
-    <div className="min-h-screen bg-mint-50 dark:bg-brand-950 p-4 md:p-8" role="status" aria-live="polite">
+    <div className="min-h-screen bg-[#f4fbf7] dark:bg-[#07111f] p-4 md:p-8" role="status" aria-live="polite">
       <span className="sr-only">Loading academy</span>
       <div className="mx-auto max-w-6xl animate-pulse space-y-5 pt-16 md:pt-24">
-        <div className="h-8 w-56 rounded-xl bg-brand-100 dark:bg-brand-900" />
+        <div className="h-8 w-56 rounded-2xl bg-[#e9f7ee] dark:bg-[#1d492f]/50" />
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((item) => <div key={item} className="h-32 rounded-2xl bg-white dark:bg-slate-900" />)}
+          {[1, 2, 3, 4].map((item) => <div key={item} className="h-32 rounded-3xl bg-white dark:bg-[#0b1422] border border-[#dbdbdb]/60 dark:border-[#243244]" />)}
         </div>
-        <div className="h-80 rounded-3xl bg-white dark:bg-slate-900" />
+        <div className="h-80 rounded-3xl bg-white dark:bg-[#0b1422] border border-[#dbdbdb]/60 dark:border-[#243244]" />
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-mint-50 dark:bg-brand-950 text-slate-900 dark:text-brand-50 font-sans antialiased selection:bg-brand-500 selection:text-white">
+    <div className="app-shell min-h-screen bg-[#f4fbf7] dark:bg-[#07111f] text-[#212121] dark:text-[#e2e8f0] font-sans antialiased selection:bg-[#3fc073] selection:text-white">
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <Navigation
         currentTab={currentTab}
@@ -305,31 +305,31 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
 
       <main id="main-content" tabIndex={-1} className="md:ml-[270px] min-h-screen px-3 sm:px-6 lg:px-8 py-3 sm:py-6 md:py-8 pb-28 md:pb-12">
         <div className="mx-auto w-full max-w-[1440px]">
-        <header className="relative z-30 mb-4 sm:mb-5 flex min-w-0 items-center justify-between gap-2.5 rounded-2xl border border-brand-200/60 bg-white/80 px-3 py-2 sm:py-2.5 shadow-xs backdrop-blur-sm dark:border-brand-800 dark:bg-slate-900/80 sm:px-4">
+        <header className="relative z-30 mb-4 sm:mb-5 flex min-w-0 items-center justify-between gap-2.5 rounded-2xl border border-[#dbdbdb]/80 bg-white/80 px-3.5 py-2 sm:py-2.5 shadow-xs backdrop-blur-xl dark:border-[#243244] dark:bg-[#0b1422]/80 sm:px-4">
           <div className="min-w-0">
-            <p className="truncate text-xs sm:text-sm font-bold text-slate-800 dark:text-white">{session.user.tenantName}</p>
-            <p className="truncate text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">Signed in as {session.user.fullName}</p>
+            <p className="truncate text-xs sm:text-sm font-bold text-[#212121] dark:text-white">{session.user.tenantName}</p>
+            <p className="truncate text-xs sm:text-xs text-[#808080] dark:text-[#94a3b8]">Signed in as {session.user.fullName}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <NotificationCenter tenantKey={session.user.tenantId || session.user.email} preferences={settings.notifications}
               students={students} transactions={transactions} onNavigate={setCurrentTab} />
-            <button type="button" onClick={onLogout} aria-label="Sign out" className="min-h-9 sm:min-h-11 shrink-0 rounded-xl border border-slate-200 px-2.5 sm:px-3.5 text-xs font-bold bg-white text-slate-700 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-rose-950/40 flex items-center gap-1">
+            <button type="button" onClick={onLogout} aria-label="Sign out" className="min-h-9 sm:min-h-11 shrink-0 rounded-2xl border border-[#dbdbdb] px-2.5 sm:px-3.5 text-xs font-semibold bg-white text-[#212121] transition-all hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-[#243244] dark:bg-[#111c2b] dark:text-[#e2e8f0] dark:hover:bg-rose-950/40 flex items-center gap-1 active:scale-95">
               <span className="hidden sm:inline">Sign out</span>
               <span className="material-symbols-outlined text-[17px] sm:hidden">logout</span>
             </button>
           </div>
         </header>
-        {loadError && <div role="alert" className="mb-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
+        {loadError && <div role="alert" className="mb-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200">
           <span className="material-symbols-outlined mt-0.5 text-[20px]" aria-hidden="true">error</span>
           <span className="min-w-0 flex-1 py-1">{loadError}</span>
-          <button type="button" onClick={() => void reload()} className="min-h-9 rounded-lg px-2.5 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50">Retry</button>
-          <button type="button" onClick={() => setLoadError('')} aria-label="Dismiss error" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900/50">
+          <button type="button" onClick={() => void reload()} className="min-h-9 rounded-xl px-2.5 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50">Retry</button>
+          <button type="button" onClick={() => setLoadError('')} aria-label="Dismiss error" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl hover:bg-rose-100 dark:hover:bg-rose-900/50">
             <span className="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
           </button>
         </div>}
         {currentTab === 'home' && (
           <React.Suspense fallback={
-            <div className="min-h-[420px] rounded-3xl border border-brand-200/60 dark:border-brand-800 bg-white dark:bg-slate-900 flex items-center justify-center text-sm font-semibold text-brand-700 dark:text-brand-300">
+            <div className="min-h-[420px] rounded-3xl border border-[#dbdbdb]/80 dark:border-[#243244] bg-white dark:bg-[#0b1422] flex items-center justify-center text-sm font-semibold text-[#3fc073]">
               Loading dashboard…
             </div>
           }>

@@ -106,31 +106,16 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
     }
   }
 
-  async function toggleTenant(tenant: Tenant) {
-    if (tenant.isActive && !window.confirm(
-      'Suspend ' + tenant.name + '? Its users will immediately lose access.'
-    )) return;
-    clearMessages();
-    setBusyId('status-' + tenant.id);
-    try {
-      await api.setTenantStatus(session.token, tenant.id, !tenant.isActive);
-      setNotice(tenant.isActive ? 'Academy suspended.' : 'Academy activated.');
-      await load();
-    } catch (requestError) {
-      setError(requestError instanceof ApiError ? requestError.message : 'Unable to update academy.');
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   async function renew(event: React.FormEvent<HTMLFormElement>, tenantId: string) {
     event.preventDefault();
     clearMessages();
     setBusyId('subscription-' + tenantId);
     const data = new FormData(event.currentTarget);
     try {
-      await api.assignSubscription(session.token, tenantId, String(data.get('planId')),
-        new Date(String(data.get('endsAt')) + 'T23:59:59Z').toISOString());
+      await api.assignTenantPlan(session.token, tenantId, {
+        planId: String(data.get('planId')),
+        endsAt: new Date(String(data.get('endsAt')) + 'T23:59:59Z').toISOString()
+      });
       setRenewing(null);
       setNotice('Subscription updated successfully.');
       await load();
@@ -141,12 +126,21 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
     }
   }
 
-  async function openUsers(tenantId: string) {
-    if (managingUsers === tenantId) {
-      setManagingUsers(null);
-      return;
+  async function toggleTenant(tenant: Tenant) {
+    clearMessages();
+    setBusyId('status-' + tenant.id);
+    try {
+      await api.setTenantStatus(session.token, tenant.id, !tenant.isActive);
+      setNotice(`Academy ${tenant.isActive ? 'suspended' : 'activated'} successfully.`);
+      await load();
+    } catch (requestError) {
+      setError(requestError instanceof ApiError ? requestError.message : 'Unable to update status.');
+    } finally {
+      setBusyId(null);
     }
-    setRenewing(null);
+  }
+
+  async function openUsers(tenantId: string) {
     setManagingUsers(tenantId);
     setUsersLoading(true);
     clearMessages();
@@ -188,26 +182,26 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
   const initials = session.user.fullName.split(' ').map((part) => part[0]).join('').slice(0, 2);
 
   return (
-    <main className="min-h-screen bg-[#f4f8f6] text-slate-900">
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-brand-100">
+    <main className="app-shell min-h-screen bg-[#f4fbf7] text-[#212121] dark:bg-[#07111f] dark:text-[#e2e8f0]">
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-2xl border-b border-[#dbdbdb]/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-lg shadow-brand-500/20 flex items-center justify-center shrink-0">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-white shadow-lg shadow-[#3fc073]/25 flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-[24px]">admin_panel_settings</span>
             </div>
             <div className="min-w-0">
-              <h1 className="font-heading font-extrabold text-lg sm:text-xl truncate">Rhythaalaya Platform</h1>
-              <p className="text-[11px] sm:text-xs text-slate-500">Super Admin Console</p>
+              <h1 className="font-heading font-bold text-lg sm:text-xl truncate text-[#212121]">Rhythaalaya Platform</h1>
+              <p className="text-xs sm:text-xs text-[#808080]">Super Admin Console</p>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden sm:flex items-center gap-2.5 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
-              <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 font-bold text-xs flex items-center justify-center">{initials}</div>
+            <div className="hidden sm:flex items-center gap-2.5 rounded-2xl bg-[#f0f0f0] border border-[#dbdbdb] px-3 py-2">
+              <div className="w-8 h-8 rounded-xl bg-[#e9f7ee] text-[#3fc073] font-bold text-xs flex items-center justify-center">{initials}</div>
               <div className="leading-tight"><div className="text-xs font-bold">{session.user.fullName}</div>
-                <div className="text-[10px] text-slate-500">{session.user.email}</div></div>
+                <div className="text-xs text-[#808080]">{session.user.email}</div></div>
             </div>
             <button type="button" onClick={onLogout} title="Sign out"
-              className="h-10 px-3 sm:px-4 rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 font-bold text-xs flex items-center gap-2 transition-all">
+              className="h-10 px-3.5 sm:px-4 rounded-2xl border border-[#dbdbdb] bg-white text-[#575757] hover:text-[#ef4444] hover:border-rose-200 hover:bg-rose-50 font-bold text-xs flex items-center gap-2 transition-all active:scale-95">
               <span className="material-symbols-outlined text-[18px]">logout</span>
               <span className="hidden sm:inline">Sign out</span>
             </button>
@@ -216,18 +210,18 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-7">
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#102a22] via-brand-900 to-brand-700 text-white p-6 sm:p-8 shadow-xl shadow-brand-900/10">
-          <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-brand-300/15 blur-2xl" />
+        <section className="relative overflow-hidden rounded-3xl bg-[#212121] text-white p-6 sm:p-8 shadow-2xl border border-[#333333]">
+          <div className="absolute -right-16 -top-16 w-72 h-72 rounded-full bg-[#3fc073]/20 blur-3xl pointer-events-none" />
           <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-5">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/10 px-3 py-1 text-[11px] font-semibold text-brand-100 mb-3">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Platform overview
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/10 px-3 py-1 text-xs font-semibold text-[#b3e6c7] mb-3">
+                <span className="w-2 h-2 rounded-full bg-[#3fc073] animate-pulse" /> Platform overview
               </div>
-              <h2 className="font-heading text-2xl sm:text-3xl font-extrabold">Manage every academy in one place</h2>
-              <p className="text-sm text-brand-100/80 mt-2 max-w-2xl">Create customer workspaces, control subscriptions, and monitor platform usage.</p>
+              <h2 className="font-heading text-2xl sm:text-3xl font-bold">Manage every academy in one place</h2>
+              <p className="text-sm text-[#9e9e9e] mt-2 max-w-2xl">Create customer workspaces, control subscriptions, and monitor platform usage.</p>
             </div>
             <button type="button" onClick={() => { setShowTenant(true); setShowPlan(false); }}
-              className="btn-brand rounded-xl px-5 py-3 text-sm font-bold flex items-center justify-center gap-2 shrink-0">
+              className="btn-brand rounded-2xl px-5 py-3 text-sm font-bold flex items-center justify-center gap-2 shrink-0">
               <span className="material-symbols-outlined text-[20px]">add_business</span>
               Add academy
             </button>
@@ -236,7 +230,7 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
 
         {(error || notice) && (
           <div role="alert" className={'rounded-2xl px-4 py-3.5 text-sm flex items-start gap-3 border shadow-sm ' +
-            (error ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200')}>
+            (error ? 'bg-rose-50 text-[#ef4444] border-rose-200' : 'bg-emerald-50 text-[#22c55e] border-emerald-200')}>
             <span className="material-symbols-outlined text-[20px]">{error ? 'error' : 'check_circle'}</span>
             <span className="flex-1 font-medium">{error || notice}</span>
             <button type="button" onClick={clearMessages} aria-label="Dismiss notification" className="rounded-lg p-0.5 hover:bg-black/5">
@@ -246,29 +240,29 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
         )}
 
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Stat icon="apartment" label="Total academies" value={tenants.length} hint={activeTenants + ' active'} color="brand" />
+          <Stat icon="apartment" label="Total academies" value={tenants.length} hint={activeTenants + ' active'} color="blue" />
           <Stat icon="verified" label="Active tenants" value={activeTenants} hint={(tenants.length - activeTenants) + ' suspended'} color="emerald" />
-          <Stat icon="groups" label="Platform users" value={totalUsers} hint={totalStudents + ' students'} color="blue" />
+          <Stat icon="groups" label="Platform users" value={totalUsers} hint={totalStudents + ' students'} color="indigo" />
           <Stat icon="workspace_premium" label="Plans available" value={plans.length} hint="Subscription catalogue" color="amber" />
         </section>
 
-        <section className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-          <div className="p-5 sm:p-6 border-b border-slate-100">
+        <section className="bg-white rounded-3xl border border-[#dbdbdb]/80 shadow-sm overflow-hidden">
+          <div className="p-5 sm:p-6 border-b border-[#dbdbdb]/60">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div><h2 className="font-heading font-extrabold text-xl">Academies</h2>
-                <p className="text-xs text-slate-500 mt-1">Manage tenant access, usage and subscription dates.</p></div>
+              <div><h2 className="font-heading font-bold text-xl text-[#212121]">Academies</h2>
+                <p className="text-xs text-[#808080] mt-1">Manage tenant access, usage and subscription dates.</p></div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] text-[18px]">search</span>
                   <input value={search} onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search academies…" className="w-full sm:w-60 pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/10" />
+                    placeholder="Search academies…" className="w-full sm:w-60 pl-10 pr-3 py-2.5 rounded-2xl bg-[#f0f0f0] border border-[#dbdbdb] text-xs outline-none focus:border-[#3fc073] focus:ring-4 focus:ring-[#3fc073]/15" />
                 </div>
                 <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
-                  className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs font-semibold outline-none focus:border-brand-400">
+                  className="rounded-2xl bg-[#f0f0f0] border border-[#dbdbdb] px-3.5 py-2.5 text-xs font-semibold outline-none focus:border-[#3fc073]">
                   <option>All</option><option>Active</option><option>Suspended</option>
                 </select>
                 <button type="button" onClick={() => setShowTenant(!showTenant)}
-                  className="btn-brand rounded-xl px-4 py-2.5 text-xs font-bold flex items-center justify-center gap-2">
+                  className="btn-brand rounded-2xl px-4 py-2.5 text-xs font-bold flex items-center justify-center gap-2">
                   <span className="material-symbols-outlined text-[18px]">{showTenant ? 'close' : 'add'}</span>
                   {showTenant ? 'Close form' : 'New academy'}
                 </button>
@@ -277,13 +271,13 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
           </div>
 
           {showTenant && (
-            <form onSubmit={createTenant} className="p-5 sm:p-6 bg-brand-50/60 border-b border-brand-100">
+            <form onSubmit={createTenant} className="p-5 sm:p-6 bg-[#f4fbf7]/60 border-b border-[#cbecd8]">
               <div className="flex items-start gap-3 mb-5">
-                <div className="w-10 h-10 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] text-[#3fc073] flex items-center justify-center">
                   <span className="material-symbols-outlined text-[20px]">add_business</span>
                 </div>
-                <div><h3 className="font-bold text-sm">Create customer academy</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">This also creates the first Tenant Admin account and subscription.</p></div>
+                <div><h3 className="font-bold text-sm text-[#212121]">Create customer academy</h3>
+                  <p className="text-xs text-[#808080] mt-0.5">This also creates the first Tenant Admin account and subscription.</p></div>
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Input name="name" label="Academy name" placeholder="Rhythaalaya Chennai" required />
@@ -295,13 +289,13 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
                 <Input name="adminPassword" label="Temporary password" type="password" placeholder="Minimum 8 characters" minLength={8} required />
                 <div className="flex items-end">
                   <button disabled={busyId === 'new-tenant' || plans.length === 0}
-                    className="btn-brand w-full rounded-xl py-2.5 font-bold text-xs flex items-center justify-center gap-2 disabled:opacity-50">
+                    className="btn-brand w-full rounded-2xl py-2.5 font-bold text-xs flex items-center justify-center gap-2 disabled:opacity-50">
                     <span className="material-symbols-outlined text-[18px]">{busyId === 'new-tenant' ? 'progress_activity' : 'check'}</span>
                     {busyId === 'new-tenant' ? 'Creating…' : 'Create academy'}
                   </button>
                 </div>
               </div>
-              {plans.length === 0 && <p className="text-xs text-amber-700 mt-3">Create at least one subscription plan before adding an academy.</p>}
+              {plans.length === 0 && <p className="text-xs text-[#f59e0b] mt-3">Create at least one subscription plan before adding an academy.</p>}
             </form>
           )}
 
@@ -311,34 +305,34 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
             <>
               <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead><tr className="text-left text-[11px] uppercase tracking-wider text-slate-500 bg-slate-50/70 border-b border-slate-100">
+                  <thead><tr className="text-left text-xs uppercase tracking-wider text-[#808080] bg-[#f0f0f0]/90 border-b border-[#dbdbdb]/60">
                     <th className="px-6 py-3.5">Academy</th><th className="px-5 py-3.5">Subscription</th>
                     <th className="px-5 py-3.5">Usage</th><th className="px-5 py-3.5">Status</th>
                     <th className="px-6 py-3.5 text-right">Actions</th>
                   </tr></thead>
-                  <tbody className="divide-y divide-slate-100">{filteredTenants.map((tenant) => (
+                  <tbody className="divide-y divide-[#dbdbdb]/60">{filteredTenants.map((tenant) => (
                     <React.Fragment key={tenant.id}>
-                      <tr className="hover:bg-slate-50/60 transition-colors">
+                      <tr className="hover:bg-[#f0f0f0]/60 transition-colors">
                         <td className="px-6 py-4"><div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-brand-100 text-brand-700 font-extrabold flex items-center justify-center">{tenant.name.charAt(0).toUpperCase()}</div>
-                          <div><div className="font-bold text-slate-900">{tenant.name}</div>
-                            <div className="text-[11px] text-slate-400 mt-0.5">{tenant.slug}</div></div></div></td>
-                        <td className="px-5 py-4"><div className="font-semibold text-slate-700">{tenant.subscription?.planName || 'No active plan'}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">Ends {formatDate(tenant.subscription?.endsAt)}</div></td>
+                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-white font-bold flex items-center justify-center">{tenant.name.charAt(0).toUpperCase()}</div>
+                          <div><div className="font-bold text-[#212121]">{tenant.name}</div>
+                            <div className="text-xs text-[#808080] mt-0.5">{tenant.slug}</div></div></div></td>
+                        <td className="px-5 py-4"><div className="font-semibold text-[#212121]">{tenant.subscription?.planName || 'No active plan'}</div>
+                          <div className="text-xs text-[#808080] mt-0.5">Ends {formatDate(tenant.subscription?.endsAt)}</div></td>
                         <td className="px-5 py-4"><div className="flex gap-4 text-xs">
-                          <span className="inline-flex items-center gap-1 text-slate-600"><span className="material-symbols-outlined text-[16px] text-brand-500">school</span>{tenant.studentCount}</span>
-                          <span className="inline-flex items-center gap-1 text-slate-600"><span className="material-symbols-outlined text-[16px] text-blue-500">group</span>{tenant.userCount}</span>
+                          <span className="inline-flex items-center gap-1 text-[#575757]"><span className="material-symbols-outlined text-[16px] text-[#3fc073]">school</span>{tenant.studentCount}</span>
+                          <span className="inline-flex items-center gap-1 text-[#575757]"><span className="material-symbols-outlined text-[16px] text-indigo-500">group</span>{tenant.userCount}</span>
                         </div></td>
                         <td className="px-5 py-4"><StatusBadge active={tenant.isActive} /></td>
                         <td className="px-6 py-4"><TenantActions tenant={tenant} renewing={renewing}
                           managingUsers={managingUsers} busyId={busyId}
                           setRenewing={setRenewing} openUsers={openUsers} toggleTenant={toggleTenant} /></td>
                       </tr>
-                      {renewing === tenant.id && <tr><td colSpan={5} className="px-6 py-4 bg-slate-50">
+                      {renewing === tenant.id && <tr><td colSpan={5} className="px-6 py-4 bg-[#f0f0f0]">
                         <SubscriptionForm tenant={tenant} plans={plans} busy={busyId === 'subscription-' + tenant.id}
                           onSubmit={(event) => renew(event, tenant.id)} onCancel={() => setRenewing(null)} />
                       </td></tr>}
-                      {managingUsers === tenant.id && <tr><td colSpan={5} className="px-6 py-5 bg-slate-50">
+                      {managingUsers === tenant.id && <tr><td colSpan={5} className="px-6 py-5 bg-[#f0f0f0]">
                         <TenantUsersPanel tenant={tenant}
                           plan={plans.find((plan) => plan.id === tenant.subscription?.planId)}
                           users={tenantUsers[tenant.id] || []}
@@ -352,12 +346,12 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
               </div>
 
               <div className="lg:hidden p-4 grid sm:grid-cols-2 gap-4">{filteredTenants.map((tenant) => (
-                <article key={tenant.id} className="rounded-2xl border border-slate-200 p-4 bg-white shadow-sm">
+                <article key={tenant.id} className="rounded-3xl border border-[#dbdbdb] p-4 bg-white shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-11 rounded-xl bg-brand-100 text-brand-700 font-extrabold flex items-center justify-center shrink-0">{tenant.name.charAt(0).toUpperCase()}</div>
-                      <div className="min-w-0"><h3 className="font-bold truncate">{tenant.name}</h3>
-                        <p className="text-[11px] text-slate-400 truncate">{tenant.slug}</p></div>
+                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-white font-bold flex items-center justify-center shrink-0">{tenant.name.charAt(0).toUpperCase()}</div>
+                      <div className="min-w-0"><h3 className="font-bold truncate text-[#212121]">{tenant.name}</h3>
+                        <p className="text-xs text-[#808080] truncate">{tenant.slug}</p></div>
                     </div><StatusBadge active={tenant.isActive} />
                   </div>
                   <div className="grid grid-cols-2 gap-2 my-4">
@@ -369,11 +363,11 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
                   <TenantActions tenant={tenant} renewing={renewing} managingUsers={managingUsers}
                     busyId={busyId} setRenewing={setRenewing} openUsers={openUsers}
                     toggleTenant={toggleTenant} mobile />
-                  {renewing === tenant.id && <div className="mt-4 pt-4 border-t border-slate-100">
+                  {renewing === tenant.id && <div className="mt-4 pt-4 border-t border-[#dbdbdb]/60">
                     <SubscriptionForm tenant={tenant} plans={plans} busy={busyId === 'subscription-' + tenant.id}
                       onSubmit={(event) => renew(event, tenant.id)} onCancel={() => setRenewing(null)} compact />
                   </div>}
-                  {managingUsers === tenant.id && <div className="mt-4 pt-4 border-t border-slate-100">
+                  {managingUsers === tenant.id && <div className="mt-4 pt-4 border-t border-[#dbdbdb]/60">
                     <TenantUsersPanel tenant={tenant}
                       plan={plans.find((plan) => plan.id === tenant.subscription?.planId)}
                       users={tenantUsers[tenant.id] || []}
@@ -387,18 +381,18 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
           )}
         </section>
 
-        <section className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-5 sm:p-6">
+        <section className="bg-white rounded-3xl border border-[#dbdbdb]/80 shadow-sm p-5 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-            <div><h2 className="font-heading font-extrabold text-xl">Subscription plans</h2>
-              <p className="text-xs text-slate-500 mt-1">Limits are enforced automatically by the API.</p></div>
+            <div><h2 className="font-heading font-bold text-xl text-[#212121]">Subscription plans</h2>
+              <p className="text-xs text-[#808080] mt-1">Limits are enforced automatically by the API.</p></div>
             <button type="button" onClick={() => setShowPlan(!showPlan)}
-              className="rounded-xl border border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 px-4 py-2.5 text-xs font-bold flex items-center justify-center gap-2 transition-colors">
+              className="rounded-2xl border border-[#dbdbdb] bg-[#f0f0f0] text-[#212121] hover:bg-[#f0f0f0] px-4 py-2.5 text-xs font-bold flex items-center justify-center gap-2 transition-colors">
               <span className="material-symbols-outlined text-[18px]">{showPlan ? 'close' : 'add_card'}</span>
               {showPlan ? 'Close form' : 'New plan'}
             </button>
           </div>
 
-          {showPlan && <form onSubmit={createPlan} className="rounded-2xl bg-slate-50 border border-slate-200 p-4 mb-5">
+          {showPlan && <form onSubmit={createPlan} className="rounded-3xl bg-[#f0f0f0] border border-[#dbdbdb] p-4 mb-5">
             <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-3">
               <Input name="name" label="Plan name" placeholder="Professional" required />
               <Input name="code" label="Plan code" placeholder="PRO" required />
@@ -406,24 +400,24 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
               <Input name="maxUsers" label="Maximum users" type="number" min={1} placeholder="10" required />
               <Input name="maxStudents" label="Maximum students" type="number" min={1} placeholder="250" required />
               <div className="flex items-end"><button disabled={busyId === 'new-plan'}
-                className="btn-brand w-full rounded-xl py-2.5 font-bold text-xs flex items-center justify-center gap-2 disabled:opacity-50">
+                className="btn-brand w-full rounded-2xl py-2.5 font-bold text-xs flex items-center justify-center gap-2 disabled:opacity-50">
                 <span className="material-symbols-outlined text-[18px]">{busyId === 'new-plan' ? 'progress_activity' : 'check'}</span>
                 {busyId === 'new-plan' ? 'Creating…' : 'Create plan'}
               </button></div>
             </div>
           </form>}
 
-          {plans.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">No plans created yet.</div> :
+          {plans.length === 0 ? <div className="rounded-3xl border border-dashed border-[#dbdbdb] p-8 text-center text-sm text-[#808080]">No plans created yet.</div> :
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">{plans.map((plan) =>
-              <div key={plan.id} className="rounded-2xl border border-slate-200 p-5 hover:border-brand-300 hover:shadow-md transition-all">
-                <div className="flex items-start justify-between gap-3"><div><div className="font-extrabold text-lg">{plan.name}</div>
-                  <div className="text-[11px] text-slate-400 uppercase tracking-wider mt-0.5">{plan.code}</div></div>
-                  <span className={'rounded-full px-2.5 py-1 text-[10px] font-bold ' + (plan.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500')}>
+              <div key={plan.id} className="rounded-3xl border border-[#dbdbdb] p-5 hover:border-[#3fc073]/50 hover:shadow-lg transition-all">
+                <div className="flex items-start justify-between gap-3"><div><div className="font-bold text-lg text-[#212121]">{plan.name}</div>
+                  <div className="text-xs text-[#808080] uppercase tracking-wider mt-0.5">{plan.code}</div></div>
+                  <span className={'rounded-full px-2.5 py-1 text-xs font-bold ' + (plan.isActive ? 'bg-emerald-50 text-[#22c55e]' : 'bg-[#f0f0f0] text-[#808080]')}>
                     {plan.isActive ? 'Available' : 'Inactive'}</span></div>
-                <div className="mt-5 flex items-end gap-1"><span className="text-3xl font-black">₹{plan.monthlyPrice}</span><span className="text-xs text-slate-400 mb-1">/ month</span></div>
-                <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 gap-3 text-xs">
-                  <div className="flex items-center gap-2 text-slate-600"><span className="material-symbols-outlined text-[18px] text-brand-500">school</span><span><b>{plan.maxStudents}</b><br />students</span></div>
-                  <div className="flex items-center gap-2 text-slate-600"><span className="material-symbols-outlined text-[18px] text-blue-500">group</span><span><b>{plan.maxUsers}</b><br />users</span></div>
+                <div className="mt-5 flex items-end gap-1"><span className="text-3xl font-bold text-[#212121]">₹{plan.monthlyPrice}</span><span className="text-xs text-[#808080] mb-1">/ month</span></div>
+                <div className="mt-4 pt-4 border-t border-[#dbdbdb]/60 grid grid-cols-2 gap-3 text-xs">
+                  <div className="flex items-center gap-2 text-[#575757]"><span className="material-symbols-outlined text-[18px] text-[#3fc073]">school</span><span><b>{plan.maxStudents}</b><br />students</span></div>
+                  <div className="flex items-center gap-2 text-[#575757]"><span className="material-symbols-outlined text-[18px] text-indigo-500">group</span><span><b>{plan.maxUsers}</b><br />users</span></div>
                 </div>
               </div>)}</div>}
         </section>
@@ -433,40 +427,40 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
 }
 
 function Stat({ icon, label, value, hint, color }: {
-  icon: string; label: string; value: number; hint: string; color: 'brand' | 'emerald' | 'blue' | 'amber'
+  icon: string; label: string; value: number; hint: string; color: 'blue' | 'emerald' | 'indigo' | 'amber'
 }) {
   const colors = {
-    brand: 'bg-brand-100 text-brand-700',
-    emerald: 'bg-emerald-100 text-emerald-700',
-    blue: 'bg-blue-100 text-blue-700',
-    amber: 'bg-amber-100 text-amber-700'
+    blue: 'bg-[#e9f7ee] text-[#3fc073]',
+    emerald: 'bg-emerald-50 text-[#22c55e]',
+    indigo: 'bg-indigo-50 text-indigo-600',
+    amber: 'bg-amber-50 text-[#f59e0b]'
   };
-  return <div className="rounded-2xl bg-white border border-slate-200/80 p-4 sm:p-5 shadow-sm">
-    <div className={'w-10 h-10 rounded-xl flex items-center justify-center ' + colors[color]}>
+  return <div className="rounded-3xl bg-white border border-[#dbdbdb]/80 p-4 sm:p-5 shadow-xs">
+    <div className={'w-10 h-10 rounded-2xl flex items-center justify-center ' + colors[color]}>
       <span className="material-symbols-outlined text-[21px]">{icon}</span></div>
-    <div className="text-2xl sm:text-3xl font-black mt-3">{value}</div>
-    <div className="text-xs font-bold text-slate-700 mt-0.5">{label}</div>
-    <div className="text-[10px] text-slate-400 mt-1">{hint}</div>
+    <div className="text-2xl sm:text-3xl font-bold mt-3 text-[#212121]">{value}</div>
+    <div className="text-xs font-bold text-[#575757] mt-0.5">{label}</div>
+    <div className="text-xs text-[#9e9e9e] mt-1">{hint}</div>
   </div>;
 }
 
 function Input(props: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
   const { label, ...input } = props;
-  return <label className="block"><span className="block text-[11px] font-bold text-slate-600 mb-1.5">{label}</span>
-    <input {...input} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/10 placeholder:text-slate-300" /></label>;
+  return <label className="block"><span className="block text-xs font-bold text-[#575757] mb-1.5">{label}</span>
+    <input {...input} className="w-full rounded-2xl border border-[#dbdbdb] bg-white px-3.5 py-2.5 text-xs outline-none focus:border-[#3fc073] focus:ring-4 focus:ring-[#3fc073]/15 placeholder:text-[#c2c2c2]" /></label>;
 }
 
 function SelectPlan({ plans, defaultValue }: { plans: Plan[]; defaultValue?: string }) {
-  return <label className="block"><span className="block text-[11px] font-bold text-slate-600 mb-1.5">Subscription plan</span>
-    <select name="planId" required defaultValue={defaultValue || ''} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs outline-none focus:border-brand-400">
+  return <label className="block"><span className="block text-xs font-bold text-[#575757] mb-1.5">Subscription plan</span>
+    <select name="planId" required defaultValue={defaultValue || ''} className="w-full rounded-2xl border border-[#dbdbdb] bg-white px-3.5 py-2.5 text-xs outline-none focus:border-[#3fc073]">
       <option value="" disabled>Select a plan</option>{plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name} — ₹{plan.monthlyPrice}</option>)}
     </select></label>;
 }
 
 function StatusBadge({ active }: { active: boolean }) {
-  return <span className={'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold shrink-0 ' +
-    (active ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700')}>
-    <span className={'w-1.5 h-1.5 rounded-full ' + (active ? 'bg-emerald-500' : 'bg-rose-500')} />
+  return <span className={'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold shrink-0 ' +
+    (active ? 'bg-emerald-50 text-[#22c55e]' : 'bg-rose-50 text-[#ef4444]')}>
+    <span className={'w-1.5 h-1.5 rounded-full ' + (active ? 'bg-[#22c55e]' : 'bg-[#ef4444]')} />
     {active ? 'Active' : 'Suspended'}
   </span>;
 }
@@ -484,7 +478,7 @@ function TenantActions({ tenant, renewing, managingUsers, busyId, setRenewing, o
       if (managingUsers) void openUsers(managingUsers);
       setRenewing(renewing === tenant.id ? null : tenant.id);
     }}
-      className="h-9 rounded-xl border border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 px-3 text-[11px] font-bold inline-flex items-center justify-center gap-1.5 transition-colors">
+      className="h-9 rounded-2xl border border-[#dbdbdb] bg-[#f0f0f0] text-[#212121] hover:bg-[#f0f0f0] px-3 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors">
       <span className="material-symbols-outlined text-[17px]">event_repeat</span>
       <span className={mobile ? 'hidden sm:inline' : ''}>Subscription</span>
     </button>
@@ -492,13 +486,13 @@ function TenantActions({ tenant, renewing, managingUsers, busyId, setRenewing, o
       setRenewing(null);
       void openUsers(tenant.id);
     }}
-      className="h-9 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 text-[11px] font-bold inline-flex items-center justify-center gap-1.5 transition-colors">
+      className="h-9 rounded-2xl border border-[#dbdbdb] bg-[#f0f0f0] text-[#3fc073] hover:bg-[#e9f7ee] px-3 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors">
       <span className="material-symbols-outlined text-[17px]">manage_accounts</span>
       <span className={mobile ? 'hidden sm:inline' : ''}>Users</span>
     </button>
     <button type="button" disabled={changingStatus} onClick={() => void toggleTenant(tenant)}
-      className={'h-9 rounded-xl border px-3 text-[11px] font-bold inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 ' +
-        (tenant.isActive ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100')}>
+      className={'h-9 rounded-2xl border px-3 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 ' +
+        (tenant.isActive ? 'border-rose-200 bg-rose-50 text-[#ef4444] hover:bg-rose-100' : 'border-emerald-200 bg-emerald-50 text-[#22c55e] hover:bg-emerald-100')}>
       <span className="material-symbols-outlined text-[17px]">{changingStatus ? 'progress_activity' : tenant.isActive ? 'pause_circle' : 'play_circle'}</span>
       <span className={mobile ? 'hidden sm:inline' : ''}>
         {changingStatus ? 'Updating…' : tenant.isActive ? 'Suspend' : 'Activate'}
@@ -517,75 +511,75 @@ function TenantUsersPanel({ tenant, plan, users, loading, busy, onSubmit, onClos
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div>
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-blue-600 text-[21px]">manage_accounts</span>
-          <h3 className="font-extrabold text-sm">Users for {tenant.name}</h3>
+          <span className="material-symbols-outlined text-[#3fc073] text-[21px]">manage_accounts</span>
+          <h3 className="font-bold text-sm text-[#212121]">Users for {tenant.name}</h3>
         </div>
-        <p className="text-[11px] text-slate-500 mt-1">
+        <p className="text-xs text-[#808080] mt-1">
           {tenant.userCount} active user{tenant.userCount === 1 ? '' : 's'}
           {plan ? ' of ' + plan.maxUsers + ' allowed by ' + plan.name : ''}
         </p>
       </div>
       <button type="button" onClick={onClose}
-        className="self-start sm:self-auto rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-100 inline-flex items-center gap-1.5">
+        className="self-start sm:self-auto rounded-2xl border border-[#dbdbdb] bg-white px-3 py-2 text-xs font-bold text-[#575757] hover:bg-[#f0f0f0] inline-flex items-center gap-1.5">
         <span className="material-symbols-outlined text-[16px]">close</span>Close
       </button>
     </div>
 
     {plan && <div className="space-y-1.5">
-      <div className="flex justify-between text-[10px] font-semibold text-slate-500">
+      <div className="flex justify-between text-xs font-semibold text-[#808080]">
         <span>Plan user usage</span><span>{tenant.userCount} / {plan.maxUsers}</span>
       </div>
-      <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
-        <div className={'h-full rounded-full transition-all ' + (atLimit ? 'bg-rose-500' : 'bg-blue-500')}
+      <div className="h-2 rounded-full bg-[#f0f0f0] overflow-hidden">
+        <div className={'h-full rounded-full transition-all ' + (atLimit ? 'bg-[#ef4444]' : 'bg-[#3fc073]')}
           style={{ width: Math.min(100, tenant.userCount / plan.maxUsers * 100) + '%' }} />
       </div>
     </div>}
 
     <div className={compact ? 'space-y-2' : 'grid sm:grid-cols-2 lg:grid-cols-3 gap-2'}>
-      {loading ? <div className="text-xs text-slate-500 py-4">Loading tenant users…</div> :
+      {loading ? <div className="text-xs text-[#808080] py-4">Loading tenant users…</div> :
         users.map((user) => <div key={user.id}
-          className="rounded-xl border border-slate-200 bg-white p-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0">
+          className="rounded-2xl border border-[#dbdbdb] bg-white p-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#e9f7ee] text-[#3fc073] font-bold text-xs flex items-center justify-center shrink-0">
             {user.fullName.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-xs font-bold text-slate-800 truncate">{user.fullName}</div>
-            <div className="text-[10px] text-slate-400 truncate">{user.email}</div>
+            <div className="text-xs font-bold text-[#212121] truncate">{user.fullName}</div>
+            <div className="text-xs text-[#808080] truncate">{user.email}</div>
           </div>
-          <span className={'rounded-full px-2 py-1 text-[9px] font-bold shrink-0 ' +
-            (user.role === 'TenantAdmin' ? 'bg-violet-50 text-violet-700' : 'bg-slate-100 text-slate-600')}>
+          <span className={'rounded-full px-2 py-1 text-xs font-bold shrink-0 ' +
+            (user.role === 'TenantAdmin' ? 'bg-purple-50 text-purple-700' : 'bg-[#f0f0f0] text-[#808080]')}>
             {user.role === 'TenantAdmin' ? 'Admin' : 'Staff'}
           </span>
         </div>)}
     </div>
 
-    {atLimit ? <div className="rounded-xl border border-amber-200 bg-amber-50 text-amber-800 px-4 py-3 text-xs flex items-start gap-2">
+    {atLimit ? <div className="rounded-2xl border border-amber-200 bg-amber-50 text-[#f59e0b] px-4 py-3 text-xs flex items-start gap-2">
       <span className="material-symbols-outlined text-[18px]">warning</span>
       <span>This tenant has reached the <b>{plan?.maxUsers}-user</b> limit. Assign a larger subscription plan before adding another user.</span>
     </div> :
-      <form onSubmit={onSubmit} className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+      <form onSubmit={onSubmit} className="rounded-3xl border border-[#cbecd8] bg-[#f4fbf7]/60 p-4">
         <div className="flex items-center gap-2 mb-3">
-          <span className="material-symbols-outlined text-blue-600 text-[18px]">person_add</span>
-          <h4 className="text-xs font-extrabold">Add tenant user</h4>
+          <span className="material-symbols-outlined text-[#3fc073] text-[18px]">person_add</span>
+          <h4 className="text-xs font-bold text-[#212121]">Add tenant user</h4>
         </div>
         <div className={compact ? 'space-y-3' : 'grid sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end'}>
           <Input name="fullName" label="Full name" placeholder="User's full name" required />
           <Input name="email" label="Email address" type="email" placeholder="user@academy.com" required />
           <Input name="password" label="Temporary password" type="password" placeholder="Minimum 8 characters" minLength={8} required />
-          <label className="block"><span className="block text-[11px] font-bold text-slate-600 mb-1.5">Role</span>
+          <label className="block"><span className="block text-xs font-bold text-[#575757] mb-1.5">Role</span>
             <select name="role" defaultValue="Staff" required
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs outline-none focus:border-blue-400">
+              className="w-full rounded-2xl border border-[#dbdbdb] bg-white px-3.5 py-2.5 text-xs outline-none focus:border-[#3fc073]">
               <option value="Staff">Staff</option>
               <option value="TenantAdmin">Tenant Admin</option>
             </select>
           </label>
           <button disabled={busy}
-            className="btn-brand w-full rounded-xl py-2.5 px-4 text-xs font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50">
+            className="btn-brand w-full rounded-2xl py-2.5 px-4 text-xs font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50">
             <span className="material-symbols-outlined text-[17px]">{busy ? 'progress_activity' : 'person_add'}</span>
             {busy ? 'Creating…' : 'Add user'}
           </button>
         </div>
-        <p className="text-[10px] text-slate-500 mt-3">The user can sign in immediately with this email and temporary password.</p>
+        <p className="text-xs text-[#808080] mt-3">The user can sign in immediately with this email and temporary password.</p>
       </form>}
   </div>;
 }
@@ -598,34 +592,34 @@ function SubscriptionForm({ tenant, plans, busy, onSubmit, onCancel, compact = f
     <div className={compact ? '' : 'min-w-52'}><SelectPlan plans={plans} defaultValue={tenant.subscription?.planId} /></div>
     <div className={compact ? '' : 'min-w-48'}><Input name="endsAt" label="New subscription end date" type="date" defaultValue={oneYearFromNow()} required /></div>
     <div className={'flex gap-2 ' + (compact ? 'w-full' : '')}>
-      <button disabled={busy} className="btn-brand rounded-xl px-4 py-2.5 text-xs font-bold flex-1 inline-flex items-center justify-center gap-2 disabled:opacity-50">
+      <button disabled={busy} className="btn-brand rounded-2xl px-4 py-2.5 text-xs font-bold flex-1 inline-flex items-center justify-center gap-2 disabled:opacity-50">
         <span className="material-symbols-outlined text-[17px]">{busy ? 'progress_activity' : 'check'}</span>
         {busy ? 'Applying…' : 'Apply plan'}
       </button>
       <button type="button" onClick={onCancel} disabled={busy}
-        className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50">Cancel</button>
+        className="rounded-2xl border border-[#dbdbdb] bg-white px-4 py-2.5 text-xs font-bold text-[#575757] hover:bg-[#f0f0f0] disabled:opacity-50">Cancel</button>
     </div>
   </form>;
 }
 
 function MiniInfo({ icon, label, value }: { icon: string; label: string; value: string }) {
-  return <div className="rounded-xl bg-slate-50 p-2.5 min-w-0">
-    <div className="flex items-center gap-1 text-[10px] text-slate-400"><span className="material-symbols-outlined text-[14px]">{icon}</span>{label}</div>
-    <div className="text-xs font-bold text-slate-700 mt-1 truncate">{value}</div>
+  return <div className="rounded-2xl bg-[#f0f0f0] p-2.5 min-w-0">
+    <div className="flex items-center gap-1 text-xs text-[#808080]"><span className="material-symbols-outlined text-[14px]">{icon}</span>{label}</div>
+    <div className="text-xs font-bold text-[#212121] mt-1 truncate">{value}</div>
   </div>;
 }
 
 function LoadingRows() {
   return <div className="p-6 space-y-3">{[1, 2, 3].map((item) =>
-    <div key={item} className="h-16 rounded-xl bg-slate-100 animate-pulse" />)}</div>;
+    <div key={item} className="h-16 rounded-2xl bg-[#f0f0f0] animate-pulse" />)}</div>;
 }
 
 function EmptyState({ hasTenants, onCreate }: { hasTenants: boolean; onCreate: () => void }) {
   return <div className="px-5 py-14 text-center">
-    <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+    <div className="w-14 h-14 rounded-2xl bg-[#f0f0f0] text-[#808080] mx-auto flex items-center justify-center">
       <span className="material-symbols-outlined text-[28px]">{hasTenants ? 'search_off' : 'domain_add'}</span></div>
-    <h3 className="font-bold mt-4">{hasTenants ? 'No academies match your filters' : 'No academies yet'}</h3>
-    <p className="text-xs text-slate-500 mt-1">{hasTenants ? 'Try another search or status.' : 'Create your first customer workspace to get started.'}</p>
-    {!hasTenants && <button type="button" onClick={onCreate} className="btn-brand rounded-xl px-4 py-2.5 text-xs font-bold mt-4">Create academy</button>}
+    <h3 className="font-bold mt-4 text-[#212121]">{hasTenants ? 'No academies match your filters' : 'No academies yet'}</h3>
+    <p className="text-xs text-[#808080] mt-1">{hasTenants ? 'Try another search or status.' : 'Create your first customer workspace to get started.'}</p>
+    {!hasTenants && <button type="button" onClick={onCreate} className="btn-brand rounded-2xl px-4 py-2.5 text-xs font-bold mt-4">Create academy</button>}
   </div>;
 }

@@ -37,15 +37,15 @@ export const Navigation: React.FC<NavigationProps> = ({
   return (
     <>
       {/* Desktop Sidebar Drawer */}
-      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-[270px] p-5 border-r border-brand-200/70 dark:border-brand-800 bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl z-50">
+      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-[270px] p-5 border-r border-[#dbdbdb]/80 dark:border-[#243244] bg-white/80 dark:bg-[#0b1422]/85 backdrop-blur-2xl z-50">
         {/* Academy Profile Header Card */}
         <button
           type="button"
-          className="flex w-full items-center gap-3 mb-6 p-3 bg-brand-50/90 dark:bg-brand-900/50 border border-brand-200/70 dark:border-brand-700/50 rounded-2xl text-left group hover:border-brand-400 dark:hover:border-brand-600 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          className="flex w-full items-center gap-3 mb-6 p-3 bg-[#f0f0f0] dark:bg-[#111c2b]/60 border border-[#dbdbdb]/70 dark:border-[#243244] rounded-2xl text-left group hover:border-[#3fc073]/40 dark:hover:border-[#3fc073]/40 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3fc073]"
           onClick={() => navigate('home')}
           aria-label="Go to dashboard"
         >
-          <div className="w-11 h-11 rounded-xl bg-brand-500 text-white flex items-center justify-center font-bold text-base overflow-hidden shrink-0 border border-brand-400/30 shadow-inner group-hover:scale-105 transition-transform">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-white flex items-center justify-center font-bold text-base overflow-hidden shrink-0 border border-white/20 shadow-sm shadow-[#3fc073]/25 group-hover:scale-105 transition-transform">
             {settings.logoUrl ? (
               <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover" />
             ) : (
@@ -53,11 +53,11 @@ export const Navigation: React.FC<NavigationProps> = ({
             )}
           </div>
           <div className="overflow-hidden flex-1 min-w-0">
-            <p className="font-heading text-sm font-extrabold text-slate-900 dark:text-brand-50 truncate">
+            <p className="font-heading text-sm font-bold text-[#212121] dark:text-[#e2e8f0] truncate">
               {settings.name}
             </p>
-            <p className="font-sans text-[11px] text-slate-500 dark:text-brand-200/80 truncate flex items-center gap-1 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
+            <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] truncate flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#3fc073]"></span>
               {settings.type}
             </p>
           </div>
@@ -73,10 +73,10 @@ export const Navigation: React.FC<NavigationProps> = ({
                 type="button"
                 onClick={() => navigate(item.id)}
                 aria-current={isActive ? 'page' : undefined}
-                className={`w-full min-h-11 flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl transition-all text-left font-sans text-sm font-medium ${
+                className={`w-full min-h-12 flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all text-left font-sans text-base font-medium ${
                   isActive
-                    ? 'bg-gradient-to-r from-brand-400 via-brand-500 to-[#63c06a] text-white shadow-md shadow-brand-400/30 font-semibold'
-                    : 'text-slate-600 dark:text-brand-100 hover:bg-brand-50 dark:hover:bg-brand-900/60'
+                    ? 'bg-gradient-to-r from-[#4d999d] to-[#64a85a] text-white shadow-md shadow-[#4d999d]/25 font-semibold'
+                    : 'text-[#575757] dark:text-[#cbd5e1] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] hover:text-[#212121] dark:hover:text-white'
                 }`}
               >
                 <span className={`material-symbols-outlined text-[20px] ${isActive ? 'filled' : ''}`}>
@@ -92,11 +92,11 @@ export const Navigation: React.FC<NavigationProps> = ({
         </nav>
 
         {/* Sidebar Footer Action */}
-        <div className="pt-4 border-t border-brand-200/70 dark:border-brand-800 space-y-3">
+        <div className="pt-4 border-t border-[#dbdbdb]/80 dark:border-[#243244] space-y-3">
           <button
             type="button"
             onClick={onOpenAddStudent}
-            className="btn-brand w-full min-h-11 py-3 px-4 rounded-xl font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2"
+            className="btn-brand w-full min-h-11 py-3 px-4 rounded-2xl font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-[18px]">person_add</span>
             <span>Add Student</span>
@@ -105,23 +105,23 @@ export const Navigation: React.FC<NavigationProps> = ({
       </aside>
 
       {/* Mobile Top Header */}
-      <header className="md:hidden sticky top-0 z-40 flex justify-between items-center px-4 py-2.5 bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl border-b border-brand-200/70 dark:border-brand-800 shadow-xs">
-        <button type="button" className="flex min-h-11 items-center gap-2.5 rounded-xl text-left min-w-0 flex-1 pr-2" onClick={() => navigate('home')} aria-label="Go to dashboard">
-          <div className="w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center font-bold text-xs overflow-hidden shrink-0 border border-brand-400/30 shadow-xs">
+      <header className="md:hidden sticky top-0 z-40 flex justify-between items-center px-4 py-2.5 bg-white/85 dark:bg-[#0b1422]/85 backdrop-blur-xl border-b border-[#dbdbdb]/80 dark:border-[#243244] shadow-xs">
+        <button type="button" className="flex min-h-11 items-center gap-2.5 rounded-2xl text-left min-w-0 flex-1 pr-2" onClick={() => navigate('home')} aria-label="Go to dashboard">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-white flex items-center justify-center font-bold text-xs overflow-hidden shrink-0 border border-white/20 shadow-xs">
             {settings.logoUrl ? (
               <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover" />
             ) : (
               settings.name.charAt(0) || 'R'
             )}
           </div>
-          <h1 className="font-heading text-base font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
+          <h1 className="font-heading text-base font-bold text-[#212121] dark:text-white tracking-tight truncate">
             {settings.name}
           </h1>
         </button>
         <button
           type="button"
           onClick={onOpenAddStudent}
-          className="btn-brand min-h-10 px-3.5 py-1.5 rounded-xl font-sans text-xs font-semibold flex items-center gap-1.5 shrink-0"
+          className="btn-brand min-h-10 px-3.5 py-1.5 rounded-2xl font-sans text-xs font-semibold flex items-center gap-1.5 shrink-0"
         >
           <span className="material-symbols-outlined text-[16px]">add</span>
           <span>Student</span>
@@ -130,19 +130,19 @@ export const Navigation: React.FC<NavigationProps> = ({
 
       {/* Mobile Bottom Navigation Bar */}
       {isMoreOpen && (
-        <div className="md:hidden fixed inset-0 z-[55] bg-slate-950/35 backdrop-blur-[2px]" onClick={() => setIsMoreOpen(false)}>
+        <div className="md:hidden fixed inset-0 z-[55] bg-black/40 backdrop-blur-xs" onClick={() => setIsMoreOpen(false)}>
           <div
             role="dialog"
             aria-modal="true"
             aria-label="More navigation"
-            className="absolute bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-3 right-3 rounded-2xl border border-brand-200/70 dark:border-brand-800 bg-white dark:bg-brand-950 p-2 shadow-2xl"
+            className="absolute bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-3 right-3 rounded-3xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] p-2 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <p className="px-3 pb-2 pt-1 text-xs font-bold uppercase tracking-wider text-slate-400">More</p>
+            <p className="px-3 pb-2 pt-1 text-xs font-bold uppercase tracking-wider text-[#9e9e9e]">More</p>
             {mobileMoreItems.map((item) => (
               <button key={item.id} type="button" onClick={() => navigate(item.id)}
-                className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-slate-700 hover:bg-brand-50 dark:text-brand-100 dark:hover:bg-brand-900/60">
-                <span className="material-symbols-outlined text-[21px] text-brand-500">{item.icon}</span>
+                className="flex min-h-12 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-semibold text-[#212121] hover:bg-[#f0f0f0] dark:text-[#e2e8f0] dark:hover:bg-[#172435]">
+                <span className="material-symbols-outlined text-[21px] text-[#3fc073]">{item.icon}</span>
                 <span>{item.label}</span>
               </button>
             ))}
@@ -150,7 +150,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         </div>
       )}
 
-      <nav aria-label="Primary navigation" className="md:hidden fixed bottom-0 left-0 w-full z-[60] grid grid-cols-5 items-stretch px-2 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-brand-950/95 backdrop-blur-xl border-t border-brand-200/70 dark:border-brand-800 shadow-[0_-8px_24px_rgba(15,23,42,0.08)]">
+      <nav aria-label="Primary navigation" className="md:hidden fixed bottom-0 left-0 w-full z-[60] grid grid-cols-5 items-stretch px-2 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] bg-white/85 dark:bg-[#0b1422]/85 backdrop-blur-xl border-t border-[#dbdbdb]/80 dark:border-[#243244] shadow-[0_-8px_24px_rgba(0,0,0,0.06)]">
         {mobileNavItems.map((item) => {
           const isActive = currentTab === item.id;
           return (
@@ -159,25 +159,25 @@ export const Navigation: React.FC<NavigationProps> = ({
               type="button"
               onClick={() => navigate(item.id)}
               aria-current={isActive ? 'page' : undefined}
-              className={`relative min-h-[60px] flex flex-col items-center justify-center rounded-xl px-1 py-1 transition-all ${
+              className={`relative min-h-[60px] flex flex-col items-center justify-center rounded-2xl px-1 py-1 transition-all ${
                 isActive
-                  ? 'bg-brand-50 text-brand-600 dark:bg-brand-900/60 dark:text-brand-300 font-bold'
-                  : 'text-slate-500 dark:text-brand-200/70 hover:text-brand-700'
+                  ? 'bg-[#e9f7ee] text-[#35a160] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7] font-bold'
+                  : 'text-[#6b6b6b] dark:text-[#94a3b8] hover:text-[#3fc073]'
               }`}
             >
               <span className={`material-symbols-outlined text-[20px] ${isActive ? 'filled' : ''}`}>
                 {item.icon}
               </span>
-              <span className="font-sans text-[11px] leading-tight tracking-tight font-semibold mt-1">
+              <span className="font-sans text-xs leading-tight tracking-tight font-semibold mt-1">
                 {item.label}
               </span>
             </button>
           );
         })}
         <button type="button" onClick={() => setIsMoreOpen((open) => !open)} aria-expanded={isMoreOpen}
-          className={`relative min-h-[60px] flex flex-col items-center justify-center rounded-xl px-1 py-1 transition-all ${moreIsActive || isMoreOpen ? 'bg-brand-50 text-brand-600 dark:bg-brand-900/60 dark:text-brand-300 font-bold' : 'text-slate-500 dark:text-brand-200/70'}`}>
+          className={`relative min-h-[60px] flex flex-col items-center justify-center rounded-2xl px-1 py-1 transition-all ${moreIsActive || isMoreOpen ? 'bg-[#e9f7ee] text-[#35a160] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7] font-bold' : 'text-[#6b6b6b] dark:text-[#94a3b8]'}`}>
           <span className={`material-symbols-outlined text-[20px] ${moreIsActive ? 'filled' : ''}`}>more_horiz</span>
-          <span className="font-sans text-[11px] leading-tight tracking-tight font-semibold mt-1">More</span>
+          <span className="font-sans text-xs leading-tight tracking-tight font-semibold mt-1">More</span>
         </button>
       </nav>
     </>

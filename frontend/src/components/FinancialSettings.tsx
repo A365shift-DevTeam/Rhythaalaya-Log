@@ -66,9 +66,9 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
 
             <ReceiptPreview settings={settings} receipt={receiptDraft} />
           </div>
-          <div className="mt-5 flex items-center justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-            {saved && <span role="status" className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Receipt setup saved</span>}
-            <button type="submit" className="btn-brand min-h-11 rounded-xl px-5 text-xs font-bold">Save receipt setup</button>
+          <div className="mt-5 flex items-center justify-end gap-3 border-t border-[#dbdbdb]/60 pt-4 dark:border-[#243244]">
+            {saved && <span role="status" className="text-xs font-semibold text-[#22c55e]">Receipt setup saved</span>}
+            <button type="submit" className="btn-brand min-h-11 rounded-2xl px-5 text-xs font-bold">Save receipt setup</button>
           </div>
         </form>
       </section>
@@ -87,7 +87,7 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
       <section className="space-y-3" aria-labelledby="notification-settings-title">
         <SectionHeading id="notification-settings-title" icon="notifications" title="Notification Preferences"
           description="Choose which operational updates appear in the notification center." />
-        <div className="premium-card divide-y divide-slate-100 dark:divide-slate-800">
+        <div className="premium-card divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
           <PreferenceRow icon="notifications_active" title="Enable notifications" description="Show academy alerts in the application."
             checked={settings.notifications.enabled}
             onChange={(enabled) => setSettings((previous) => ({ ...previous, notifications: { ...previous.notifications, enabled } }))} />
@@ -108,42 +108,42 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
 
 function SectionHeading({ id, icon, title, description }: { id: string; icon: string; title: string; description: string }) {
   return <div className="flex items-start gap-3 px-1">
-    <span className="material-symbols-outlined mt-0.5 text-[22px] text-brand-600 dark:text-brand-400" aria-hidden="true">{icon}</span>
-    <div><h3 id={id} className="text-sm font-bold text-slate-900 dark:text-white">{title}</h3>
-      <p className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-slate-400">{description}</p></div>
+    <span className="material-symbols-outlined mt-0.5 text-[22px] text-[#3fc073]" aria-hidden="true">{icon}</span>
+    <div><h3 id={id} className="text-sm font-bold text-[#212121] dark:text-white">{title}</h3>
+      <p className="mt-0.5 text-xs leading-5 text-[#808080] dark:text-[#94a3b8]">{description}</p></div>
   </div>;
 }
 
 function Field({ label, id, hint, children }: { label: string; id: string; hint?: string; children: React.ReactNode }) {
-  return <div><label htmlFor={id} className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-300">{label}</label>
-    {children}{hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}</div>;
+  return <div><label htmlFor={id} className="mb-1.5 block text-xs font-bold text-[#575757] dark:text-[#cbd5e1]">{label}</label>
+    {children}{hint && <p className="mt-1 text-xs text-[#9e9e9e]">{hint}</p>}</div>;
 }
 
 function ReceiptOption({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
-  return <label className="flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">
-    <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-4 w-4 accent-emerald-600" />{label}
+  return <label className="flex min-h-12 items-center gap-2 rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-[#f0f0f0] dark:bg-[#0b1422] px-3.5 text-xs font-semibold text-[#212121] dark:text-[#e2e8f0] cursor-pointer">
+    <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-4 w-4 accent-[#3fc073] rounded" />{label}
   </label>;
 }
 
 function ReceiptPreview({ settings, receipt }: { settings: OrgSettings; receipt: ReceiptSettings }) {
-  return <aside className="rounded-2xl border border-dashed border-brand-300 bg-brand-50/60 p-4 dark:border-brand-700 dark:bg-brand-950/40" aria-label="Receipt preview">
-    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Live preview</div>
+  return <aside className="rounded-3xl border border-dashed border-[#cbecd8] dark:border-[#3fc073]/40 bg-[#f4fbf7]/60 p-4 dark:bg-[#07111f]/40" aria-label="Receipt preview">
+    <div className="text-xs font-bold uppercase tracking-[0.18em] text-[#3fc073]">Live preview</div>
     <div className="mt-4 text-center">
-      {receipt.showLogo && <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-brand-500 text-sm font-bold text-white">
+      {receipt.showLogo && <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-sm font-bold text-white shadow-xs">
         {settings.logoUrl ? <img src={settings.logoUrl} alt="" className="h-full w-full object-cover" /> : settings.name.charAt(0)}
       </div>}
-      <div className="text-sm font-extrabold text-slate-900 dark:text-white">{settings.name}</div>
-      <div className="mt-0.5 text-[11px] text-slate-500">{receipt.address || 'Academy address'}</div>
+      <div className="text-sm font-bold text-[#212121] dark:text-white">{settings.name}</div>
+      <div className="mt-0.5 text-xs text-[#808080]">{receipt.address || 'Academy address'}</div>
     </div>
-    <div className="my-4 border-t border-dashed border-brand-200 dark:border-brand-800" />
+    <div className="my-4 border-t border-dashed border-[#cbecd8] dark:border-[#1d492f]" />
     <div className="space-y-2 text-xs"><PreviewRow label="Receipt" value={`${receipt.prefix || 'REC'}-0001`} />
       <PreviewRow label="Student" value="Student name" /><PreviewRow label="Amount" value="₹1,500" /></div>
-    <div className="mt-4 rounded-lg bg-white/80 px-3 py-2 text-center text-[11px] text-slate-500 dark:bg-slate-900/70">{receipt.footer || 'Receipt footer'}</div>
+    <div className="mt-4 rounded-2xl bg-white/90 px-3 py-2 text-center text-xs text-[#808080] dark:bg-[#0b1422]/80 dark:text-[#94a3b8]">{receipt.footer || 'Receipt footer'}</div>
   </aside>;
 }
 
 function PreviewRow({ label, value }: { label: string; value: string }) {
-  return <div className="flex justify-between gap-4"><span className="text-slate-500">{label}</span><span className="font-bold text-slate-900 dark:text-white">{value}</span></div>;
+  return <div className="flex justify-between gap-4"><span className="text-[#808080]">{label}</span><span className="font-bold text-[#212121] dark:text-white">{value}</span></div>;
 }
 
 function CategoryEditor({ title, tone, categories, onChange }: { title: string; tone: 'income' | 'expense'; categories: string[]; onChange: (categories: string[]) => void }) {
@@ -153,20 +153,20 @@ function CategoryEditor({ title, tone, categories, onChange }: { title: string; 
     if (!next || categories.some((item) => item.toLowerCase() === next.toLowerCase()) || categories.length >= 20) return;
     onChange([...categories, next]); setValue('');
   };
-  const toneClasses = tone === 'income' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300';
+  const toneClasses = tone === 'income' ? 'bg-emerald-50 text-[#22c55e] dark:bg-emerald-950/50' : 'bg-rose-50 text-[#ef4444] dark:bg-rose-950/50';
   return <div className="premium-card p-4 sm:p-5">
-    <div className="flex items-center justify-between"><h4 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h4><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${toneClasses}`}>{categories.length}/20</span></div>
-    <div className="mt-4 flex flex-wrap gap-2">{categories.map((category) => <span key={category} className="inline-flex min-h-9 items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">{category}
-      <button type="button" disabled={categories.length === 1} onClick={() => onChange(categories.filter((item) => item !== category))} aria-label={`Remove ${category}`} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-white disabled:opacity-30 dark:hover:bg-slate-700"><span className="material-symbols-outlined text-[17px]">close</span></button></span>)}</div>
+    <div className="flex items-center justify-between"><h4 className="text-sm font-bold text-[#212121] dark:text-white">{title}</h4><span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${toneClasses}`}>{categories.length}/20</span></div>
+    <div className="mt-4 flex flex-wrap gap-2">{categories.map((category) => <span key={category} className="inline-flex min-h-9 items-center gap-1 rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-[#f0f0f0] pl-3 pr-1 text-xs font-semibold text-[#212121] dark:bg-[#0b1422] dark:text-[#e2e8f0]">{category}
+      <button type="button" disabled={categories.length === 1} onClick={() => onChange(categories.filter((item) => item !== category))} aria-label={`Remove ${category}`} className="flex h-8 w-8 items-center justify-center rounded-xl hover:bg-white disabled:opacity-30 dark:hover:bg-[#172435]"><span className="material-symbols-outlined text-[17px]">close</span></button></span>)}</div>
     <form onSubmit={add} className="mt-4 flex gap-2"><label className="sr-only" htmlFor={`new-${tone}-category`}>New {tone} category</label><input id={`new-${tone}-category`} maxLength={80} value={value} onChange={(event) => setValue(event.target.value)} className="settings-input min-w-0 flex-1" placeholder={`Add ${tone} category`} />
-      <button type="submit" disabled={!value.trim() || categories.length >= 20} className="min-h-11 rounded-xl bg-slate-900 px-4 text-xs font-bold text-white disabled:opacity-40 dark:bg-white dark:text-slate-900">Add</button></form>
+      <button type="submit" disabled={!value.trim() || categories.length >= 20} className="min-h-11 rounded-2xl bg-[#212121] px-4 text-xs font-bold text-white disabled:opacity-40 dark:bg-white dark:text-[#212121]">Add</button></form>
   </div>;
 }
 
 function PreferenceRow({ icon, title, description, checked, disabled, onChange }: { icon: string; title: string; description: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) {
-  return <label className={`flex min-h-16 items-center gap-3 p-4 sm:px-6 ${disabled ? 'opacity-45' : ''}`}>
-    <span className="material-symbols-outlined flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-900/60 dark:text-brand-300">{icon}</span>
-    <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-slate-900 dark:text-white">{title}</span><span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{description}</span></span>
-    <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} className="h-5 w-5 shrink-0 accent-emerald-600" />
+  return <label className={`flex min-h-16 items-center gap-3 p-4 sm:px-6 cursor-pointer hover:bg-[#f0f0f0]/50 dark:hover:bg-[#172435]/40 transition-colors ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}>
+    <span className="material-symbols-outlined flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]">{icon}</span>
+    <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-[#212121] dark:text-white">{title}</span><span className="mt-0.5 block text-xs text-[#808080] dark:text-[#94a3b8]">{description}</span></span>
+    <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} className="h-5 w-5 shrink-0 accent-[#3fc073] rounded cursor-pointer" />
   </label>;
 }

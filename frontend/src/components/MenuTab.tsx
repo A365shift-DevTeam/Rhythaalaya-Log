@@ -94,10 +94,10 @@ export const MenuTab: React.FC<MenuTabProps> = ({
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
       {/* Top Title */}
       <div>
-        <h2 className="font-heading text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+        <h2 className="font-heading text-2xl md:text-3xl font-bold text-[#212121] dark:text-white tracking-tight">
           Academy Settings
         </h2>
-        <p className="font-sans text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
+        <p className="font-sans text-xs md:text-sm text-[#808080] dark:text-[#94a3b8] mt-1">
           Configure organization profile, fee structure, appearance, and data backup
         </p>
       </div>
@@ -105,13 +105,13 @@ export const MenuTab: React.FC<MenuTabProps> = ({
       {/* Organization Section */}
       <section className="space-y-3">
         <div className="flex justify-between items-center px-1">
-          <h3 className="font-heading text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs">
+          <h3 className="font-heading text-xs font-bold text-[#808080] dark:text-[#94a3b8] uppercase tracking-wider">
             Studio Profile
           </h3>
           <button
             type="button"
             onClick={() => isEditingOrg ? setIsEditingOrg(false) : openEditOrg()}
-            className="min-h-11 rounded-xl px-2 text-xs font-bold text-brand-500 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/50 flex items-center gap-1"
+            className="min-h-10 rounded-2xl px-2.5 text-xs font-bold text-[#3fc073] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 flex items-center gap-1 transition-colors"
           >
             <span className="material-symbols-outlined text-[16px]">
               {isEditingOrg ? 'close' : 'edit'}
@@ -125,7 +125,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="org-name" className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
+                  <label htmlFor="org-name" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">
                     Studio / Academy Name
                   </label>
                   <input
@@ -133,11 +133,11 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                     type="text"
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-brand-200 dark:border-brand-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm font-semibold text-[#212121] dark:text-white focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] outline-none transition-all"
                   />
                 </div>
                 <div>
-                  <label htmlFor="org-type" className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
+                  <label htmlFor="org-type" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">
                     Category / Type
                   </label>
                   <input
@@ -145,56 +145,56 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                     type="text"
                     value={orgType}
                     onChange={(e) => setOrgType(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-brand-200 dark:border-brand-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
+                    className="w-full px-3.5 py-2.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm font-semibold text-[#212121] dark:text-white focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] outline-none transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Logo</label>
+                <label className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Logo</label>
                 <div className="flex items-center gap-3.5">
-                  <div className="w-16 h-16 rounded-xl overflow-hidden border border-brand-200 dark:border-brand-700 shrink-0 flex items-center justify-center bg-brand-50 dark:bg-brand-900/60">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden border border-[#dbdbdb] dark:border-[#243244] shrink-0 flex items-center justify-center bg-[#f0f0f0] dark:bg-[#0b1422]">
                     {orgLogoUrl
                       ? <img src={orgLogoUrl} alt="Logo preview" className="w-full h-full object-contain" />
-                      : <span className="material-symbols-outlined text-brand-400 text-2xl">image</span>}
+                      : <span className="material-symbols-outlined text-[#3fc073] text-2xl">image</span>}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <label className="min-h-11 inline-flex items-center gap-1.5 px-3.5 rounded-xl text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/60 hover:bg-brand-100 dark:hover:bg-brand-900 cursor-pointer transition-colors">
+                    <label className="min-h-11 inline-flex items-center gap-1.5 px-4 rounded-2xl text-xs font-bold text-[#3fc073] bg-[#e9f7ee] dark:bg-[#3fc073]/20 hover:bg-[#cbecd8] cursor-pointer transition-colors">
                       <span className="material-symbols-outlined text-[16px]">{logoProcessing ? 'progress_activity' : 'upload'}</span>
                       <span>{logoProcessing ? 'Processing…' : orgLogoUrl ? 'Change logo' : 'Upload logo'}</span>
                       <input type="file" accept="image/*" onChange={handleLogoChange} disabled={logoProcessing} className="hidden" />
                     </label>
                     {orgLogoUrl && (
                       <button type="button" onClick={() => setOrgLogoUrl('')} disabled={logoProcessing}
-                        className="min-h-11 px-3 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 disabled:opacity-50">
+                        className="min-h-11 px-3.5 rounded-2xl text-xs font-bold text-[#ef4444] hover:bg-rose-50 dark:hover:bg-rose-950/40 disabled:opacity-50">
                         Remove
                       </button>
                     )}
                   </div>
                 </div>
-                <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">PNG or JPG, up to 5MB — resized automatically.</p>
-                {logoError && <p className="mt-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">{logoError}</p>}
+                <p className="mt-1.5 text-xs text-[#808080] dark:text-[#94a3b8]">PNG or JPG, up to 5MB — resized automatically.</p>
+                {logoError && <p className="mt-1 text-xs font-semibold text-[#ef4444]">{logoError}</p>}
               </div>
 
               <button
                 type="button"
                 onClick={handleSaveOrg}
                 disabled={logoProcessing}
-                className="btn-brand min-h-11 px-5 py-2.5 rounded-xl text-xs font-bold disabled:opacity-50"
+                className="btn-brand min-h-11 px-5 py-2.5 rounded-2xl text-xs font-bold disabled:opacity-50"
               >
                 Save Profile
               </button>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
               <div className="p-4 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined">storefront</span>
                   </div>
                   <div>
-                    <div className="font-sans text-xs text-slate-400 font-medium">Academy Name</div>
-                    <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
+                    <div className="font-sans text-xs text-[#808080] font-medium">Academy Name</div>
+                    <div className="font-sans text-sm font-bold text-[#212121] dark:text-white">
                       {settings.name}
                     </div>
                   </div>
@@ -203,12 +203,12 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
               <div className="p-4 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined">category</span>
                   </div>
                   <div>
-                    <div className="font-sans text-xs text-slate-400 font-medium">Academy Type</div>
-                    <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
+                    <div className="font-sans text-xs text-[#808080] font-medium">Academy Type</div>
+                    <div className="font-sans text-sm font-bold text-[#212121] dark:text-white">
                       {settings.type}
                     </div>
                   </div>
@@ -217,20 +217,20 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
               <div className="p-4 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined">image</span>
                   </div>
                   <div>
-                    <div className="font-sans text-xs text-slate-400 font-medium">Logo</div>
-                    <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
+                    <div className="font-sans text-xs text-[#808080] font-medium">Logo</div>
+                    <div className="font-sans text-sm font-bold text-[#212121] dark:text-white">
                       {settings.logoUrl ? 'Active banner logo' : 'No logo uploaded yet'}
                     </div>
                   </div>
                 </div>
-                <div className="w-9 h-9 rounded-xl overflow-hidden border border-brand-200 dark:border-brand-700 shrink-0 flex items-center justify-center bg-brand-50 dark:bg-brand-900/60">
+                <div className="w-9 h-9 rounded-2xl overflow-hidden border border-[#dbdbdb] dark:border-[#243244] shrink-0 flex items-center justify-center bg-[#f0f0f0] dark:bg-[#0b1422]">
                   {settings.logoUrl
                     ? <img src={settings.logoUrl} alt="Logo" className="w-full h-full object-contain" />
-                    : <span className="material-symbols-outlined text-brand-400 text-[18px]">image</span>}
+                    : <span className="material-symbols-outlined text-[#3fc073] text-[18px]">image</span>}
                 </div>
               </div>
             </div>
@@ -240,20 +240,20 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
       {/* Appearance Section */}
       <section className="space-y-3">
-        <h3 className="font-heading text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs px-1">
+        <h3 className="font-heading text-xs font-bold text-[#808080] dark:text-[#94a3b8] uppercase tracking-wider px-1">
           Theme & Display
         </h3>
         <div className="premium-card">
           <div className="p-4 sm:px-6 flex items-center justify-between">
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined">dark_mode</span>
               </div>
               <div>
-                <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
+                <div className="font-sans text-sm font-bold text-[#212121] dark:text-white">
                   Dark Atmosphere
                 </div>
-                <div className="font-sans text-xs text-slate-500">
+                <div className="font-sans text-xs text-[#808080]">
                   Toggle dark mode interface
                 </div>
               </div>
@@ -266,7 +266,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 onChange={handleToggleDarkMode}
                 className="sr-only peer"
               />
-              <div className="relative w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500 peer-focus-visible:ring-offset-2 dark:peer-focus-visible:ring-offset-slate-900 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+              <div className="relative w-12 h-7 bg-[#dbdbdb] dark:bg-[#111c2b] peer-focus:outline-none peer-focus-visible:ring-4 peer-focus-visible:ring-[#4d999d]/25 rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:shadow-sm after:transition-all peer-checked:bg-[#64a85a]"></div>
             </label>
           </div>
         </div>
@@ -276,46 +276,46 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
       {/* Data Backup Section */}
       <section className="space-y-3">
-        <h3 className="font-heading text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs px-1">
+        <h3 className="font-heading text-xs font-bold text-[#808080] dark:text-[#94a3b8] uppercase tracking-wider px-1">
           Data Management
         </h3>
-        <div className="premium-card divide-y divide-slate-100 dark:divide-slate-800">
+        <div className="premium-card divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
           <button type="button"
             onClick={onExportData}
-            className="w-full p-4 sm:px-6 flex items-center justify-between text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"
+            className="w-full p-4 sm:px-6 flex items-center justify-between text-left hover:bg-[#f0f0f0]/70 dark:hover:bg-[#172435]/60 cursor-pointer transition-colors"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-[#22c55e] flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined">file_download</span>
               </div>
               <div>
-                <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
+                <div className="font-sans text-sm font-bold text-[#212121] dark:text-white">
                   Export Backup File
                 </div>
-                <div className="font-sans text-xs text-slate-500">
+                <div className="font-sans text-xs text-[#808080]">
                   Download local snapshot as JSON file
                 </div>
               </div>
             </div>
-            <span className="material-symbols-outlined text-slate-400">chevron_right</span>
+            <span className="material-symbols-outlined text-[#9e9e9e]">chevron_right</span>
           </button>
 
-          <label className="min-h-16 p-4 sm:px-6 flex items-center justify-between hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-brand-500">
+          <label className="min-h-16 p-4 sm:px-6 flex items-center justify-between hover:bg-[#f0f0f0]/70 dark:hover:bg-[#172435]/60 cursor-pointer transition-colors focus-within:ring-4 focus-within:ring-[#3fc073]/20">
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 text-brand-500 dark:text-brand-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined">file_upload</span>
               </div>
               <div>
-                <div className="font-sans text-sm font-bold text-slate-900 dark:text-white">
+                <div className="font-sans text-sm font-bold text-[#212121] dark:text-white">
                   Restore Data Backup
                 </div>
-                <div className="font-sans text-xs text-slate-500">
+                <div className="font-sans text-xs text-[#808080]">
                   Import existing JSON data file
                 </div>
               </div>
             </div>
             <input type="file" accept=".json" onChange={onImportData} className="hidden" />
-            <span className="material-symbols-outlined text-slate-400">chevron_right</span>
+            <span className="material-symbols-outlined text-[#9e9e9e]">chevron_right</span>
           </label>
         </div>
       </section>
