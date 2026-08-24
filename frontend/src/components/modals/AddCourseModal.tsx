@@ -3,6 +3,7 @@ import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { Course, FeeFrequency, FeeStructure, FEE_FREQUENCY_LABELS } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
+import { todayIsoDate as todayIso } from '../../lib/schedule';
 
 export interface NewCourseFee {
   name: string;
@@ -22,7 +23,6 @@ interface AddCourseModalProps {
   onUpdateFeeStructure: (structureId: string, payload: { name: string; effectiveTo?: string | null; isActive: boolean }) => Promise<void>;
 }
 
-const todayIso = () => new Date().toISOString().split('T')[0];
 
 export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   isOpen, onClose, editingCourse, feeStructures, onSave, onArchive, onAddFeeStructure, onUpdateFeeStructure

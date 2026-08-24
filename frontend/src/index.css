@@ -258,18 +258,22 @@
 }
 
 /* Primary Ambot365 action */
+/* Teal-to-green sweep kept, but both stops are dark enough to carry white text:
+   #2f6f72 is 5.77:1 and #1f7a4d is 5.32:1 against #ffffff (WCAG AA needs 4.5:1).
+   The previous #4d999d -> #64a85a pair measured 3.30:1 and 2.88:1 and failed. */
 .btn-brand {
-  background-color: #64a85a;
-  background-image: linear-gradient(to right, #4d999d 0%, #64a85a 100%);
+  background-color: #1f7a4d;
+  background-image: linear-gradient(to right, #2f6f72 0%, #1f7a4d 100%);
   color: #ffffff;
-  box-shadow: 0 4px 14px 0 rgba(77, 153, 157, 0.3);
+  box-shadow: 0 4px 14px 0 rgba(47, 111, 114, 0.3);
   border-radius: var(--radius-lg);
   transition: filter 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
 }
 
+/* brightness(1.05) leaves the lighter stop at 4.92:1, so hover still clears AA. */
 .btn-brand:hover {
   filter: brightness(1.05);
-  box-shadow: 0 6px 20px 0 rgba(77, 153, 157, 0.4);
+  box-shadow: 0 6px 20px 0 rgba(47, 111, 114, 0.4);
 }
 
 .btn-brand:active {
@@ -278,7 +282,7 @@
 }
 
 .btn-brand:focus-visible {
-  outline: 3px solid rgba(77, 153, 157, 0.55);
+  outline: 3px solid rgba(47, 111, 114, 0.65);
   outline-offset: 2px;
 }
 

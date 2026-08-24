@@ -3,6 +3,7 @@ import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { Batch, Course, Staff, WEEKDAY_LABELS, WEEKDAY_SHORT } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
+import { todayIsoDate } from '../../lib/schedule';
 
 interface AddBatchModalProps {
   isOpen: boolean;
@@ -43,7 +44,7 @@ export const AddBatchModal: React.FC<AddBatchModalProps> = ({ isOpen, onClose, c
     setDays(editingBatch?.days || []);
     setStartTime(editingBatch?.startTime?.slice(0, 5) || '17:00');
     setEndTime(editingBatch?.endTime?.slice(0, 5) || '18:00');
-    setStartDate(editingBatch?.startDate || new Date().toISOString().split('T')[0]);
+    setStartDate(editingBatch?.startDate || todayIsoDate());
     setEndDate(editingBatch?.endDate || '');
     setIsActive(editingBatch?.isActive ?? true);
     setError('');

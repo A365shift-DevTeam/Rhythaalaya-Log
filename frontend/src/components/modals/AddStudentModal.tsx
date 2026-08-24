@@ -3,6 +3,7 @@ import { JisIcon } from '../JisIcon';
 import React, { useEffect, useRef, useState } from 'react';
 import { Batch, Student } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
+import { todayIsoDate as todayIso } from '../../lib/schedule';
 
 const WIZARD_STEPS = ['Student', 'Contact', 'Batches', 'Review'];
 const LAST_STEP = WIZARD_STEPS.length - 1;
@@ -24,7 +25,6 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   editingStudent,
   batches,
 }) => {
-  const todayIso = () => new Date().toISOString().slice(0, 10);
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [joinDate, setJoinDate] = useState(todayIso());

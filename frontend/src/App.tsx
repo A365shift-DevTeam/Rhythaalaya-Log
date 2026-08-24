@@ -18,6 +18,7 @@ import {
   INITIAL_SETTINGS
 } from './data/mockData';
 import { ApiError, api, authStore, Session } from './api';
+import { todayIsoDate } from './lib/schedule';
 import { LoginPage } from './components/LoginPage';
 import { SuperAdminPage } from './components/SuperAdminPage';
 
@@ -132,8 +133,9 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   const handleAddStudent = async (payload: {
     name: string; dateOfBirth: string | null; joinDate: string; parentName: string; phone: string; email: string; address: string;
   }, batchIds: string[]) => {
-    const created = await api.createStudent(session.token, payload);
-    for (const targetBatchId of [...new Set(batchIds)]) await api.enrollStudent(session.token, created.id, targetBatchId);
+    // One request: the server writes the student and every enrollment in a single transaction,
+    // so a failure saves nothing and pressing Save again cannot create a duplicate student.
+    await api.createStudent(session.token, { ...payload, batchIds: [...new Set(batchIds)] });
     await reload();
   };
 
@@ -268,15 +270,10 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `rhythaalaya_backup_${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute('download', `rhythaalaya_backup_${todayIsoDate()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-  };
-
-  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.target.value = '';
-    setLoadError('Direct JSON import is disabled for tenant safety. Use the API migration workflow for bulk imports.');
   };
 
   const openRecordFee = (student?: Student) => { setFeeTargetStudent(student); setIsRecordFeeOpen(true); };
@@ -412,7 +409,6 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             settings={settings}
             setSettings={handleSettings}
             onExportData={handleExportData}
-            onImportData={handleImportData}
           />
         )}
         </div>

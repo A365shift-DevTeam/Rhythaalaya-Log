@@ -133,9 +133,11 @@ export const api = {
   // Students & enrollment
   students: (token: string) => request<any[]>('/students', {}, token).then(rows => rows.map(mapStudent)),
   student: (token: string, id: string) => request<any>('/students/' + id, {}, token).then(mapStudent),
+  // batchIds is enrolled server-side in the same transaction as the student, so a failure
+  // cannot leave a half-saved student behind for a retry to duplicate.
   createStudent: (token: string, body: {
     name: string; dateOfBirth?: string | null; parentName?: string; phone?: string; email?: string;
-    address?: string; joinDate?: string | null;
+    address?: string; joinDate?: string | null; batchIds?: string[];
   }) => request<any>('/students', { method: 'POST', body: JSON.stringify(body) }, token).then(mapStudent),
   updateStudent: (token: string, id: string, body: {
     name: string; dateOfBirth?: string | null; parentName?: string; phone?: string; email?: string;

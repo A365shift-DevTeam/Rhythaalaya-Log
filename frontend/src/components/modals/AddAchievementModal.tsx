@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Achievement, AchievementCategory } from '../../types';
 import { api } from '../../api';
 import { useDialogLifecycle } from './useDialogLifecycle';
+import { todayIsoDate as todayIso } from '../../lib/schedule';
 
 interface AddAchievementModalProps {
   isOpen: boolean;
@@ -23,7 +24,6 @@ const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const MAX_PDF_BYTES = 8 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
 
 export const AddAchievementModal: React.FC<AddAchievementModalProps> = ({
   isOpen, onClose, studentId, token, onCreated,

@@ -2,11 +2,14 @@ import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ApiError, api, Plan, Session, Tenant, TenantUser } from '../api';
+import { toIsoDate } from '../lib/schedule';
 
 const oneYearFromNow = () => {
   const date = new Date();
   date.setFullYear(date.getFullYear() + 1);
-  return date.toISOString().slice(0, 10);
+  // toIsoDate, not toISOString: the latter converts to UTC first and lands a day
+  // early for any timezone ahead of it.
+  return toIsoDate(date);
 };
 
 const formatDate = (value?: string) =>

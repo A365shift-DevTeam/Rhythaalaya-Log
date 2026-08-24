@@ -158,16 +158,32 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         var activeStudents = await db.Students.CountAsync(x => x.IsActive, ct);
         if (activeStudents >= subscription.Plan.MaxStudents)
             throw new ConflictException("Subscription student limit reached.");
+        // Resolve every batch before writing anything, so an unknown or archived batch fails the
+        // whole request instead of leaving a student saved with only some of their enrollments.
+        var batchIds = request.BatchIds?.Distinct().ToList() ?? [];
+        var batches = batchIds.Count == 0 ? [] : await db.Batches
+            .Where(x => batchIds.Contains(x.Id) && x.IsActive).ToListAsync(ct);
+        if (batches.Count != batchIds.Count) throw new AppValidationException(nameof(request.BatchIds));
+
+        var joinDate = request.JoinDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var student = new Student
         {
             TenantId = tenantId,
             StudentNumber = string.Concat("STU", DateTime.UtcNow.Year, Guid.NewGuid().ToString()[..8]).ToUpperInvariant(),
             Name = request.Name.Trim(), DateOfBirth = request.DateOfBirth, ParentName = Clean(request.ParentName),
             Phone = Clean(request.Phone), Email = Clean(request.Email), Address = Clean(request.Address),
-            JoinDate = request.JoinDate ?? DateOnly.FromDateTime(DateTime.UtcNow)
+            JoinDate = joinDate
         };
         db.Students.Add(student);
+        var enrollments = batches.Select(batch => new Enrollment
+        {
+            TenantId = tenantId, StudentId = student.Id, BatchId = batch.Id, CourseId = batch.CourseId,
+            EnrolledOn = joinDate
+        }).ToList();
+        db.Enrollments.AddRange(enrollments);
+        // One SaveChanges, so EF wraps the student and every enrollment in a single transaction.
         await db.SaveChangesAsync(ct);
+        foreach (var enrollment in enrollments) await dueGenerator.EnsureForEnrollmentAsync(enrollment.Id, ct);
         return await GetStudentAsync(student.Id, ct);
     }
 

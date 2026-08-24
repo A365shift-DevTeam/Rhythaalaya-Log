@@ -13,8 +13,11 @@ public sealed record CreateBatchRequest(string Name, Guid CourseId, Guid StaffId
 public sealed record UpdateBatchRequest(string Name, Guid CourseId, Guid StaffId, IReadOnlyList<DayOfWeek> Days,
     TimeOnly StartTime, TimeOnly EndTime, DateOnly StartDate, DateOnly? EndDate, bool IsActive);
 
+// BatchIds lets the student and their enrollments be written in one transaction. Creating the
+// student first and then enrolling in a loop meant a failure halfway left a half-saved student,
+// and retrying the save created a duplicate.
 public sealed record CreateStudentRequest(string Name, DateOnly? DateOfBirth, string? ParentName, string? Phone,
-    string? Email, string? Address, DateOnly? JoinDate);
+    string? Email, string? Address, DateOnly? JoinDate, IReadOnlyList<Guid>? BatchIds = null);
 public sealed record UpdateStudentRequest(string Name, DateOnly? DateOfBirth, string? ParentName, string? Phone,
     string? Email, string? Address, DateOnly? JoinDate, bool IsActive);
 

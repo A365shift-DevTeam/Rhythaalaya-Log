@@ -9,7 +9,6 @@ interface MenuTabProps {
   settings: OrgSettings;
   setSettings: React.Dispatch<React.SetStateAction<OrgSettings>>;
   onExportData: () => void;
-  onImportData: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 const MAX_LOGO_DIMENSION = 320;
@@ -43,8 +42,7 @@ function resizeLogoFile(file: File): Promise<string> {
 export const MenuTab: React.FC<MenuTabProps> = ({
   settings,
   setSettings,
-  onExportData,
-  onImportData
+  onExportData
 }) => {
   const [isEditingOrg, setIsEditingOrg] = useState(false);
   const [orgName, setOrgName] = useState(settings.name);
@@ -300,23 +298,23 @@ export const MenuTab: React.FC<MenuTabProps> = ({
             <JisIcon className="text-[#9e9e9e]">chevron_right</JisIcon>
           </Button>
 
-          <label className="min-h-16 p-4 sm:px-6 flex items-center justify-between hover:bg-[#f0f0f0]/70 dark:hover:bg-[#172435]/60 cursor-pointer transition-colors focus-within:ring-4 focus-within:ring-[#3fc073]/20">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center shrink-0">
-                <JisIcon className="">file_upload</JisIcon>
+          {/* Restore is not self-serve: it used to open a file picker and then reject every
+              file. Say so up front rather than letting anyone pick a backup that goes nowhere. */}
+          <div className="min-h-16 p-4 sm:px-6 flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-[#f0f0f0] dark:bg-[#172435] text-[#6b6b6b] dark:text-[#94a3b8] flex items-center justify-center shrink-0">
+              <JisIcon className="">lock</JisIcon>
+            </div>
+            <div>
+              <div className="font-sans text-sm font-bold text-[#6b6b6b] dark:text-[#94a3b8]">
+                Restoring a backup
               </div>
-              <div>
-                <div className="font-sans text-sm font-bold text-[#212121] dark:text-white">
-                  Restore Data Backup
-                </div>
-                <div className="font-sans text-xs text-[#808080]">
-                  Import existing JSON data file
-                </div>
+              <div className="font-sans text-xs text-[#6b6b6b] dark:text-[#94a3b8]">
+                Uploading a backup file here is not supported. Contact support to restore an
+                academy from a snapshot — they run it through the migration workflow so existing
+                records are not overwritten.
               </div>
             </div>
-            <input type="file" accept=".json" onChange={onImportData} className="hidden" />
-            <JisIcon className="text-[#9e9e9e]">chevron_right</JisIcon>
-          </label>
+          </div>
         </div>
       </section>
     </div>
