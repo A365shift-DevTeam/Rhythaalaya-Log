@@ -1,8 +1,11 @@
 import { Button } from '../ui/button';
 import { JisIcon } from '../JisIcon';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Batch, Student } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
+
+const WIZARD_STEPS = ['Student', 'Contact', 'Batches', 'Review'];
+const LAST_STEP = WIZARD_STEPS.length - 1;
 
 interface AddStudentModalProps {
   isOpen: boolean;
@@ -30,9 +33,15 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
+  const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const dialogRef = useDialogLifecycle(isOpen, onClose);
+  const panelHeadingRef = useRef<HTMLHeadingElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const hasNavigatedRef = useRef(false);
+
+  const isWizard = !editingStudent;
 
   useEffect(() => {
     if (editingStudent) {
@@ -54,14 +63,27 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       setAddress('');
       setSelectedBatchIds([]);
     }
+    setStep(0);
+    hasNavigatedRef.current = false;
     setError('');
     setSubmitting(false);
   }, [editingStudent, isOpen]);
+
+  // Announce each wizard step: the name field on first open, the panel heading thereafter.
+  useEffect(() => {
+    if (!isOpen || !isWizard) return;
+    if (hasNavigatedRef.current) {
+      panelHeadingRef.current?.focus();
+    } else {
+      nameInputRef.current?.focus();
+    }
+  }, [step, isOpen, isWizard]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (isWizard && step < LAST_STEP) return;
     if (!name.trim()) { setError('Student name is required.'); return; }
     setSubmitting(true);
     setError('');
@@ -98,6 +120,101 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       : [...previous, targetBatchId]);
   };
 
+  const goToStep = (targetStep: number) => {
+    hasNavigatedRef.current = true;
+    setStep(targetStep);
+  };
+  const canLeaveFirstStep = name.trim() !== '' && joinDate !== '';
+  const selectedBatches = editableBatches.filter((batch) => selectedBatchIds.includes(batch.id));
+
+  const nameField = (
+    <div className="sm:col-span-2">
+      <label htmlFor="student-name" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">
+        Student name <span className="text-[#ef4444]" aria-hidden="true">*</span>
+      </label>
+      <input id="student-name" ref={nameInputRef} type="text" required autoFocus={!isWizard} autoComplete="name" placeholder="Enter the student's full name"
+        value={name} onChange={(event) => setName(event.target.value)}
+        className="settings-input" />
+    </div>
+  );
+  const dateOfBirthField = (
+    <div>
+      <label htmlFor="student-dob" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Date of birth</label>
+      <input id="student-dob" type="date" value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)}
+        className="settings-input" />
+    </div>
+  );
+  const joinDateField = (
+    <div>
+      <label htmlFor="student-join-date" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">
+        Date of joining <span className="text-[#ef4444]" aria-hidden="true">*</span>
+      </label>
+      <input id="student-join-date" type="date" required value={joinDate} onChange={(event) => setJoinDate(event.target.value)}
+        className="settings-input" />
+    </div>
+  );
+  const parentNameField = (
+    <div>
+      <label htmlFor="student-parent" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Parent / guardian name</label>
+      <input id="student-parent" type="text" placeholder="e.g. Anita Sharma" value={parentName}
+        onChange={(event) => setParentName(event.target.value)}
+        className="settings-input" />
+    </div>
+  );
+  const phoneField = (
+    <div>
+      <label htmlFor="student-phone" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Phone number</label>
+      <input id="student-phone" type="tel" autoComplete="tel" placeholder="e.g. +91 98765 43210" value={phone}
+        onChange={(event) => setPhone(event.target.value)}
+        className="settings-input" />
+    </div>
+  );
+  const emailField = (
+    <div>
+      <label htmlFor="student-email" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Email address</label>
+      <input id="student-email" type="email" autoComplete="email" placeholder="student@example.com" value={email}
+        onChange={(event) => setEmail(event.target.value)}
+        className="settings-input" />
+    </div>
+  );
+  const addressField = (
+    <div className="sm:col-span-2">
+      <label htmlFor="student-address" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Address</label>
+      <textarea id="student-address" rows={2} placeholder="Street, city, postal code" value={address}
+        onChange={(event) => setAddress(event.target.value)}
+        className="w-full px-3.5 py-2.5 bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm text-[#212121] dark:text-white outline-none focus:border-[#3fc073] focus:ring-4 focus:ring-[#3fc073]/15" />
+    </div>
+  );
+
+  const batchPicker = editableBatches.length === 0 ? (
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-[#f59e0b] dark:border-amber-900/60 dark:bg-amber-950/40" role="alert">
+      {editingStudent
+        ? 'No active batches are available. Create a batch before assigning this student.'
+        : 'No active batches yet. You can save the student now and enroll them from the Students tab once a batch exists.'}
+    </div>
+  ) : (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+      {editableBatches.map((batch) => {
+        const isSelected = selectedBatchIds.includes(batch.id);
+        return (
+          <label key={batch.id} className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition-all ${isSelected
+            ? 'border-[#3fc073] bg-[#f4fbf7] dark:border-[#3fc073] dark:bg-[#07111f]/50'
+            : 'border-[#dbdbdb] bg-[#f0f0f0] hover:border-[#3fc073]/50 dark:border-[#243244] dark:bg-[#111c2b]'}`}>
+            <input type="checkbox" checked={isSelected} onChange={() => toggleBatch(batch.id)} className="h-4 w-4 shrink-0 accent-[#3fc073] rounded" />
+            <span className="min-w-0">
+              <span className="block truncate text-xs font-bold text-[#212121] dark:text-white">{batch.name}</span>
+              <span className="block truncate text-xs text-[#808080] dark:text-[#94a3b8]">{batch.courseName}{!batch.isActive ? ' - Inactive' : ''}</span>
+            </span>
+          </label>
+        );
+      })}
+    </div>
+  );
+
+  const errorBanner = error
+    ? <div role="alert" className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-[#ef4444] text-xs font-bold">{error}</div>
+    : null;
+
   return (
     <div
       ref={dialogRef}
@@ -112,7 +229,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
           <div className="pr-10">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#3fc073]">
               <JisIcon className="text-[16px]">{editingStudent ? 'edit' : 'person_add'}</JisIcon>
-              {editingStudent ? 'Edit student' : 'New student'}
+              {editingStudent ? 'Edit student' : `Step ${step + 1} of ${WIZARD_STEPS.length}`}
             </span>
             <h3 id="add-student-title" className="font-heading text-xl sm:text-2xl font-bold text-[#212121] dark:text-white mt-1">
               {editingStudent ? editingStudent.name : 'Enroll a student'}
@@ -131,125 +248,213 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(92dvh-118px)]">
-          <div className="p-5 sm:p-7 space-y-6">
-            <section aria-labelledby="student-information-heading">
-              {!editingStudent && (
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="w-7 h-7 rounded-full bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20 inline-flex items-center justify-center text-xs font-bold">1</span>
-                  <h4 id="student-information-heading" className="font-heading text-sm font-bold text-[#212121] dark:text-white">Student details</h4>
-                </div>
+        {isWizard && <StepIndicator current={step} onStepClick={goToStep} />}
+
+        <form onSubmit={handleSubmit} className={`overflow-y-auto ${isWizard ? 'max-h-[calc(92dvh-186px)]' : 'max-h-[calc(92dvh-118px)]'}`}>
+          {isWizard ? (
+            <div className="p-5 sm:p-7 space-y-6" role="group" aria-labelledby="student-step-heading">
+              {step === 0 && (
+                <section>
+                  <StepHeading headingRef={panelHeadingRef} title="Student details" hint="Who is joining, and when did they start?" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {nameField}
+                    {dateOfBirthField}
+                    {joinDateField}
+                  </div>
+                </section>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label htmlFor="student-name" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">
-                    Student name <span className="text-[#ef4444]" aria-hidden="true">*</span>
-                  </label>
-                  <input id="student-name" type="text" required autoFocus autoComplete="name" placeholder="Enter the student's full name"
-                    value={name} onChange={(event) => setName(event.target.value)}
-                    className="settings-input" />
-                </div>
-                <div>
-                  <label htmlFor="student-dob" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Date of birth</label>
-                  <input id="student-dob" type="date" value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)}
-                    className="settings-input" />
-                </div>
-                <div>
-                  <label htmlFor="student-join-date" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">
-                    Date of joining <span className="text-[#ef4444]" aria-hidden="true">*</span>
-                  </label>
-                  <input id="student-join-date" type="date" required value={joinDate} onChange={(event) => setJoinDate(event.target.value)}
-                    className="settings-input" />
-                </div>
-                <div>
-                  <label htmlFor="student-parent" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Parent / guardian name</label>
-                  <input id="student-parent" type="text" placeholder="e.g. Anita Sharma" value={parentName}
-                    onChange={(event) => setParentName(event.target.value)}
-                    className="settings-input" />
-                </div>
-                <div>
-                  <label htmlFor="student-phone" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Phone number</label>
-                  <input id="student-phone" type="tel" autoComplete="tel" placeholder="e.g. +91 98765 43210" value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                    className="settings-input" />
-                </div>
-                <div>
-                  <label htmlFor="student-email" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Email address</label>
-                  <input id="student-email" type="email" autoComplete="email" placeholder="student@example.com" value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    className="settings-input" />
-                </div>
-                <div className="sm:col-span-2">
-                  <label htmlFor="student-address" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Address</label>
-                  <textarea id="student-address" rows={2} placeholder="Street, city, postal code" value={address}
-                    onChange={(event) => setAddress(event.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm text-[#212121] dark:text-white outline-none focus:border-[#3fc073] focus:ring-4 focus:ring-[#3fc073]/15" />
-                </div>
-              </div>
-            </section>
+              {step === 1 && (
+                <section>
+                  <StepHeading headingRef={panelHeadingRef} title="Contact details" hint="All optional — you can fill these in later." />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {parentNameField}
+                    {phoneField}
+                    {emailField}
+                    {addressField}
+                  </div>
+                </section>
+              )}
 
-            <div className="h-px bg-[#dbdbdb]/60 dark:bg-[#111c2b]" />
+              {step === 2 && (
+                <section>
+                  <StepHeading headingRef={panelHeadingRef} title="Enroll in batches" hint="Select every batch this student should attend. Optional." />
+                  {batchPicker}
+                </section>
+              )}
 
-            <section aria-labelledby="batch-enrollment-heading">
-              <div className="flex items-center gap-3 mb-4">
-                {editingStudent ? (
+              {step === 3 && (
+                <section>
+                  <StepHeading headingRef={panelHeadingRef} title="Review" hint="Check everything below before saving." />
+                  <div className="space-y-3">
+                    <ReviewGroup title="Student" onEdit={() => goToStep(0)}>
+                      <ReviewRow label="Student name" value={name.trim()} />
+                      <ReviewRow label="Date of birth" value={formatDate(dateOfBirth)} />
+                      <ReviewRow label="Date of joining" value={formatDate(joinDate)} />
+                    </ReviewGroup>
+                    <ReviewGroup title="Contact" onEdit={() => goToStep(1)}>
+                      <ReviewRow label="Parent / guardian" value={parentName.trim()} />
+                      <ReviewRow label="Phone number" value={phone.trim()} />
+                      <ReviewRow label="Email address" value={email.trim()} />
+                      <ReviewRow label="Address" value={address.trim()} />
+                    </ReviewGroup>
+                    <ReviewGroup title="Batches" onEdit={() => goToStep(2)}>
+                      <ReviewRow
+                        label={selectedBatches.length === 1 ? 'Batch' : 'Batches'}
+                        value={selectedBatches.map((batch) => batch.name).join(', ')}
+                        emptyText="None selected"
+                      />
+                    </ReviewGroup>
+                  </div>
+                </section>
+              )}
+
+              {errorBanner}
+            </div>
+          ) : (
+            <div className="p-5 sm:p-7 space-y-6">
+              <section>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {nameField}
+                  {dateOfBirthField}
+                  {joinDateField}
+                  {parentNameField}
+                  {phoneField}
+                  {emailField}
+                  {addressField}
+                </div>
+              </section>
+
+              <div className="h-px bg-[#dbdbdb]/60 dark:bg-[#111c2b]" />
+
+              <section aria-labelledby="batch-enrollment-heading">
+                <div className="flex items-center gap-3 mb-4">
                   <span className="w-8 h-8 rounded-2xl bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20 inline-flex items-center justify-center">
                     <JisIcon className="text-[18px]">calendar_view_week</JisIcon>
                   </span>
-                ) : (
-                  <span className="w-7 h-7 rounded-full bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20 inline-flex items-center justify-center text-xs font-bold">2</span>
-                )}
-                <div>
-                  <h4 id="batch-enrollment-heading" className="font-heading text-sm font-bold text-[#212121] dark:text-white">
-                    {editingStudent ? 'Batch enrollment' : 'Enroll in batches (optional)'}
-                  </h4>
-                  <p className="text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">Select every batch this student should attend.</p>
+                  <div>
+                    <h4 id="batch-enrollment-heading" className="font-heading text-sm font-bold text-[#212121] dark:text-white">Batch enrollment</h4>
+                    <p className="text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">Select every batch this student should attend.</p>
+                  </div>
                 </div>
-              </div>
+                {batchPicker}
+              </section>
 
-              {editableBatches.length === 0 ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-[#f59e0b] dark:border-amber-900/60 dark:bg-amber-950/40" role="alert">
-                  {editingStudent
-                    ? 'No active batches are available. Create a batch before assigning this student.'
-                    : 'No active batches yet. You can save the student now and enroll them from the Students tab once a batch exists.'}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {editableBatches.map((batch) => {
-                    const isSelected = selectedBatchIds.includes(batch.id);
-                    return (
-                      <label key={batch.id} className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition-all ${isSelected
-                        ? 'border-[#3fc073] bg-[#f4fbf7] dark:border-[#3fc073] dark:bg-[#07111f]/50'
-                        : 'border-[#dbdbdb] bg-[#f0f0f0] hover:border-[#3fc073]/50 dark:border-[#243244] dark:bg-[#111c2b]'}`}>
-                        <input type="checkbox" checked={isSelected} onChange={() => toggleBatch(batch.id)} className="h-4 w-4 shrink-0 accent-[#3fc073] rounded" />
-                        <span className="min-w-0">
-                          <span className="block truncate text-xs font-bold text-[#212121] dark:text-white">{batch.name}</span>
-                          <span className="block truncate text-xs text-[#808080] dark:text-[#94a3b8]">{batch.courseName}{!batch.isActive ? ' - Inactive' : ''}</span>
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-
-            {error && <div role="alert" className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-[#ef4444] text-xs font-bold">{error}</div>}
-          </div>
+              {errorBanner}
+            </div>
+          )}
 
           <div className="sticky bottom-0 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 px-5 sm:px-7 py-4 bg-white/95 dark:bg-[#0b1422]/95 backdrop-blur border-t border-[#dbdbdb]/60 dark:border-[#243244]">
             <Button type="button" onClick={onClose} disabled={submitting}
               className="min-h-11 px-5 rounded-2xl text-sm font-semibold text-[#575757] dark:text-[#cbd5e1] hover:bg-[#f0f0f0] dark:hover:bg-[#172435]">
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting || !name.trim()}
-              className="btn-brand min-h-11 px-6 rounded-2xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-45">
-              <JisIcon className="text-[18px]">check_circle</JisIcon>
-              {submitting ? 'Saving…' : editingStudent ? 'Save changes' : 'Save student'}
-            </Button>
+            {isWizard && step > 0 && (
+              <Button type="button" onClick={() => goToStep(step - 1)} disabled={submitting}
+                className="min-h-11 px-5 rounded-2xl text-sm font-semibold text-[#575757] dark:text-[#cbd5e1] border border-[#dbdbdb] dark:border-[#243244] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] inline-flex items-center justify-center gap-1.5">
+                <JisIcon className="text-[18px]">arrow_back</JisIcon>
+                Back
+              </Button>
+            )}
+            {isWizard && step < LAST_STEP ? (
+              <Button type="button" onClick={() => goToStep(step + 1)} disabled={step === 0 && !canLeaveFirstStep}
+                className="btn-brand min-h-11 px-6 rounded-2xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-45">
+                Next
+                <JisIcon className="text-[18px]">arrow_forward</JisIcon>
+              </Button>
+            ) : (
+              <Button type="submit" disabled={submitting || !name.trim()}
+                className="btn-brand min-h-11 px-6 rounded-2xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-45">
+                <JisIcon className="text-[18px]">check_circle</JisIcon>
+                {submitting ? 'Saving…' : editingStudent ? 'Save changes' : 'Save student'}
+              </Button>
+            )}
           </div>
         </form>
       </div>
     </div>
   );
 };
+
+function formatDate(iso: string) {
+  if (!iso) return '';
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return iso;
+  return parsed.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function StepIndicator({ current, onStepClick }: { current: number; onStepClick: (step: number) => void }) {
+  return (
+    <ol className="flex items-center gap-1 px-5 sm:px-7 py-3.5 border-b border-[#dbdbdb]/60 dark:border-[#243244]">
+      {WIZARD_STEPS.map((label, index) => {
+        const isDone = index < current;
+        const isCurrent = index === current;
+        return (
+          <li key={label} className={`flex items-center gap-1.5 ${index === LAST_STEP ? '' : 'flex-1'}`}>
+            <Button
+              type="button"
+              onClick={() => onStepClick(index)}
+              disabled={index > current}
+              aria-current={isCurrent ? 'step' : undefined}
+              className={`flex items-center gap-2 rounded-2xl px-1.5 py-1 transition-all disabled:cursor-default ${index <= current ? 'hover:bg-[#f0f0f0] dark:hover:bg-[#172435]' : ''}`}
+            >
+              <span className={`w-6 h-6 shrink-0 rounded-full inline-flex items-center justify-center text-xs font-bold transition-colors ${isCurrent
+                ? 'bg-[#3fc073] text-white'
+                : isDone
+                  ? 'bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20'
+                  : 'bg-[#f0f0f0] text-[#808080] dark:bg-[#111c2b] dark:text-[#94a3b8]'}`}>
+                {isDone ? <JisIcon className="text-[14px]">check</JisIcon> : index + 1}
+              </span>
+              <span className={`hidden sm:block text-xs font-bold whitespace-nowrap ${isCurrent
+                ? 'text-[#212121] dark:text-white'
+                : 'text-[#808080] dark:text-[#94a3b8]'}`}>
+                {label}
+              </span>
+            </Button>
+            {index < LAST_STEP && (
+              <span aria-hidden="true" className={`h-0.5 flex-1 rounded-full ${isDone ? 'bg-[#3fc073]' : 'bg-[#dbdbdb] dark:bg-[#243244]'}`} />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function StepHeading({ headingRef, title, hint }: { headingRef: React.RefObject<HTMLHeadingElement>; title: string; hint: string }) {
+  return (
+    <div className="mb-4">
+      <h4 id="student-step-heading" ref={headingRef} tabIndex={-1} className="font-heading text-sm font-bold text-[#212121] dark:text-white outline-none">{title}</h4>
+      <p className="text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">{hint}</p>
+    </div>
+  );
+}
+
+function ReviewGroup({ title, onEdit, children }: { title: string; onEdit: () => void; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-[#dbdbdb] bg-[#f0f0f0] px-4 py-3.5 dark:border-[#243244] dark:bg-[#111c2b]">
+      <div className="flex items-center justify-between gap-3 mb-2.5">
+        <h5 className="text-xs font-bold uppercase tracking-[0.14em] text-[#808080] dark:text-[#94a3b8]">{title}</h5>
+        <Button type="button" onClick={onEdit}
+          className="inline-flex items-center gap-1 rounded-2xl px-2 py-1 text-xs font-bold text-[#3fc073] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20">
+          <JisIcon className="text-[15px]">edit</JisIcon>
+          Edit
+        </Button>
+      </div>
+      <dl className="space-y-1.5">{children}</dl>
+    </div>
+  );
+}
+
+function ReviewRow({ label, value, emptyText = 'Not provided' }: { label: string; value: string; emptyText?: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="shrink-0 text-xs text-[#808080] dark:text-[#94a3b8]">{label}</dt>
+      <dd className={`min-w-0 text-right text-xs font-bold break-words ${value
+        ? 'text-[#212121] dark:text-white'
+        : 'text-[#808080] font-semibold italic dark:text-[#94a3b8]'}`}>
+        {value || emptyText}
+      </dd>
+    </div>
+  );
+}

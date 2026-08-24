@@ -1,5 +1,27 @@
 import { useEffect, useRef } from 'react';
 
+// Dialog lifetimes overlap (a receipt opens while Record fee is still closing, an
+// achievement dialog nests inside student details), so each dialog cannot snapshot and
+// restore body overflow on its own — the later one would restore the earlier one's
+// 'hidden' and lock the page for good. Count the locks instead and only release on the last.
+let scrollLockCount = 0;
+let overflowBeforeLock = '';
+
+function lockBodyScroll() {
+  if (scrollLockCount === 0) {
+    overflowBeforeLock = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
+  scrollLockCount += 1;
+}
+
+function unlockBodyScroll() {
+  scrollLockCount = Math.max(0, scrollLockCount - 1);
+  if (scrollLockCount === 0) {
+    document.body.style.overflow = overflowBeforeLock;
+  }
+}
+
 const focusableSelector = [
   'a[href]',
   'button:not([disabled])',
@@ -23,8 +45,7 @@ export function useDialogLifecycle(isOpen: boolean, onClose: () => void) {
     const previouslyFocused = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    lockBodyScroll();
 
     const frame = window.requestAnimationFrame(() => {
       const firstField = dialogRef.current?.querySelector<HTMLElement>(focusableSelector);
@@ -64,7 +85,7 @@ export function useDialogLifecycle(isOpen: boolean, onClose: () => void) {
     return () => {
       window.cancelAnimationFrame(frame);
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = previousOverflow;
+      unlockBodyScroll();
       previouslyFocused?.focus();
     };
   }, [isOpen]);
