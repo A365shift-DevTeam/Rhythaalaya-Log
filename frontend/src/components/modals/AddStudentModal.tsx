@@ -33,6 +33,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
+  const [batchMenuOpen, setBatchMenuOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -40,8 +41,42 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   const panelHeadingRef = useRef<HTMLHeadingElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const hasNavigatedRef = useRef(false);
+  const batchMenuRef = useRef<HTMLDivElement>(null);
+  const batchPanelRef = useRef<HTMLDivElement>(null);
 
   const isWizard = !editingStudent;
+
+  // Dismiss the batch menu on an outside press, and on Escape before the dialog sees it.
+  useEffect(() => {
+    if (!batchMenuOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!batchMenuRef.current?.contains(event.target as Node)) setBatchMenuOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      event.preventDefault();
+      setBatchMenuOpen(false);
+      document.getElementById('batch-picker-trigger')?.focus();
+    };
+
+    // The panel is absolutely positioned inside the modal's scroller, so nudge it into
+    // view — otherwise it can open below the fold with nothing prompting a scroll.
+    const frame = window.requestAnimationFrame(() =>
+      batchPanelRef.current?.scrollIntoView({ block: 'nearest' }));
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [batchMenuOpen]);
+
+  // A menu left hanging open across a step change or a reopen is just a stray popover.
+  useEffect(() => { setBatchMenuOpen(false); }, [step, isOpen]);
 
   useEffect(() => {
     if (editingStudent) {
@@ -193,21 +228,58 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
         : 'No active batches yet. You can save the student now and enroll them from the Students tab once a batch exists.'}
     </div>
   ) : (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-      {editableBatches.map((batch) => {
-        const isSelected = selectedBatchIds.includes(batch.id);
-        return (
-          <label key={batch.id} className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition-all ${isSelected
-            ? 'border-[#3fc073] bg-[#f4fbf7] dark:border-[#3fc073] dark:bg-[#07111f]/50'
-            : 'border-[#dbdbdb] bg-[#f0f0f0] hover:border-[#3fc073]/50 dark:border-[#243244] dark:bg-[#111c2b]'}`}>
-            <input type="checkbox" checked={isSelected} onChange={() => toggleBatch(batch.id)} className="h-4 w-4 shrink-0 accent-[#3fc073] rounded" />
-            <span className="min-w-0">
-              <span className="block truncate text-xs font-bold text-[#212121] dark:text-white">{batch.name}</span>
-              <span className="block truncate text-xs text-[#808080] dark:text-[#94a3b8]">{batch.courseName}{!batch.isActive ? ' - Inactive' : ''}</span>
-            </span>
-          </label>
-        );
-      })}
+    <div className="relative" ref={batchMenuRef}>
+      <button
+        type="button"
+        id="batch-picker-trigger"
+        onClick={() => setBatchMenuOpen((open) => !open)}
+        aria-haspopup="listbox"
+        aria-expanded={batchMenuOpen}
+        className={`flex min-h-11 w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left text-sm font-medium text-[#212121] outline-none transition-all dark:text-[#e2e8f0] ${batchMenuOpen
+          ? 'border-[#3fc073] bg-white ring-4 ring-[#3fc073]/15 dark:border-[#4d999d] dark:bg-[#0b1422]'
+          : 'border-[#dbdbdb] bg-[#f0f0f0] hover:border-[#3fc073]/50 dark:border-[#243244] dark:bg-[#111c2b]'}`}
+      >
+        <JisIcon className="text-[#9e9e9e] text-[20px] shrink-0">groups</JisIcon>
+        <span className={`min-w-0 flex-1 truncate ${selectedBatches.length === 0 ? 'text-[#9e9e9e] dark:text-[#64748b]' : ''}`}>
+          {selectedBatches.length === 0 ? 'Select batches' : selectedBatches.map((batch) => batch.name).join(', ')}
+        </span>
+        {selectedBatches.length > 0 && (
+          <span className="shrink-0 rounded-full bg-[#e9f7ee] px-2 py-0.5 text-xs font-bold text-[#35a160] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]">
+            {selectedBatches.length}
+          </span>
+        )}
+        <JisIcon className={`text-[#9e9e9e] text-[20px] shrink-0 transition-transform ${batchMenuOpen ? 'rotate-180' : ''}`}>expand_more</JisIcon>
+      </button>
+
+      {batchMenuOpen && (
+        <div
+          ref={batchPanelRef}
+          role="listbox"
+          aria-multiselectable="true"
+          aria-labelledby="batch-picker-trigger"
+          className="absolute left-0 right-0 top-full z-10 mt-1.5 max-h-60 overflow-y-auto rounded-2xl border border-[#dbdbdb] bg-white p-1.5 shadow-2xl dark:border-[#243244] dark:bg-[#0b1422]"
+        >
+          {editableBatches.map((batch) => {
+            const isSelected = selectedBatchIds.includes(batch.id);
+            return (
+              <label
+                key={batch.id}
+                role="option"
+                aria-selected={isSelected}
+                className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition-all ${isSelected
+                  ? 'border-[#3fc073] bg-[#f4fbf7] dark:border-[#3fc073] dark:bg-[#07111f]/50'
+                  : 'border-transparent hover:border-[#3fc073]/50 hover:bg-[#f0f0f0] dark:hover:bg-[#111c2b]'}`}
+              >
+                <input type="checkbox" checked={isSelected} onChange={() => toggleBatch(batch.id)} className="h-4 w-4 shrink-0 accent-[#3fc073] rounded" />
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-bold text-[#212121] dark:text-white">{batch.name}</span>
+                  <span className="block truncate text-xs text-[#808080] dark:text-[#94a3b8]">{batch.courseName}{!batch.isActive ? ' - Inactive' : ''}</span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 
