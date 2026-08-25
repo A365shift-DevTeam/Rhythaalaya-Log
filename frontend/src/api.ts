@@ -1,5 +1,5 @@
-import { Achievement, AchievementCategory, Batch, Course, FeeDue, FeeDueStatus, FeeFrequency, FeePayment,
-  FeeStructure, OrgSettings, PaymentMethod, Receipt, Staff, Student, Transaction } from './types';
+import { Achievement, AchievementCategory, Batch, Course, FeeAdjustment, FeeAdjustmentType, FeeDue, FeeDueStatus,
+  FeeFrequency, FeePayment, FeeStructure, OrgSettings, PaymentMethod, Receipt, Staff, Student, Transaction } from './types';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5101/api').replace(/\/$/, '');
 const SESSION_KEY = 'rhythaalaya_session';
@@ -206,8 +206,17 @@ export const api = {
     request<any[]>(`/finance/students/${studentId}/payments`, {}, token).then(rows => rows.map(mapFeePayment)),
   recordPayment: (token: string, body: {
     studentId: string; feeDueId?: string | null; amount: number; method: PaymentMethod;
-    referenceNumber?: string; remarks?: string; paymentDate?: string | null;
+    referenceNumber?: string; remarks?: string; paymentDate?: string | null; idempotencyKey?: string;
   }) => request<any>('/finance/payments', { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeePayment),
+  dueAdjustments: (token: string, dueId: string) =>
+    request<any[]>(`/finance/dues/${dueId}/adjustments`, {}, token).then(rows => rows.map(mapFeeAdjustment)),
+  addDueAdjustment: (token: string, dueId: string, body: { type: FeeAdjustmentType; amount: number; reason: string }) =>
+    request<any>(`/finance/dues/${dueId}/adjustments`, { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeeDue),
+  cancelDue: (token: string, dueId: string, reason: string) =>
+    request<any>(`/finance/dues/${dueId}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) }, token).then(mapFeeDue),
+  createCustomDue: (token: string, body: {
+    studentId: string; enrollmentId: string; title: string; amount: number; dueDate: string;
+  }) => request<any>('/finance/dues/custom', { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeeDue),
   refundPayment: (token: string, paymentId: string, body: { amount?: number | null; remarks?: string }) =>
     request<any>(`/finance/payments/${paymentId}/refund`, { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeePayment),
   receipt: (token: string, paymentId: string) =>
@@ -249,7 +258,9 @@ export const api = {
       notificationsEnabled: settings.notifications.enabled,
       feeReminderNotifications: settings.notifications.feeReminders,
       paymentNotifications: settings.notifications.paymentUpdates,
-      attendanceNotifications: settings.notifications.attendanceAlerts
+      attendanceNotifications: settings.notifications.attendanceAlerts,
+      feeDueLeadDays: settings.feeDueLeadDays,
+      lateEnrollmentBillingPolicy: settings.lateEnrollmentBillingPolicy
     }) }, token).then(mapSettings),
 
   plans: (token: string) => request<Plan[]>('/superadmin/plans', {}, token),
@@ -318,10 +329,16 @@ function mapFeeStructure(x: any): FeeStructure {
 function mapFeeDue(x: any): FeeDue {
   return {
     id: x.id, studentId: x.studentId, studentName: x.studentName, enrollmentId: x.enrollmentId, batchId: x.batchId,
-    batchName: x.batchName, courseName: x.courseName, feeStructureId: x.feeStructureId, dueDate: x.dueDate,
+    batchName: x.batchName, courseName: x.courseName, feeStructureId: x.feeStructureId || undefined,
+    title: x.title || undefined, dueDate: x.dueDate,
     amount: x.amount, discountAmount: x.discountAmount, netAmount: x.netAmount, paidAmount: x.paidAmount,
-    balanceAmount: x.balanceAmount, status: x.status
+    balanceAmount: x.balanceAmount, status: x.status,
+    cancelledAt: x.cancelledAt || undefined, cancelReason: x.cancelReason || undefined
   };
+}
+function mapFeeAdjustment(x: any): FeeAdjustment {
+  return { id: x.id, type: x.type, amount: x.amount, reason: x.reason,
+    performedByName: x.performedByName, createdAt: x.createdAt };
 }
 function mapFeePayment(x: any): FeePayment {
   return {
@@ -370,6 +387,8 @@ function mapSettings(x: any): OrgSettings {
       feeReminders: x.feeReminderNotifications ?? true,
       paymentUpdates: x.paymentNotifications ?? true,
       attendanceAlerts: x.attendanceNotifications ?? true
-    }
+    },
+    feeDueLeadDays: x.feeDueLeadDays ?? 7,
+    lateEnrollmentBillingPolicy: x.lateEnrollmentBillingPolicy ?? 'Skip'
   };
 }

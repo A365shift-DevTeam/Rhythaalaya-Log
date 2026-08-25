@@ -3,7 +3,9 @@ export type AppTab = 'home' | 'students' | 'batches' | 'finance' | 'log' | 'repo
 
 export type EnrollmentStatus = 'Active' | 'Completed' | 'Withdrawn';
 export type FeeFrequency = 'Monthly' | 'Quarterly' | 'HalfYearly' | 'Yearly' | 'OneTime';
-export type FeeDueStatus = 'Pending' | 'Partial' | 'Paid' | 'Overdue' | 'Cancelled';
+export type FeeDueStatus = 'Pending' | 'Partial' | 'Paid' | 'Overdue' | 'Cancelled' | 'Upcoming';
+export type FeeAdjustmentType = 'Discount' | 'Waiver' | 'Proration';
+export type LateEnrollmentBillingPolicy = 'Skip' | 'Full' | 'Prorated';
 export type PaymentMethod = 'Cash' | 'Upi' | 'Card' | 'BankTransfer' | 'Cheque' | 'Other';
 export type AchievementCategory = 'Won' | 'Participated' | 'Other';
 
@@ -114,7 +116,8 @@ export interface FeeDue {
   batchId: string;
   batchName: string;
   courseName: string;
-  feeStructureId: string;
+  feeStructureId?: string;
+  title?: string;
   dueDate: string;
   amount: number;
   discountAmount: number;
@@ -122,6 +125,17 @@ export interface FeeDue {
   paidAmount: number;
   balanceAmount: number;
   status: FeeDueStatus;
+  cancelledAt?: string;
+  cancelReason?: string;
+}
+
+export interface FeeAdjustment {
+  id: string;
+  type: FeeAdjustmentType;
+  amount: number;
+  reason: string;
+  performedByName: string;
+  createdAt: string;
 }
 
 export interface FeePaymentAllocation {
@@ -208,4 +222,6 @@ export interface OrgSettings {
   incomeCategories: string[];
   expenseCategories: string[];
   notifications: NotificationSettings;
+  feeDueLeadDays: number;
+  lateEnrollmentBillingPolicy: LateEnrollmentBillingPolicy;
 }

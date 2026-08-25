@@ -15,5 +15,7 @@ export const INITIAL_SETTINGS: OrgSettings = {
   expenseCategories: ['Rent & Operations', 'Instructor Salary', 'Equipment', 'Utilities', 'Marketing', 'Other Expense', 'Refund'],
   notifications: {
     enabled: true, feeReminders: true, paymentUpdates: true, attendanceAlerts: true
-  }
+  },
+  feeDueLeadDays: 7,
+  lateEnrollmentBillingPolicy: 'Skip'
 };
