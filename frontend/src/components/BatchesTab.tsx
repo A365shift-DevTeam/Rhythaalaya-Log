@@ -105,11 +105,10 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
                   <div className="text-xs text-[#808080] dark:text-[#94a3b8] truncate">{course.description || 'No description'}</div>
                 </div>
                 <span
-                  className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
-                    course.isActive
+                  className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${course.isActive
                       ? 'bg-emerald-50 text-[#22c55e] dark:bg-emerald-950/60 dark:text-emerald-300'
                       : 'bg-[#f0f0f0] text-[#808080] dark:bg-[#111c2b]'
-                  }`}
+                    }`}
                 >
                   {course.batchCount} batch{course.batchCount === 1 ? '' : 'es'}
                 </span>
@@ -155,11 +154,10 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
                   <div className="text-xs text-[#808080] dark:text-[#94a3b8] truncate">{member.phone || member.email || 'No contact on file'}</div>
                 </div>
                 <span
-                  className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
-                    member.isActive
+                  className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${member.isActive
                       ? 'bg-emerald-50 text-[#22c55e] dark:bg-emerald-950/60 dark:text-emerald-300'
                       : 'bg-[#f0f0f0] text-[#808080] dark:bg-[#111c2b]'
-                  }`}
+                    }`}
                 >
                   {member.batchCount} batch{member.batchCount === 1 ? '' : 'es'}
                 </span>
@@ -241,8 +239,8 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
               {batches.length
                 ? 'Try a different search or course filter.'
                 : canManage
-                ? 'Add a course and staff member, then schedule a batch.'
-                : 'Ask your admin to schedule one.'}
+                  ? 'Add a course and staff member, then schedule a batch.'
+                  : 'Ask your admin to schedule one.'}
             </p>
           </div>
         ) : (
@@ -267,11 +265,10 @@ function BatchCard({ batch, canManage, onEdit }: { batch: Batch; canManage: bool
           </div>
           <div className="flex items-center gap-1.5">
             <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-bold inline-flex items-center gap-1.5 ${
-                batch.isActive
+              className={`rounded-full px-2.5 py-0.5 text-xs font-bold inline-flex items-center gap-1.5 ${batch.isActive
                   ? 'bg-emerald-50 dark:bg-emerald-950/60 text-[#22c55e] dark:text-emerald-300'
                   : 'bg-[#f0f0f0] dark:bg-[#111c2b] text-[#808080]'
-              }`}
+                }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${batch.isActive ? 'bg-[#22c55e]' : 'bg-[#9e9e9e]'}`} />
               {batch.isActive ? 'Active' : 'Inactive'}
@@ -303,10 +300,9 @@ function BatchCard({ batch, canManage, onEdit }: { batch: Batch; canManage: bool
           <BatchInfo icon="person" label="Staff / mentor" value={batch.staffName} />
           <BatchInfo
             icon="date_range"
-            label="Runs"
-            value={`${new Date(batch.startDate).toLocaleDateString('en-IN')}${
-              batch.endDate ? ' – ' + new Date(batch.endDate).toLocaleDateString('en-IN') : ' onward'
-            }`}
+            label="Active"
+            value={`${new Date(batch.startDate).toLocaleDateString('en-IN')}${batch.endDate ? ' – ' + new Date(batch.endDate).toLocaleDateString('en-IN') : ' onward'
+              }`}
           />
         </div>
       </div>
