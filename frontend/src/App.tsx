@@ -453,6 +453,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         isOpen={isAddChargeOpen}
         onClose={() => setIsAddChargeOpen(false)}
         students={students}
+        batches={batches}
         token={session.token}
         onCreated={reload}
       />

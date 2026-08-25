@@ -323,7 +323,7 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
 
     public async Task<FeeDueDto> CreateCustomFeeDueAsync(CreateCustomFeeDueRequest request, CancellationToken ct)
     {
-        var tenantId = RequireTenant();
+        RequireTenant();
         RequireText(request.Title, nameof(request.Title));
         if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
         var enrollment = await db.Enrollments.AsNoTracking()
@@ -331,22 +331,67 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
             ?? throw new AppValidationException(nameof(request.EnrollmentId));
 
         var today = await dueGenerator.TodayForTenantAsync(ct);
-        var due = new FeeDue
-        {
-            TenantId = tenantId, StudentId = enrollment.StudentId, EnrollmentId = enrollment.Id,
-            FeeStructureId = null, Title = request.Title.Trim(), DueDate = request.DueDate,
-            Amount = request.Amount, DiscountAmount = 0, NetAmount = request.Amount,
-            Status = request.DueDate > today ? FeeDueStatus.Upcoming : FeeDueStatus.Pending
-        };
+        Guid dueId;
         await using (var tx = await db.Database.BeginTransactionAsync(ct))
         {
-            db.FeeDues.Add(due);
-            await db.SaveChangesAsync(ct);
-            await dueGenerator.AllocateCreditAsync(due, ct);
-            await dueGenerator.RefreshDueStatusAsync(due.Id, ct);
+            dueId = await CreateCustomDueCoreAsync(enrollment, request.Title.Trim(), request.Amount, request.DueDate, today, ct);
             await tx.CommitAsync(ct);
         }
-        return await GetDueAsync(due.Id, ct);
+        return await GetDueAsync(dueId, ct);
+    }
+
+    public async Task<IReadOnlyList<FeeDueDto>> CreateCustomFeeDuesForBatchAsync(CreateBatchCustomFeeDueRequest request, CancellationToken ct)
+    {
+        RequireTenant();
+        RequireText(request.Title, nameof(request.Title));
+        if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
+        if (!await db.Batches.AnyAsync(x => x.Id == request.BatchId, ct))
+            throw new AppValidationException(nameof(request.BatchId));
+        var enrollments = await db.Enrollments.AsNoTracking()
+            .Where(x => x.BatchId == request.BatchId && x.Status == EnrollmentStatus.Active)
+            .ToListAsync(ct);
+        if (enrollments.Count == 0)
+            throw new AppValidationException("The batch has no active students to charge.");
+
+        var today = await dueGenerator.TodayForTenantAsync(ct);
+        var title = request.Title.Trim();
+        var dueIds = new List<Guid>();
+        await using (var tx = await db.Database.BeginTransactionAsync(ct))
+        {
+            foreach (var enrollment in enrollments)
+                dueIds.Add(await CreateCustomDueCoreAsync(enrollment, title, request.Amount, request.DueDate, today, ct));
+            await tx.CommitAsync(ct);
+        }
+        var dues = await DueQuery().Where(x => dueIds.Contains(x.Id)).OrderBy(x => x.Student.Name).ToListAsync(ct);
+        return await MapDuesAsync(dues, ct);
+    }
+
+    /// <summary>
+    /// Creates one custom (structure-less) due and applies advance credit. Custom dues aren't
+    /// covered by the schedule's unique index (null FeeStructureId), so an identical live charge
+    /// on the enrollment is treated as the same submission and returned instead of billed twice.
+    /// </summary>
+    private async Task<Guid> CreateCustomDueCoreAsync(Enrollment enrollment, string title, decimal amount,
+        DateOnly dueDate, DateOnly today, CancellationToken ct)
+    {
+        var existing = await db.FeeDues.AsNoTracking()
+            .Where(x => x.EnrollmentId == enrollment.Id && x.FeeStructureId == null && x.Title == title
+                && x.Amount == amount && x.DueDate == dueDate && x.Status != FeeDueStatus.Cancelled)
+            .Select(x => (Guid?)x.Id).FirstOrDefaultAsync(ct);
+        if (existing is not null) return existing.Value;
+
+        var due = new FeeDue
+        {
+            TenantId = enrollment.TenantId, StudentId = enrollment.StudentId, EnrollmentId = enrollment.Id,
+            FeeStructureId = null, Title = title, DueDate = dueDate,
+            Amount = amount, DiscountAmount = 0, NetAmount = amount,
+            Status = dueDate > today ? FeeDueStatus.Upcoming : FeeDueStatus.Pending
+        };
+        db.FeeDues.Add(due);
+        await db.SaveChangesAsync(ct);
+        await dueGenerator.AllocateCreditAsync(due, ct);
+        await dueGenerator.RefreshDueStatusAsync(due.Id, ct);
+        return due.Id;
     }
 
     public async Task<IReadOnlyList<FeePaymentDto>> GetStudentPaymentsAsync(Guid studentId, CancellationToken ct)

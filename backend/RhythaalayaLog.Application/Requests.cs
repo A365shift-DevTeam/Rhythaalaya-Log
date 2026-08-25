@@ -40,6 +40,7 @@ public sealed record RefundFeePaymentRequest(decimal? Amount, string? Remarks);
 public sealed record AddFeeAdjustmentRequest(FeeAdjustmentType Type, decimal Amount, string Reason);
 public sealed record CancelFeeDueRequest(string Reason);
 public sealed record CreateCustomFeeDueRequest(Guid StudentId, Guid EnrollmentId, string Title, decimal Amount, DateOnly DueDate);
+public sealed record CreateBatchCustomFeeDueRequest(Guid BatchId, string Title, decimal Amount, DateOnly DueDate);
 
 public sealed record CreateTransactionRequest(string Title, TransactionType Type, decimal Amount,
     string Category, DateTimeOffset? OccurredAt);

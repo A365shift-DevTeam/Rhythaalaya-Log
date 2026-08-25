@@ -195,6 +195,55 @@ public sealed class FinanceServiceTests
     }
 
     [Fact]
+    public async Task CustomDue_DoubleSubmit_ReturnsExistingInsteadOfDuplicating()
+    {
+        var (h, enrollment, _) = await SeedBilledEnrollmentAsync();
+        using var _1 = h;
+        var request = new CreateCustomFeeDueRequest(h.Student.Id, enrollment.Id, "Costume fee", 750m, Today);
+
+        var first = await h.Finance.CreateCustomFeeDueAsync(request, default);
+        var second = await h.Finance.CreateCustomFeeDueAsync(request, default);
+
+        Assert.Equal(first.Id, second.Id);
+        Assert.Equal(1, h.Db.FeeDues.Count(x => x.FeeStructureId == null));
+    }
+
+    [Fact]
+    public async Task BatchCharge_CreatesOneDuePerActiveStudent_AndIsSafeToRepeat()
+    {
+        var (h, _, _) = await SeedBilledEnrollmentAsync();
+        using var _1 = h;
+        var student2 = new Student { TenantId = h.TenantId, StudentNumber = "S-002", Name = "Anya", JoinDate = Anchor };
+        var enrollment2 = new Enrollment
+        {
+            TenantId = h.TenantId, Student = student2, BatchId = h.Batch.Id, CourseId = h.Course.Id, EnrolledOn = Anchor
+        };
+        var withdrawnStudent = new Student { TenantId = h.TenantId, StudentNumber = "S-003", Name = "Left", JoinDate = Anchor };
+        var withdrawnEnrollment = new Enrollment
+        {
+            TenantId = h.TenantId, Student = withdrawnStudent, BatchId = h.Batch.Id, CourseId = h.Course.Id,
+            EnrolledOn = Anchor, Status = EnrollmentStatus.Withdrawn
+        };
+        h.Db.AddRange(enrollment2, withdrawnEnrollment);
+        h.Db.SaveChanges();
+
+        var request = new CreateBatchCustomFeeDueRequest(h.Batch.Id, "Annual day fee", 500m, Today);
+        var created = await h.Finance.CreateCustomFeeDuesForBatchAsync(request, default);
+
+        Assert.Equal(2, created.Count); // both active students, not the withdrawn one
+        Assert.All(created, due =>
+        {
+            Assert.Equal("Annual day fee", due.Title);
+            Assert.Equal(500m, due.Amount);
+            Assert.Null(due.FeeStructureId);
+        });
+
+        var repeat = await h.Finance.CreateCustomFeeDuesForBatchAsync(request, default);
+        Assert.Equal(2, repeat.Count);
+        Assert.Equal(2, h.Db.FeeDues.Count(x => x.FeeStructureId == null)); // no duplicates on re-run
+    }
+
+    [Fact]
     public async Task FutureDatedFeeStructure_DoesNotDeactivateCurrentPlan()
     {
         using var h = new TestHarness();

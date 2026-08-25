@@ -84,6 +84,12 @@ public sealed class FinanceController(IFinanceService service) : ControllerBase
         return Created($"/api/finance/dues/{result.Id}", result);
     }
 
+    [HttpPost("dues/custom/batch")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<ActionResult<IReadOnlyList<FeeDueDto>>> CreateBatchCustomDues(
+        CreateBatchCustomFeeDueRequest request, CancellationToken ct) =>
+        Ok(await service.CreateCustomFeeDuesForBatchAsync(request, ct));
+
     [HttpGet("students/{studentId:guid}/payments")]
     public async Task<ActionResult<IReadOnlyList<FeePaymentDto>>> GetStudentPayments(Guid studentId, CancellationToken ct) =>
         Ok(await service.GetStudentPaymentsAsync(studentId, ct));

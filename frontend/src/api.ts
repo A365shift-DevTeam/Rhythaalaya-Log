@@ -217,6 +217,10 @@ export const api = {
   createCustomDue: (token: string, body: {
     studentId: string; enrollmentId: string; title: string; amount: number; dueDate: string;
   }) => request<any>('/finance/dues/custom', { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeeDue),
+  createBatchCustomDues: (token: string, body: {
+    batchId: string; title: string; amount: number; dueDate: string;
+  }) => request<any[]>('/finance/dues/custom/batch', { method: 'POST', body: JSON.stringify(body) }, token)
+    .then(rows => rows.map(mapFeeDue)),
   refundPayment: (token: string, paymentId: string, body: { amount?: number | null; remarks?: string }) =>
     request<any>(`/finance/payments/${paymentId}/refund`, { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeePayment),
   receipt: (token: string, paymentId: string) =>
