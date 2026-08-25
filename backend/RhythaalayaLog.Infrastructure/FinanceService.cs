@@ -201,10 +201,12 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
             var originalAllocations = await db.FeePaymentAllocations.Where(x => x.FeePaymentId == paymentId)
                 .OrderByDescending(x => x.AllocatedAt).ToListAsync(ct);
             await rowLocker.LockFeeDuesAsync(db, originalAllocations.Select(x => x.FeeDueId).Distinct().ToList(), ct);
-            var alreadyReversedByAllocation = originalAllocations.Count == 0 ? [] : await db.FeePaymentAllocations
-                .Where(x => x.ReversalOfAllocationId != null && originalAllocations.Select(a => a.Id).Contains(x.ReversalOfAllocationId!.Value))
+            var originalAllocationIds = originalAllocations.Select(x => x.Id).ToList();
+            var alreadyReversedByAllocation = originalAllocationIds.Count == 0 ? [] : await db.FeePaymentAllocations
+                .Where(x => x.ReversalOfAllocationId != null && originalAllocationIds.Contains(x.ReversalOfAllocationId!.Value))
                 .GroupBy(x => x.ReversalOfAllocationId!.Value)
-                .ToDictionaryAsync(g => g.Key, g => -g.Sum(x => x.Amount), ct);
+                .Select(g => new { AllocationId = g.Key, Reversed = -g.Sum(x => x.Amount) })
+                .ToDictionaryAsync(x => x.AllocationId, x => x.Reversed, ct);
             var remaining = amount;
             var touchedDueIds = new List<Guid>();
             foreach (var allocation in originalAllocations)
