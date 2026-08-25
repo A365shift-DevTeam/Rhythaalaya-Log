@@ -32,6 +32,7 @@ import { ReportsTab } from './components/ReportsTab';
 
 import { AddStudentModal } from './components/modals/AddStudentModal';
 import { RecordFeeModal } from './components/modals/RecordFeeModal';
+import { AdjustDueModal } from './components/modals/AdjustDueModal';
 import { WhatsAppModal } from './components/modals/WhatsAppModal';
 import { AddTransactionModal } from './components/modals/AddTransactionModal';
 import { AddBatchModal } from './components/modals/AddBatchModal';
@@ -88,7 +89,8 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
       ]);
       setStudents(studentRows); setBatches(batchRows); setCourses(courseRows); setStaff(staffRows);
       setFeeStructures(structureRows);
-      setOutstandingDues(dueRows.filter((due) => due.status === 'Pending' || due.status === 'Partial' || due.status === 'Overdue'));
+      setOutstandingDues(dueRows.filter((due) => due.status === 'Pending' || due.status === 'Partial'
+        || due.status === 'Overdue' || due.status === 'Upcoming'));
       setTransactions(transactionRows); setSettings(org);
       setLoadError('');
     } catch (error) {
@@ -116,6 +118,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [isRecordFeeOpen, setIsRecordFeeOpen] = useState(false);
   const [feeTargetStudent, setFeeTargetStudent] = useState<Student | undefined>(undefined);
+  const [adjustTargetDue, setAdjustTargetDue] = useState<FeeDue | null>(null);
 
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const [whatsAppTargetStudent, setWhatsAppTargetStudent] = useState<Student | undefined>(undefined);
@@ -160,7 +163,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   };
 
 
-  const handleRecordFee = async (payload: { studentId: string; feeDueId: string | null; amount: number; method: PaymentMethod; remarks?: string }) => {
+  const handleRecordFee = async (payload: { studentId: string; feeDueId: string | null; amount: number; method: PaymentMethod; remarks?: string; idempotencyKey?: string }) => {
     const payment = await api.recordPayment(session.token, payload);
     const receipt = await api.receipt(session.token, payment.id);
     setLastReceipt(receipt);
@@ -383,6 +386,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             onOpenWhatsAppAll={() => openWhatsApp(undefined)}
             onOpenAddTransaction={openAddTransaction}
             onEditTransaction={openEditTransaction}
+            onAdjustDue={(due) => setAdjustTargetDue(due)}
           />
         )}
 
@@ -432,6 +436,14 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         initialStudent={feeTargetStudent}
         token={session.token}
         onRecordFee={handleRecordFee}
+      />
+
+      <AdjustDueModal
+        isOpen={adjustTargetDue !== null}
+        onClose={() => setAdjustTargetDue(null)}
+        due={adjustTargetDue}
+        token={session.token}
+        onApplied={reload}
       />
 
       <WhatsAppModal

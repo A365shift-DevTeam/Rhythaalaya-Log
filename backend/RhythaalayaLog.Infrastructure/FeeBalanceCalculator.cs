@@ -3,16 +3,22 @@ using RhythaalayaLog.Domain;
 
 namespace RhythaalayaLog.Infrastructure;
 
-/// <summary>Computes outstanding-balance figures from FeeDue/FeePaymentAllocation, batched to avoid N+1 queries.</summary>
+/// <summary>
+/// Computes outstanding-balance figures from FeeDue/FeePaymentAllocation, batched to avoid N+1
+/// queries. Upcoming dues are excluded on both sides (their net and any credit already set aside
+/// against them): money not yet due is neither owed nor available.
+/// </summary>
 public sealed class FeeBalanceCalculator(AppDbContext db)
 {
     public async Task<Dictionary<Guid, decimal>> ByEnrollmentAsync(IReadOnlyCollection<Guid> enrollmentIds, CancellationToken ct)
     {
         if (enrollmentIds.Count == 0) return [];
-        var net = await db.FeeDues.Where(x => enrollmentIds.Contains(x.EnrollmentId) && x.Status != FeeDueStatus.Cancelled)
+        var net = await db.FeeDues.Where(x => enrollmentIds.Contains(x.EnrollmentId)
+                && x.Status != FeeDueStatus.Cancelled && x.Status != FeeDueStatus.Upcoming)
             .GroupBy(x => x.EnrollmentId)
             .Select(g => new { EnrollmentId = g.Key, Net = g.Sum(x => x.NetAmount) }).ToListAsync(ct);
-        var paid = await db.FeePaymentAllocations.Where(x => enrollmentIds.Contains(x.FeeDue.EnrollmentId) && x.FeeDue.Status != FeeDueStatus.Cancelled)
+        var paid = await db.FeePaymentAllocations.Where(x => enrollmentIds.Contains(x.FeeDue.EnrollmentId)
+                && x.FeeDue.Status != FeeDueStatus.Cancelled && x.FeeDue.Status != FeeDueStatus.Upcoming)
             .GroupBy(x => x.FeeDue.EnrollmentId)
             .Select(g => new { EnrollmentId = g.Key, Paid = g.Sum(x => x.Amount) }).ToListAsync(ct);
         var paidMap = paid.ToDictionary(x => x.EnrollmentId, x => x.Paid);
@@ -22,10 +28,12 @@ public sealed class FeeBalanceCalculator(AppDbContext db)
     public async Task<Dictionary<Guid, decimal>> ByStudentAsync(IReadOnlyCollection<Guid> studentIds, CancellationToken ct)
     {
         if (studentIds.Count == 0) return [];
-        var net = await db.FeeDues.Where(x => studentIds.Contains(x.StudentId) && x.Status != FeeDueStatus.Cancelled)
+        var net = await db.FeeDues.Where(x => studentIds.Contains(x.StudentId)
+                && x.Status != FeeDueStatus.Cancelled && x.Status != FeeDueStatus.Upcoming)
             .GroupBy(x => x.StudentId)
             .Select(g => new { StudentId = g.Key, Net = g.Sum(x => x.NetAmount) }).ToListAsync(ct);
-        var paid = await db.FeePaymentAllocations.Where(x => studentIds.Contains(x.FeeDue.StudentId) && x.FeeDue.Status != FeeDueStatus.Cancelled)
+        var paid = await db.FeePaymentAllocations.Where(x => studentIds.Contains(x.FeeDue.StudentId)
+                && x.FeeDue.Status != FeeDueStatus.Cancelled && x.FeeDue.Status != FeeDueStatus.Upcoming)
             .GroupBy(x => x.FeeDue.StudentId)
             .Select(g => new { StudentId = g.Key, Paid = g.Sum(x => x.Amount) }).ToListAsync(ct);
         var credit = await db.FeePayments.Where(x => studentIds.Contains(x.StudentId) && x.Amount > 0 && x.RefundOfPaymentId == null)

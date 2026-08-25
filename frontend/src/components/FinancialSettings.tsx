@@ -1,7 +1,7 @@
 import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
 import React, { useEffect, useState } from 'react';
-import { OrgSettings, ReceiptSettings } from '../types';
+import { LateEnrollmentBillingPolicy, OrgSettings, ReceiptSettings } from '../types';
 
 interface FinancialSettingsProps {
   settings: OrgSettings;
@@ -75,6 +75,12 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
         </form>
       </section>
 
+      <section className="space-y-3" aria-labelledby="billing-settings-title">
+        <SectionHeading id="billing-settings-title" icon="event_repeat" title="Billing & Dues"
+          description="Control how far ahead dues appear and how mid-cycle joiners are billed." />
+        <BillingSettings settings={settings} setSettings={setSettings} />
+      </section>
+
       <section className="space-y-3" aria-labelledby="category-settings-title">
         <SectionHeading id="category-settings-title" icon="category" title="Income & Expense Categories"
           description="These categories appear automatically when recording financial entries." />
@@ -105,6 +111,61 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
         </div>
       </section>
     </div>
+  );
+}
+
+const POLICY_OPTIONS: { value: LateEnrollmentBillingPolicy; label: string; description: string }[] = [
+  { value: 'Skip', label: 'Skip partial period', description: 'A mid-cycle joiner starts paying from the next full billing cycle.' },
+  { value: 'Full', label: 'Charge full period', description: 'The first partial period is billed at the full amount.' },
+  { value: 'Prorated', label: 'Prorate by days', description: 'The first partial period is billed only for the days enrolled.' },
+];
+
+function BillingSettings({ settings, setSettings }: FinancialSettingsProps) {
+  const [leadDaysDraft, setLeadDaysDraft] = useState(String(settings.feeDueLeadDays));
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => setLeadDaysDraft(String(settings.feeDueLeadDays)), [settings.feeDueLeadDays]);
+
+  const save = (event: React.FormEvent) => {
+    event.preventDefault();
+    const leadDays = Math.min(90, Math.max(0, Math.round(Number(leadDaysDraft) || 0)));
+    setLeadDaysDraft(String(leadDays));
+    setSettings((previous) => ({ ...previous, feeDueLeadDays: leadDays }));
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 2500);
+  };
+
+  return (
+    <form onSubmit={save} className="premium-card p-4 sm:p-6 space-y-5">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Due lead days" id="fee-lead-days" hint="How many days before its date a due appears as “Upcoming” (0–90).">
+          <input id="fee-lead-days" type="number" min={0} max={90} required value={leadDaysDraft}
+            onChange={(event) => setLeadDaysDraft(event.target.value)}
+            className="settings-input" placeholder="7" />
+        </Field>
+        <div>
+          <span className="mb-1.5 block text-xs font-bold text-[#575757] dark:text-[#cbd5e1]">Late enrollment billing</span>
+          <div className="space-y-2">
+            {POLICY_OPTIONS.map((option) => (
+              <label key={option.value} className={`flex min-h-12 cursor-pointer items-start gap-2.5 rounded-2xl border px-3.5 py-2.5 transition-all ${settings.lateEnrollmentBillingPolicy === option.value ? 'border-[#3fc073] bg-[#e9f7ee] dark:border-[#3fc073] dark:bg-[#3fc073]/15' : 'border-[#dbdbdb] dark:border-[#243244] bg-[#f0f0f0] dark:bg-[#0b1422]'}`}>
+                <input type="radio" name="late-enrollment-policy" value={option.value}
+                  checked={settings.lateEnrollmentBillingPolicy === option.value}
+                  onChange={() => setSettings((previous) => ({ ...previous, lateEnrollmentBillingPolicy: option.value }))}
+                  className="mt-0.5 h-4 w-4 accent-[#3fc073]" />
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold text-[#212121] dark:text-white">{option.label}</span>
+                  <span className="mt-0.5 block text-xs text-[#808080] dark:text-[#94a3b8]">{option.description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-end gap-3 border-t border-[#dbdbdb]/60 pt-4 dark:border-[#243244]">
+        {saved && <span role="status" className="text-xs font-semibold text-[#22c55e]">Billing settings saved</span>}
+        <Button type="submit" className="btn-brand min-h-11 rounded-2xl px-5 text-xs font-bold">Save billing settings</Button>
+      </div>
+    </form>
   );
 }
 

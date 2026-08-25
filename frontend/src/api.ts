@@ -265,6 +265,10 @@ export const api = {
 
   plans: (token: string) => request<Plan[]>('/superadmin/plans', {}, token),
   tenants: (token: string) => request<Tenant[]>('/superadmin/tenants', {}, token),
+  assignTenantPlan: (token: string, tenantId: string, body: { planId: string; endsAt: string }) =>
+    request<any>(`/superadmin/tenants/${tenantId}/subscription`, { method: 'POST', body: JSON.stringify({
+      planId: body.planId, status: 'Active', startsAt: new Date().toISOString(), endsAt: body.endsAt
+    }) }, token),
   createPlan: (token: string, body: Omit<Plan, 'id' | 'isActive'>) =>
     request<Plan>('/superadmin/plans', { method: 'POST', body: JSON.stringify(body) }, token),
   createTenant: (token: string, body: object) =>

@@ -14,6 +14,7 @@ interface RecordFeeModalProps {
   token: string;
   onRecordFee: (payload: {
     studentId: string; feeDueId: string | null; amount: number; method: PaymentMethod; remarks?: string;
+    idempotencyKey?: string;
   }) => Promise<FeePayment>;
 }
 
@@ -45,6 +46,9 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // One key per collection attempt: a double-click or retried submit replays the same payment
+  // on the server instead of charging twice. Regenerated whenever the modal opens.
+  const [idempotencyKey, setIdempotencyKey] = useState('');
   const dialogRef = useDialogLifecycle(isOpen, onClose);
 
   useEffect(() => {
@@ -59,7 +63,14 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
     setRemarks('');
     setError('');
     setSubmitting(false);
+    setIdempotencyKey(crypto.randomUUID());
   }, [isOpen, initialStudent?.id]);
+
+  // A changed payload is a new attempt and needs a fresh key; an unchanged retry reuses the
+  // same key so the server replays the original payment instead of recording a duplicate.
+  useEffect(() => {
+    if (isOpen) setIdempotencyKey(crypto.randomUUID());
+  }, [selectedStudentId, amount, method, remarks]);
 
   useEffect(() => {
     if (!isOpen || !selectedStudentId) { setDues([]); return; }
@@ -120,6 +131,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
         amount: paymentAmount,
         method,
         remarks: remarks.trim() || undefined,
+        idempotencyKey,
       });
       onClose();
     } catch (requestError) {

@@ -17,12 +17,14 @@ interface FinanceTabProps {
   onOpenWhatsAppAll: () => void;
   onOpenAddTransaction: () => void;
   onEditTransaction: (transaction: Transaction) => void;
+  onAdjustDue: (due: FeeDue) => void;
 }
 
 const DUE_STATUS_STYLE: Record<string, string> = {
   Overdue: 'bg-rose-100 text-[#ef4444] dark:bg-rose-950/80 dark:text-rose-300',
   Partial: 'bg-amber-100 text-[#f59e0b] dark:bg-amber-950/80 dark:text-amber-300',
   Pending: 'bg-[#f0f0f0] text-[#6b6b6b] dark:bg-[#111c2b] dark:text-[#cbd5e1]',
+  Upcoming: 'bg-sky-100 text-[#0284c7] dark:bg-sky-950/80 dark:text-sky-300',
 };
 
 export const FinanceTab: React.FC<FinanceTabProps> = ({
@@ -35,10 +37,14 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
   onOpenWhatsAppAll: _onOpenWhatsAppAll,
   onOpenAddTransaction,
   onEditTransaction,
+  onAdjustDue,
 }) => {
   const categorical = darkMode ? CATEGORICAL_DARK : CATEGORICAL_LIGHT;
   const pendingStudents = students.filter((s) => s.outstandingBalance > 0);
-  const totalDuePending = outstandingDues.reduce((sum, due) => sum + due.balanceAmount, 0);
+  // Upcoming dues are visible but not yet payable, so they don't count as pending money
+  const totalDuePending = outstandingDues
+    .filter((due) => due.status !== 'Upcoming')
+    .reduce((sum, due) => sum + due.balanceAmount, 0);
 
   const totalIncome = transactions.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
   const totalExpense = transactions.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
@@ -330,7 +336,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                             {due.status}
                           </span>
                           <span className="font-sans text-xs text-[#808080] dark:text-[#94a3b8]">
-                            {due.courseName} · due {new Date(due.dueDate).toLocaleDateString('en-IN')}
+                            {due.title || due.courseName} · due {new Date(due.dueDate).toLocaleDateString('en-IN')}
                           </span>
                         </div>
                       </div>
@@ -339,6 +345,17 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                       <span className="font-sans text-xs font-bold text-[#212121] dark:text-white tabular-nums">
                         ₹{due.balanceAmount.toLocaleString('en-IN')}
                       </span>
+                      {canManage && (
+                        <Button
+                          type="button"
+                          onClick={() => onAdjustDue(due)}
+                          aria-label={`Adjust due for ${due.studentName}`}
+                          title="Discount, waive, or cancel this due"
+                          className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] text-[#808080] hover:text-[#3fc073] hover:border-[#3fc073]/40 transition-all active:scale-95"
+                        >
+                          <JisIcon className="text-[16px]">tune</JisIcon>
+                        </Button>
+                      )}
                       <Button
                         type="button"
                         onClick={() => onOpenRecordFee(student)}
