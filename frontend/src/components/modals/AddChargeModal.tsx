@@ -27,6 +27,9 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
   const [wholeBatch, setWholeBatch] = useState(true);
   const [selectedEnrollmentIds, setSelectedEnrollmentIds] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState('');
+  // Ordering snapshot: selected students float to the top, but only re-sorted when the search
+  // changes — never while ticking, so rows don't jump under the cursor.
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState(todayIso());
@@ -67,20 +70,32 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
   const chargeAmount = Number(amount);
   const validAmount = Number.isFinite(chargeAmount) && chargeAmount > 0;
   const totalAmount = validAmount ? targetCount * chargeAmount : 0;
-  const allSelected = batchStudents.length > 0 && selectedEnrollmentIds.size === batchStudents.length;
 
-  const filteredStudents = query.trim()
+  const filteredStudents = (query.trim()
     ? batchStudents.filter(({ student }) => {
         const term = query.trim().toLowerCase();
         return student.name.toLowerCase().includes(term) || student.studentNumber.toLowerCase().includes(term);
       })
-    : batchStudents;
+    : batchStudents)
+    .slice()
+    .sort((a, b) => Number(pinnedIds.has(b.enrollmentId)) - Number(pinnedIds.has(a.enrollmentId)));
+
+  // The header checkbox operates on what's shown: with a search active it selects/clears just
+  // the filtered results, so "search, tick all matches" is one click.
+  const filteredAllSelected = filteredStudents.length > 0
+    && filteredStudents.every((item) => selectedEnrollmentIds.has(item.enrollmentId));
 
   const handlePickBatch = (id: string) => {
     setBatchId(id);
     setWholeBatch(true);
     setSelectedEnrollmentIds(new Set());
+    setPinnedIds(new Set());
     setQuery('');
+  };
+
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    setPinnedIds(new Set(selectedEnrollmentIds));
   };
 
   const toggleStudent = (enrollmentId: string) => {
@@ -93,7 +108,12 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
   };
 
   const toggleAll = () => {
-    setSelectedEnrollmentIds(allSelected ? new Set() : new Set(batchStudents.map((item) => item.enrollmentId)));
+    setSelectedEnrollmentIds((previous) => {
+      const next = new Set(previous);
+      if (filteredAllSelected) filteredStudents.forEach((item) => next.delete(item.enrollmentId));
+      else filteredStudents.forEach((item) => next.add(item.enrollmentId));
+      return next;
+    });
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -183,14 +203,21 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
                 <div className="mt-2 rounded-2xl border border-[#dbdbdb]/60 dark:border-[#243244] overflow-hidden">
                   <div className="flex items-center gap-2 border-b border-[#dbdbdb]/60 dark:border-[#243244] bg-[#f0f0f0]/60 dark:bg-[#111c2b]/60 px-3 py-2">
                     <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-[#575757] dark:text-[#cbd5e1]">
-                      <input type="checkbox" checked={allSelected} disabled={submitting} onChange={toggleAll}
-                        className="h-4 w-4 accent-[#3fc073] rounded" />
-                      {selectedEnrollmentIds.size === 0 ? 'Select all' : `${selectedEnrollmentIds.size} of ${batchStudents.length} selected`}
+                      <input type="checkbox" checked={filteredAllSelected} disabled={submitting || filteredStudents.length === 0}
+                        onChange={toggleAll} className="h-4 w-4 accent-[#3fc073] rounded" />
+                      {query.trim()
+                        ? `All ${filteredStudents.length} shown`
+                        : selectedEnrollmentIds.size === 0
+                          ? 'Select all'
+                          : `${selectedEnrollmentIds.size} of ${batchStudents.length} selected`}
                     </label>
+                    {query.trim() && selectedEnrollmentIds.size > 0 && (
+                      <span className="text-xs font-semibold text-[#9e9e9e]">{selectedEnrollmentIds.size} selected</span>
+                    )}
                     {batchStudents.length > 6 && (
                       <div className="relative ml-auto">
                         <JisIcon className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[15px] text-[#9e9e9e]">search</JisIcon>
-                        <input type="text" value={query} onChange={(event) => setQuery(event.target.value)}
+                        <input type="text" value={query} onChange={(event) => handleQueryChange(event.target.value)}
                           placeholder="Search" aria-label="Search students"
                           className="w-32 rounded-xl border border-[#dbdbdb] bg-white py-1 pl-7 pr-2 text-xs text-[#212121] outline-none focus:border-[#3fc073] dark:border-[#243244] dark:bg-[#0b1422] dark:text-white" />
                       </div>
