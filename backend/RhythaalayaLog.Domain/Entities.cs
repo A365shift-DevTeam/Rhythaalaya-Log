@@ -7,7 +7,9 @@ public enum UserRole { SuperAdmin, TenantAdmin, Staff }
 public enum SubscriptionStatus { Trial, Active, PastDue, Cancelled, Expired }
 public enum EnrollmentStatus { Active, Completed, Withdrawn }
 public enum FeeFrequency { Monthly, Quarterly, HalfYearly, Yearly, OneTime }
-public enum FeeDueStatus { Pending, Partial, Paid, Overdue, Cancelled }
+public enum FeeDueStatus { Pending, Partial, Paid, Overdue, Cancelled, Upcoming }
+public enum FeeAdjustmentType { Discount, Waiver, Proration }
+public enum LateEnrollmentBillingPolicy { Skip, Full, Prorated }
 public enum AchievementCategory { Won, Participated, Other }
 
 [Flags]
@@ -189,15 +191,43 @@ public sealed class FeeDue : ITenantOwned
     public Student Student { get; set; } = null!;
     public Guid EnrollmentId { get; set; }
     public Enrollment Enrollment { get; set; } = null!;
-    public Guid FeeStructureId { get; set; }
-    public FeeStructure FeeStructure { get; set; } = null!;
+    /// <summary>Null for custom one-off charges, which have no billing schedule.</summary>
+    public Guid? FeeStructureId { get; set; }
+    public FeeStructure? FeeStructure { get; set; }
+    /// <summary>Display name for custom charges; scheduled dues use the fee structure's name.</summary>
+    public string? Title { get; set; }
     public DateOnly DueDate { get; set; }
     public decimal Amount { get; set; }
+    /// <summary>Cached sum of Discount/Waiver adjustments (kept for backward compatibility).</summary>
     public decimal DiscountAmount { get; set; }
+    /// <summary>Billable amount: Amount minus the sum of all adjustments.</summary>
     public decimal NetAmount { get; set; }
     public FeeDueStatus Status { get; set; } = FeeDueStatus.Pending;
+    public DateTimeOffset? CancelledAt { get; set; }
+    public Guid? CancelledByUserId { get; set; }
+    public string? CancelReason { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<FeePaymentAllocation> Allocations { get; set; } = [];
+    public ICollection<FeeAdjustment> Adjustments { get; set; } = [];
+}
+
+/// <summary>
+/// An immutable, append-only reduction of a fee due's billable amount. The adjustment rows are
+/// themselves the audit history: corrections are new compensating rows (negative Amount), never edits.
+/// </summary>
+public sealed class FeeAdjustment : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid FeeDueId { get; set; }
+    public FeeDue FeeDue { get; set; } = null!;
+    public FeeAdjustmentType Type { get; set; }
+    /// <summary>Positive values reduce NetAmount; negative values correct an earlier adjustment.</summary>
+    public decimal Amount { get; set; }
+    public required string Reason { get; set; }
+    /// <summary>Null when applied by the system (e.g. enrollment proration).</summary>
+    public Guid? PerformedByUserId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
 public sealed class FeePayment : ITenantOwned
@@ -207,6 +237,10 @@ public sealed class FeePayment : ITenantOwned
     public Guid StudentId { get; set; }
     public Student Student { get; set; } = null!;
     public required string ReceiptNumber { get; set; }
+    /// <summary>Client-supplied key that makes payment submission retry-safe.</summary>
+    public string? IdempotencyKey { get; set; }
+    /// <summary>SHA-256 of the canonical request payload; detects key reuse with a different payload.</summary>
+    public string? RequestHash { get; set; }
     public decimal Amount { get; set; }
     public DateTimeOffset PaymentDate { get; set; } = DateTimeOffset.UtcNow;
     public PaymentMethod Method { get; set; }
@@ -278,6 +312,11 @@ public sealed class OrganizationSettings : ITenantOwned
     public string Currency { get; set; } = "INR";
     public string Locale { get; set; } = "en-IN";
     public string TimeZone { get; set; } = "Asia/Kolkata";
+    /// <summary>How many days before its due date a fee due is generated and shown as Upcoming.</summary>
+    public int FeeDueLeadDays { get; set; } = 7;
+    public LateEnrollmentBillingPolicy LateEnrollmentBillingPolicy { get; set; } = LateEnrollmentBillingPolicy.Skip;
+    /// <summary>Last tenant-local date the daily billing sweep completed for this tenant.</summary>
+    public DateOnly? LastBillingRunDate { get; set; }
     public string ReceiptPrefix { get; set; } = "REC";
     public int NextReceiptNumber { get; set; } = 1;
     public string? ReceiptAddress { get; set; }

@@ -18,6 +18,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
     public DbSet<FeeStructure> FeeStructures => Set<FeeStructure>();
     public DbSet<FeeDue> FeeDues => Set<FeeDue>();
+    public DbSet<FeeAdjustment> FeeAdjustments => Set<FeeAdjustment>();
     public DbSet<FeePayment> FeePayments => Set<FeePayment>();
     public DbSet<FeePaymentAllocation> FeePaymentAllocations => Set<FeePaymentAllocation>();
     public DbSet<StudentAchievement> StudentAchievements => Set<StudentAchievement>();
@@ -133,18 +134,32 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
 
         var due = modelBuilder.Entity<FeeDue>();
         due.HasIndex(x => new { x.TenantId, x.EnrollmentId, x.FeeStructureId, x.DueDate }).IsUnique();
+        due.Property(x => x.Title).HasMaxLength(160);
         due.Property(x => x.Amount).HasPrecision(12, 2);
         due.Property(x => x.DiscountAmount).HasPrecision(12, 2);
         due.Property(x => x.NetAmount).HasPrecision(12, 2);
         due.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+        due.Property(x => x.CancelReason).HasMaxLength(500);
         due.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
         due.HasOne(x => x.Enrollment).WithMany(x => x.FeeDues).HasForeignKey(x => x.EnrollmentId).OnDelete(DeleteBehavior.Restrict);
         due.HasOne(x => x.FeeStructure).WithMany(x => x.FeeDues).HasForeignKey(x => x.FeeStructureId).OnDelete(DeleteBehavior.Restrict);
         due.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
 
+        var adjustment = modelBuilder.Entity<FeeAdjustment>();
+        adjustment.HasIndex(x => new { x.TenantId, x.FeeDueId });
+        adjustment.Property(x => x.Type).HasConversion<string>().HasMaxLength(16);
+        adjustment.Property(x => x.Amount).HasPrecision(12, 2);
+        adjustment.Property(x => x.Reason).HasMaxLength(500);
+        adjustment.HasOne(x => x.FeeDue).WithMany(x => x.Adjustments).HasForeignKey(x => x.FeeDueId).OnDelete(DeleteBehavior.Restrict);
+        adjustment.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
+
         var payment = modelBuilder.Entity<FeePayment>();
         payment.HasIndex(x => new { x.TenantId, x.ReceiptNumber }).IsUnique();
+        payment.HasIndex(x => new { x.TenantId, x.IdempotencyKey }).IsUnique()
+            .HasFilter("\"IdempotencyKey\" IS NOT NULL");
         payment.Property(x => x.ReceiptNumber).HasMaxLength(32);
+        payment.Property(x => x.IdempotencyKey).HasMaxLength(64);
+        payment.Property(x => x.RequestHash).HasMaxLength(64);
         payment.Property(x => x.Amount).HasPrecision(12, 2);
         payment.Property(x => x.Method).HasConversion<string>().HasMaxLength(32);
         payment.Property(x => x.ReferenceNumber).HasMaxLength(120);
@@ -192,6 +207,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     private static void ConfigureSettings(ModelBuilder modelBuilder)
     {
         var entity = modelBuilder.Entity<OrganizationSettings>();
+        entity.Property(x => x.LateEnrollmentBillingPolicy).HasConversion<string>().HasMaxLength(16);
         entity.Property(x => x.ReceiptPrefix).HasMaxLength(16);
         entity.Property(x => x.ReceiptAddress).HasMaxLength(300);
         entity.Property(x => x.ReceiptPhone).HasMaxLength(32);
@@ -213,6 +229,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         modelBuilder.Entity<AttendanceRecord>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<FeeStructure>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<FeeDue>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
+        modelBuilder.Entity<FeeAdjustment>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<FeePayment>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<FeePaymentAllocation>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<StudentAchievement>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);

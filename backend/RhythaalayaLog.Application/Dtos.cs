@@ -28,8 +28,12 @@ public sealed record FeeStructureDto(Guid Id, Guid CourseId, string CourseName, 
     FeeFrequency Frequency, DateOnly EffectiveFrom, DateOnly? EffectiveTo, bool IsActive);
 
 public sealed record FeeDueDto(Guid Id, Guid StudentId, string StudentName, Guid EnrollmentId, Guid BatchId,
-    string BatchName, string CourseName, Guid FeeStructureId, DateOnly DueDate, decimal Amount,
-    decimal DiscountAmount, decimal NetAmount, decimal PaidAmount, decimal BalanceAmount, FeeDueStatus Status);
+    string BatchName, string CourseName, Guid? FeeStructureId, DateOnly DueDate, decimal Amount,
+    decimal DiscountAmount, decimal NetAmount, decimal PaidAmount, decimal BalanceAmount, FeeDueStatus Status,
+    string? Title = null, DateTimeOffset? CancelledAt = null, string? CancelReason = null);
+
+public sealed record FeeAdjustmentDto(Guid Id, FeeAdjustmentType Type, decimal Amount, string Reason,
+    string PerformedByName, DateTimeOffset CreatedAt);
 
 public sealed record FeePaymentAllocationDto(Guid FeeDueId, DateOnly DueDate, string CourseName, string BatchName, decimal Amount);
 
@@ -56,4 +60,5 @@ public sealed record SettingsDto(Guid Id, string Name, string Type, string? Logo
     string ReceiptFooter, bool ReceiptShowLogo, bool ReceiptShowSignature, bool ReceiptAutoOpen,
     IReadOnlyList<string> IncomeCategories, IReadOnlyList<string> ExpenseCategories,
     bool NotificationsEnabled, bool FeeReminderNotifications, bool PaymentNotifications,
-    bool AttendanceNotifications);
+    bool AttendanceNotifications, int FeeDueLeadDays = 7,
+    LateEnrollmentBillingPolicy LateEnrollmentBillingPolicy = LateEnrollmentBillingPolicy.Skip);

@@ -11,6 +11,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString)
     {
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddSingleton<IRowLocker, PostgresRowLocker>();
         services.AddScoped<FeeDueGenerator>();
         services.AddScoped<FeeBalanceCalculator>();
         services.AddScoped<IAcademyService, AcademyService>();
@@ -19,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ISaasAdminService, SaasAdminService>();
         services.AddScoped<DatabaseInitializer>();
+        services.AddHostedService<FeeBillingDailyService>();
         return services;
     }
 }

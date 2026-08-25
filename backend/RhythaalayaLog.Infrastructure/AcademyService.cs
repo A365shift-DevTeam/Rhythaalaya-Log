@@ -464,7 +464,8 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             x.ReceiptShowLogo, x.ReceiptShowSignature, x.ReceiptAutoOpen,
             ParseCategories(x.IncomeCategoriesJson, ["Student Fees", "Registration", "Events", "Other Income"]),
             ParseCategories(x.ExpenseCategoriesJson, ["Rent & Operations", "Instructor Salary", "Equipment", "Utilities", "Marketing", "Other Expense", "Refund"]),
-            x.NotificationsEnabled, x.FeeReminderNotifications, x.PaymentNotifications, x.AttendanceNotifications);
+            x.NotificationsEnabled, x.FeeReminderNotifications, x.PaymentNotifications, x.AttendanceNotifications,
+            x.FeeDueLeadDays, x.LateEnrollmentBillingPolicy);
 
     private static void ApplySettings(OrganizationSettings x, UpdateSettingsRequest request)
     {
@@ -490,6 +491,8 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         x.FeeReminderNotifications = request.FeeReminderNotifications;
         x.PaymentNotifications = request.PaymentNotifications;
         x.AttendanceNotifications = request.AttendanceNotifications;
+        x.FeeDueLeadDays = request.FeeDueLeadDays;
+        x.LateEnrollmentBillingPolicy = request.LateEnrollmentBillingPolicy;
     }
 
     private async Task ValidateBatchAsync(string name, Guid courseId, Guid staffId, IReadOnlyList<DayOfWeek> days,
@@ -532,6 +535,16 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         RequireText(request.ReceiptFooter, nameof(request.ReceiptFooter));
         if (request.Currency.Trim().Length != 3) throw new AppValidationException(nameof(request.Currency));
         if (request.ReceiptPrefix.Trim().Length > 16) throw new AppValidationException(nameof(request.ReceiptPrefix));
+        if (request.FeeDueLeadDays is < 0 or > 90) throw new AppValidationException(nameof(request.FeeDueLeadDays));
+        if (!Enum.IsDefined(request.LateEnrollmentBillingPolicy)) throw new AppValidationException(nameof(request.LateEnrollmentBillingPolicy));
+        try
+        {
+            TimeZoneInfo.FindSystemTimeZoneById(request.TimeZone.Trim());
+        }
+        catch (Exception e) when (e is TimeZoneNotFoundException or InvalidTimeZoneException)
+        {
+            throw new AppValidationException(nameof(request.TimeZone));
+        }
         ValidateCategories(request.IncomeCategories, nameof(request.IncomeCategories));
         ValidateCategories(request.ExpenseCategories, nameof(request.ExpenseCategories));
     }

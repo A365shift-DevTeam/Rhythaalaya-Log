@@ -49,6 +49,11 @@ public interface IFinanceService
     Task<IReadOnlyList<FeeDueDto>> GetStudentFeeDuesAsync(Guid studentId, CancellationToken ct);
     Task<IReadOnlyList<FeeDueDto>> GetFeeDuesAsync(Domain.FeeDueStatus? status, CancellationToken ct);
 
+    Task<FeeDueDto> AddFeeAdjustmentAsync(Guid dueId, AddFeeAdjustmentRequest request, CancellationToken ct);
+    Task<IReadOnlyList<FeeAdjustmentDto>> GetFeeAdjustmentsAsync(Guid dueId, CancellationToken ct);
+    Task<FeeDueDto> CancelFeeDueAsync(Guid dueId, CancelFeeDueRequest request, CancellationToken ct);
+    Task<FeeDueDto> CreateCustomFeeDueAsync(CreateCustomFeeDueRequest request, CancellationToken ct);
+
     Task<FeePaymentDto> RecordFeePaymentAsync(RecordFeePaymentRequest request, CancellationToken ct);
     Task<FeePaymentDto> RefundFeePaymentAsync(Guid paymentId, RefundFeePaymentRequest request, CancellationToken ct);
     Task<IReadOnlyList<FeePaymentDto>> GetStudentPaymentsAsync(Guid studentId, CancellationToken ct);

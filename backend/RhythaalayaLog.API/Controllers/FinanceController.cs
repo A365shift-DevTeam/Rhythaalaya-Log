@@ -62,6 +62,28 @@ public sealed class FinanceController(IFinanceService service) : ControllerBase
     public async Task<ActionResult<IReadOnlyList<FeeDueDto>>> GetStudentDues(Guid studentId, CancellationToken ct) =>
         Ok(await service.GetStudentFeeDuesAsync(studentId, ct));
 
+    [HttpPost("dues/{dueId:guid}/adjustments")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<ActionResult<FeeDueDto>> AddAdjustment(Guid dueId, AddFeeAdjustmentRequest request, CancellationToken ct) =>
+        Ok(await service.AddFeeAdjustmentAsync(dueId, request, ct));
+
+    [HttpGet("dues/{dueId:guid}/adjustments")]
+    public async Task<ActionResult<IReadOnlyList<FeeAdjustmentDto>>> GetAdjustments(Guid dueId, CancellationToken ct) =>
+        Ok(await service.GetFeeAdjustmentsAsync(dueId, ct));
+
+    [HttpPost("dues/{dueId:guid}/cancel")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<ActionResult<FeeDueDto>> CancelDue(Guid dueId, CancelFeeDueRequest request, CancellationToken ct) =>
+        Ok(await service.CancelFeeDueAsync(dueId, request, ct));
+
+    [HttpPost("dues/custom")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<ActionResult<FeeDueDto>> CreateCustomDue(CreateCustomFeeDueRequest request, CancellationToken ct)
+    {
+        var result = await service.CreateCustomFeeDueAsync(request, ct);
+        return Created($"/api/finance/dues/{result.Id}", result);
+    }
+
     [HttpGet("students/{studentId:guid}/payments")]
     public async Task<ActionResult<IReadOnlyList<FeePaymentDto>>> GetStudentPayments(Guid studentId, CancellationToken ct) =>
         Ok(await service.GetStudentPaymentsAsync(studentId, ct));

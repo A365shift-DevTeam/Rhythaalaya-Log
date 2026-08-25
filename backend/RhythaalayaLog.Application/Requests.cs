@@ -34,8 +34,12 @@ public sealed record CreateFeeStructureRequest(Guid CourseId, string Name, decim
 public sealed record UpdateFeeStructureRequest(string Name, DateOnly? EffectiveTo, bool IsActive);
 
 public sealed record RecordFeePaymentRequest(Guid StudentId, Guid? FeeDueId, decimal Amount, PaymentMethod Method,
-    string? ReferenceNumber, string? Remarks, DateTimeOffset? PaymentDate);
+    string? ReferenceNumber, string? Remarks, DateTimeOffset? PaymentDate, string? IdempotencyKey = null);
 public sealed record RefundFeePaymentRequest(decimal? Amount, string? Remarks);
+
+public sealed record AddFeeAdjustmentRequest(FeeAdjustmentType Type, decimal Amount, string Reason);
+public sealed record CancelFeeDueRequest(string Reason);
+public sealed record CreateCustomFeeDueRequest(Guid StudentId, Guid EnrollmentId, string Title, decimal Amount, DateOnly DueDate);
 
 public sealed record CreateTransactionRequest(string Title, TransactionType Type, decimal Amount,
     string Category, DateTimeOffset? OccurredAt);
@@ -48,4 +52,5 @@ public sealed record UpdateSettingsRequest(string Name, string Type, string? Log
     string ReceiptFooter, bool ReceiptShowLogo, bool ReceiptShowSignature, bool ReceiptAutoOpen,
     IReadOnlyList<string> IncomeCategories, IReadOnlyList<string> ExpenseCategories,
     bool NotificationsEnabled, bool FeeReminderNotifications, bool PaymentNotifications,
-    bool AttendanceNotifications);
+    bool AttendanceNotifications, int FeeDueLeadDays = 7,
+    LateEnrollmentBillingPolicy LateEnrollmentBillingPolicy = LateEnrollmentBillingPolicy.Skip);
