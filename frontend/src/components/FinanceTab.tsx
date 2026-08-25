@@ -182,9 +182,11 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
               <h4 className="font-heading text-lg sm:text-xl font-bold text-[#212121] dark:text-white mt-1">Spending by category</h4>
               <p className="text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">Where operating costs are going, year to date</p>
             </div>
-            <span className="shrink-0 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40 px-2.5 sm:px-3 py-1.5 text-right">
-              <span className="block text-base sm:text-lg font-bold text-[#ef4444] tabular-nums">{expenseEntries.length}</span>
-              <span className="block text-xs uppercase tracking-wider font-bold text-[#808080]">Categories</span>
+            <span className="shrink-0 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40 px-3 py-1.5 inline-flex items-center gap-1.5">
+              <span className="text-sm sm:text-base font-bold text-[#ef4444] tabular-nums">{expenseEntries.length}</span>
+              <span className="text-xs uppercase tracking-wider font-bold text-[#808080] dark:text-[#94a3b8]">
+                {expenseEntries.length === 1 ? 'Category' : 'Categories'}
+              </span>
             </span>
           </div>
 
