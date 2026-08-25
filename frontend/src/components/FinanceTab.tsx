@@ -123,7 +123,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
             </div>
           </div>
           <div className="mt-3 sm:mt-4">
-            <div className="font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#212121] dark:text-white tracking-tight">
+            <div className="font-heading text-2xl sm:text-3xl md:text-4xl font-medium text-[#212121] dark:text-white tracking-tight">
               ₹{totalIncome.toLocaleString('en-IN')}
             </div>
             <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8] font-medium">Year to date</p>
@@ -140,7 +140,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
             </div>
           </div>
           <div className="mt-3 sm:mt-4">
-            <div className="font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#ef4444] tracking-tight tabular-nums">
+            <div className="font-heading text-2xl sm:text-3xl md:text-4xl font-medium text-[#ef4444] tracking-tight tabular-nums">
               ₹{totalExpense.toLocaleString('en-IN')}
             </div>
             <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8] font-medium">Year to date</p>
@@ -157,7 +157,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
             </div>
           </div>
           <div className="mt-3 sm:mt-4">
-            <div className={`font-heading text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight tabular-nums ${isNetLoss ? 'text-[#ef4444]' : 'text-[#3fc073]'}`}>
+            <div className={`font-heading text-2xl sm:text-3xl md:text-4xl font-medium tracking-tight tabular-nums ${isNetLoss ? 'text-[#ef4444]' : 'text-[#3fc073]'}`}>
               {isNetLoss ? '-' : ''}₹{Math.abs(netProfit).toLocaleString('en-IN')}
             </div>
             <div className="mt-2 space-y-1.5">
