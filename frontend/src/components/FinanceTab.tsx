@@ -113,7 +113,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
-        <div className="premium-card p-4 sm:p-5 md:p-6 flex flex-col justify-between">
+        <div className="premium-card p-4 sm:p-5 md:p-6 flex flex-col justify-between bg-gradient-to-r from-[#22c55e]/10 via-[#22c55e]/[0.03] to-transparent">
           <div className="flex justify-between items-start">
             <span className="font-sans text-xs sm:text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8] flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#22c55e]" /> Total Revenue
@@ -123,14 +123,14 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
             </div>
           </div>
           <div className="mt-3 sm:mt-4">
-            <div className="font-heading text-2xl sm:text-3xl md:text-4xl font-medium text-[#212121] dark:text-white tracking-tight">
+            <div className="font-heading text-2xl sm:text-3xl md:text-4xl font-medium text-[#22c55e] tracking-tight tabular-nums">
               ₹{totalIncome.toLocaleString('en-IN')}
             </div>
             <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8] font-medium">Year to date</p>
           </div>
         </div>
 
-        <div className="premium-card p-4 sm:p-5 md:p-6 flex flex-col justify-between">
+        <div className="premium-card p-4 sm:p-5 md:p-6 flex flex-col justify-between bg-gradient-to-r from-[#ef4444]/10 via-[#ef4444]/[0.03] to-transparent">
           <div className="flex justify-between items-start">
             <span className="font-sans text-xs sm:text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8] flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#ef4444]" /> Operating Costs
@@ -147,7 +147,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           </div>
         </div>
 
-        <div className={`premium-card p-4 sm:p-5 md:p-6 flex flex-col justify-between border-l-4 ${isNetLoss ? 'border-l-[#ef4444]' : 'border-l-[#3fc073]'}`}>
+        <div className={`premium-card p-4 sm:p-5 md:p-6 flex flex-col justify-between bg-gradient-to-r ${isNetLoss ? 'from-[#ef4444]/10 via-[#ef4444]/[0.03]' : 'from-[#3fc073]/10 via-[#3fc073]/[0.03]'} to-transparent`}>
           <div className="flex justify-between items-start">
             <span className={`font-sans text-xs sm:text-xs font-bold uppercase tracking-wider ${isNetLoss ? 'text-[#ef4444]' : 'text-[#3fc073]'}`}>
               {isNetLoss ? 'Net Loss' : 'Net Profit'}
