@@ -250,17 +250,17 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       <section className="grid grid-cols-1 xl:grid-cols-5 gap-6" aria-labelledby="dashboard-insights-title">
         <h3 id="dashboard-insights-title" className="sr-only">Executive academy insights</h3>
 
-        <article className="xl:col-span-3 relative overflow-hidden rounded-3xl bg-[#212121] dark:bg-[#07111f] text-white border border-[#333333] dark:border-[#243244] shadow-2xl">
-          <div className="absolute -right-20 -top-24 w-72 h-72 rounded-full bg-[#3fc073]/15 blur-3xl pointer-events-none" />
+        <article className="premium-card xl:col-span-3 relative overflow-hidden rounded-3xl">
+          <div className="absolute -right-20 -top-24 w-72 h-72 rounded-full bg-[#3fc073]/10 blur-3xl pointer-events-none" />
           <div className="relative p-5 md:p-7 pb-2">
             <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
               <div>
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[#b3e6c7]">
+                <span className="inline-flex items-center gap-2 rounded-full border border-[#dbdbdb] dark:border-[#243244] bg-[#f0f0f0] dark:bg-[#111c2b] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[#35a160] dark:text-[#b3e6c7]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#3fc073]" />
                   Executive financial view
                 </span>
-                <h4 className="font-heading text-xl md:text-2xl font-bold mt-3">Revenue performance</h4>
-                <p className="text-xs text-[#9e9e9e] mt-1.5">{monthsRange}-month income, operating cost, and net position</p>
+                <h4 className="font-heading text-xl md:text-2xl font-bold text-[#212121] dark:text-white mt-3">Revenue performance</h4>
+                <p className="text-xs text-[#808080] dark:text-[#94a3b8] mt-1.5">{monthsRange}-month income, operating cost, and net position</p>
               </div>
 
               <div className="grid grid-cols-3 gap-2 sm:gap-3 min-w-0 lg:min-w-[330px]" aria-label={`${monthsRange}-month financial summary`}>
@@ -271,15 +271,15 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold uppercase tracking-wider text-[#dbdbdb]" aria-label="Financial chart legend">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold uppercase tracking-wider text-[#575757] dark:text-[#cbd5e1]" aria-label="Financial chart legend">
                 <span className="inline-flex items-center gap-2"><span className="w-5 h-0.5 rounded-full bg-[#3fc073]" />Collected revenue</span>
-                <span className="inline-flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-[3px] bg-[#6b6b6b]" />Operating cost</span>
+                <span className="inline-flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-[3px] bg-[#9e9e9e] dark:bg-[#6b6b6b]" />Operating cost</span>
                 <span className="inline-flex items-center gap-2"><span className="w-5 h-0.5 rounded-full bg-[#f59e0b]" />Net position</span>
               </div>
-              <div className="inline-flex rounded-xl border border-white/10 bg-white/[0.06] p-0.5" role="group" aria-label="Chart range">
+              <div className="inline-flex rounded-xl border border-[#dbdbdb] dark:border-[#243244] bg-[#f0f0f0] dark:bg-[#111c2b] p-0.5" role="group" aria-label="Chart range">
                 {RANGE_OPTIONS.map((option) => (
                   <Button key={option} type="button" onClick={() => setMonthsRange(option)} aria-pressed={monthsRange === option}
-                    className={`min-h-7 px-2.5 rounded-lg text-xs font-bold transition-colors ${monthsRange === option ? 'bg-white/20 text-white shadow-xs' : 'text-[#9e9e9e] hover:text-white'}`}>
+                    className={`min-h-7 px-2.5 rounded-lg text-xs font-bold transition-colors ${monthsRange === option ? 'bg-white dark:bg-[#223148] text-[#212121] dark:text-white shadow-xs' : 'text-[#808080] dark:text-[#94a3b8] hover:text-[#212121] dark:hover:text-white'}`}>
                     {option}mo
                   </Button>
                 ))}
@@ -296,18 +296,18 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                     <stop offset="100%" stopColor="#3fc073" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid vertical={false} stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="4 6" />
-                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#9e9e9e', fontSize: 11, fontWeight: 600 }} dy={8} />
-                <YAxis axisLine={false} tickLine={false} width={58} tick={{ fill: '#808080', fontSize: 10 }} tickFormatter={(value) => value >= 1000 ? `₹${Math.round(value / 1000)}k` : `₹${value}`} />
+                <CartesianGrid vertical={false} stroke={darkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'} strokeDasharray="4 6" />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: darkMode ? '#94a3b8' : '#808080', fontSize: 11, fontWeight: 600 }} dy={8} />
+                <YAxis axisLine={false} tickLine={false} width={58} tick={{ fill: darkMode ? '#94a3b8' : '#808080', fontSize: 10 }} tickFormatter={(value) => value >= 1000 ? `₹${Math.round(value / 1000)}k` : `₹${value}`} />
                 <Tooltip content={<FinancialTooltip />} cursor={{ stroke: 'rgba(63, 192, 115, 0.25)', strokeWidth: 1 }} />
-                <Area isAnimationActive={!reduceMotion} type="monotone" dataKey="income" name="Collected revenue" stroke="#3fc073" strokeWidth={2.5} fill="url(#revenueArea)" activeDot={{ r: 5, fill: '#3fc073', stroke: '#212121', strokeWidth: 3 }} />
-                <Bar isAnimationActive={!reduceMotion} dataKey="expense" name="Operating cost" fill="#6b6b6b" fillOpacity={0.75} maxBarSize={18} radius={[5, 5, 1, 1]} />
-                <Line isAnimationActive={!reduceMotion} type="monotone" dataKey="net" name="Net position" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#f59e0b', stroke: '#212121', strokeWidth: 2 }} />
+                <Area isAnimationActive={!reduceMotion} type="monotone" dataKey="income" name="Collected revenue" stroke="#3fc073" strokeWidth={2.5} fill="url(#revenueArea)" activeDot={{ r: 5, fill: '#3fc073', stroke: darkMode ? '#0b1422' : '#ffffff', strokeWidth: 3 }} />
+                <Bar isAnimationActive={!reduceMotion} dataKey="expense" name="Operating cost" fill={darkMode ? '#6b6b6b' : '#9e9e9e'} fillOpacity={0.75} maxBarSize={18} radius={[5, 5, 1, 1]} />
+                <Line isAnimationActive={!reduceMotion} type="monotone" dataKey="net" name="Net position" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#f59e0b', stroke: darkMode ? '#0b1422' : '#ffffff', strokeWidth: 2 }} />
               </ComposedChart>
             </ResponsiveContainer> : (
-              <div className="h-full flex flex-col items-center justify-center text-center px-6 text-[#9e9e9e]">
+              <div className="h-full flex flex-col items-center justify-center text-center px-6 text-[#808080] dark:text-[#94a3b8]">
                 <JisIcon className="text-3xl text-[#3fc073]/70 mb-2">query_stats</JisIcon>
-                <p className="text-sm font-semibold text-white">No financial activity yet</p>
+                <p className="text-sm font-semibold text-[#212121] dark:text-white">No financial activity yet</p>
                 <p className="text-xs mt-1">Income and cost trends will appear after the first transaction.</p>
               </div>
             )}
@@ -321,9 +321,11 @@ export const HomeTab: React.FC<HomeTabProps> = ({
               <h4 className="font-heading text-xl font-bold text-[#212121] dark:text-white mt-2">Course concentration</h4>
               <p className="text-xs text-[#808080] dark:text-[#94a3b8] mt-1">Active enrollments across the academy</p>
             </div>
-            <span className="shrink-0 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 border border-[#cbecd8] dark:border-[#3fc073]/30 px-3 py-2 text-right">
-              <span className="block text-lg font-bold text-[#35a160] dark:text-[#b3e6c7] tabular-nums">{enrollmentEntries.length}</span>
-              <span className="block text-xs uppercase tracking-wider font-bold text-[#808080]">Courses</span>
+            <span className="shrink-0 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 border border-[#cbecd8] dark:border-[#3fc073]/30 px-3 py-1.5 inline-flex items-center gap-1.5">
+              <span className="text-sm sm:text-base font-bold text-[#35a160] dark:text-[#b3e6c7] tabular-nums">{enrollmentEntries.length}</span>
+              <span className="text-xs uppercase tracking-wider font-bold text-[#808080] dark:text-[#94a3b8]">
+                {enrollmentEntries.length === 1 ? 'Course' : 'Courses'}
+              </span>
             </span>
           </div>
 
@@ -486,15 +488,15 @@ type ExecutiveMetricTone = 'blue' | 'green' | 'rose' | 'neutral';
 
 function ExecutiveMetric({ label, value, tone }: { label: string; value: string; tone: ExecutiveMetricTone }) {
   const tones: Record<ExecutiveMetricTone, string> = {
-    blue: 'text-[#b3e6c7]',
-    green: 'text-[#4ade80]',
-    rose: 'text-[#f87171]',
-    neutral: 'text-white'
+    blue: 'text-[#35a160] dark:text-[#b3e6c7]',
+    green: 'text-[#22c55e] dark:text-[#4ade80]',
+    rose: 'text-[#ef4444] dark:text-[#f87171]',
+    neutral: 'text-[#212121] dark:text-white'
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.06] px-2.5 sm:px-3 py-2.5 min-w-0">
-      <span className="block text-xs uppercase tracking-wider font-semibold text-[#9e9e9e] truncate">{label}</span>
+    <div className="rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-[#f0f0f0]/70 dark:bg-[#111c2b] px-2.5 sm:px-3 py-2.5 min-w-0">
+      <span className="block text-xs uppercase tracking-wider font-semibold text-[#808080] dark:text-[#94a3b8] truncate">{label}</span>
       <span className={`block text-xs sm:text-sm font-bold tabular-nums mt-1 truncate ${tones[tone]}`} title={value}>{value}</span>
     </div>
   );
@@ -546,16 +548,16 @@ function FinancialTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="min-w-48 rounded-2xl border border-[#333333] bg-[#212121]/95 p-3.5 text-white shadow-2xl backdrop-blur-xl">
-      <div className="text-xs font-bold uppercase tracking-[0.18em] text-[#b3e6c7] mb-2.5">{label} performance</div>
+    <div className="min-w-48 rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-white/95 dark:bg-[#0b1422]/95 p-3.5 shadow-xl backdrop-blur-xl">
+      <div className="text-xs font-bold uppercase tracking-[0.18em] text-[#35a160] dark:text-[#b3e6c7] mb-2.5">{label} performance</div>
       <div className="space-y-2">
         {payload.map((item) => (
           <div key={item.name} className="flex items-center justify-between gap-5 text-xs">
-            <span className="inline-flex items-center gap-2 text-[#dbdbdb]">
+            <span className="inline-flex items-center gap-2 text-[#575757] dark:text-[#cbd5e1]">
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color || item.payload?.color || '#3fc073' }} />
               {item.name}
             </span>
-            <span className={`font-bold tabular-nums ${item.name === 'Operating cost' ? 'text-[#f87171]' : ''}`}>
+            <span className={`font-bold tabular-nums ${item.name === 'Operating cost' ? 'text-[#ef4444]' : 'text-[#212121] dark:text-white'}`}>
               {formatRupees(Number(item.value || 0))}
             </span>
           </div>
