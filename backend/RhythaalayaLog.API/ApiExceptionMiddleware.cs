@@ -3,7 +3,8 @@ using RhythaalayaLog.Application;
 
 namespace RhythaalayaLog.API;
 
-public sealed class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExceptionMiddleware> logger)
+public sealed class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExceptionMiddleware> logger,
+    FileErrorLog errorLog)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -22,7 +23,10 @@ public sealed class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExce
                 _ => StatusCodes.Status500InternalServerError
             };
             if (status == StatusCodes.Status500InternalServerError)
+            {
                 logger.LogError(exception, "Unhandled API error");
+                errorLog.Write(context, exception);
+            }
             await Results.Problem(statusCode: status,
                 title: status == 500 ? "An unexpected error occurred." : exception.Message,
                 extensions: new Dictionary<string, object?> { ["traceId"] = context.TraceIdentifier })

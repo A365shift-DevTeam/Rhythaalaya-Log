@@ -341,18 +341,30 @@ function BatchStat({
   value: number;
   color: 'blue' | 'indigo' | 'violet' | 'amber';
 }) {
+  const cardGradients = {
+    blue: 'bg-gradient-to-r from-[#3fc073]/10 via-[#3fc073]/[0.03] to-transparent',
+    indigo: 'bg-gradient-to-r from-[#379fc8]/10 via-[#379fc8]/[0.03] to-transparent',
+    violet: 'bg-gradient-to-r from-[#22c55e]/10 via-[#22c55e]/[0.03] to-transparent',
+    amber: 'bg-gradient-to-r from-[#f59e0b]/10 via-[#f59e0b]/[0.03] to-transparent',
+  };
   const colors = {
     blue: 'bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]',
-    indigo: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300',
-    violet: 'bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-300',
-    amber: 'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300',
+    indigo: 'bg-sky-50 text-[#379fc8] dark:bg-sky-950/60 dark:text-sky-400',
+    violet: 'bg-emerald-50 text-[#22c55e] dark:bg-emerald-950/60 dark:text-emerald-400',
+    amber: 'bg-amber-50 text-[#f59e0b] dark:bg-amber-950/60 dark:text-amber-400',
+  };
+  const textColors = {
+    blue: 'text-[#35a160] dark:text-[#6bd194]',
+    indigo: 'text-[#379fc8] dark:text-[#64b7d8]',
+    violet: 'text-[#22c55e] dark:text-[#4ade80]',
+    amber: 'text-[#f59e0b] dark:text-[#fbbf24]',
   };
   return (
-    <div className="premium-card p-3.5 sm:p-4 flex flex-col justify-between">
+    <div className={`premium-card p-3.5 sm:p-4 flex flex-col justify-between ${cardGradients[color]}`}>
       <div className={'w-8 h-8 sm:w-9 sm:h-9 rounded-2xl flex items-center justify-center ' + colors[color]}>
         <JisIcon className="text-[18px] sm:text-[20px]">{icon}</JisIcon>
       </div>
-      <div className="text-xl sm:text-2xl font-bold text-[#212121] dark:text-white mt-2 sm:mt-3 tabular-nums">{value}</div>
+      <div className={`text-xl sm:text-2xl font-bold ${textColors[color]} mt-2 sm:mt-3 tabular-nums`}>{value}</div>
       <div className="text-xs sm:text-xs font-semibold text-[#808080] dark:text-[#94a3b8] mt-0.5 truncate">{label}</div>
     </div>
   );

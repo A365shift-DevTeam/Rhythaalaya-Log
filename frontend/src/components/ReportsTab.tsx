@@ -67,21 +67,21 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({ students, batches, cours
 
       {/* Summary metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-        <div className="p-3.5 rounded-2xl border bg-white dark:bg-[#0b1422] border-[#dbdbdb]/80 dark:border-[#243244] text-[#212121] dark:text-white text-center shadow-xs">
+        <div className="premium-card p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#3fc073]/10 via-[#3fc073]/[0.03] to-transparent text-center">
           <div className="text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Students</div>
-          <div className="font-heading text-lg sm:text-2xl font-bold tabular-nums mt-0.5">{filtered.length}</div>
+          <div className="font-heading text-xl sm:text-2xl font-bold text-[#35a160] dark:text-[#6bd194] tabular-nums mt-0.5">{filtered.length}</div>
         </div>
-        <div className="p-3.5 rounded-2xl border bg-white dark:bg-[#0b1422] border-[#dbdbdb]/80 dark:border-[#243244] text-[#212121] dark:text-white text-center shadow-xs">
+        <div className="premium-card p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#379fc8]/10 via-[#379fc8]/[0.03] to-transparent text-center">
           <div className="text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Avg Attendance</div>
-          <div className="font-heading text-lg sm:text-2xl font-bold tabular-nums mt-0.5">{avgAttendance}%</div>
+          <div className="font-heading text-xl sm:text-2xl font-bold text-[#379fc8] dark:text-[#64b7d8] tabular-nums mt-0.5">{avgAttendance}%</div>
         </div>
-        <div className="p-3.5 rounded-2xl border bg-[#fef2f2] dark:bg-rose-950/40 border-rose-200/70 dark:border-rose-900/50 text-[#ef4444] dark:text-rose-300 text-center">
-          <div className="text-xs font-bold uppercase tracking-wider opacity-90">Outstanding</div>
-          <div className="font-heading text-lg sm:text-2xl font-bold tabular-nums mt-0.5">₹{totals.outstanding.toLocaleString('en-IN')}</div>
+        <div className="premium-card p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#ef4444]/10 via-[#ef4444]/[0.03] to-transparent text-center">
+          <div className="text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Outstanding</div>
+          <div className="font-heading text-xl sm:text-2xl font-bold text-[#ef4444] dark:text-[#f87171] tabular-nums mt-0.5">₹{totals.outstanding.toLocaleString('en-IN')}</div>
         </div>
-        <div className="p-3.5 rounded-2xl border bg-[#f0fdf4] dark:bg-emerald-950/40 border-emerald-200/70 dark:border-emerald-900/50 text-[#22c55e] dark:text-emerald-300 text-center">
-          <div className="text-xs font-bold uppercase tracking-wider opacity-90">Won / Participated</div>
-          <div className="font-heading text-lg sm:text-2xl font-bold tabular-nums mt-0.5">{totals.won} / {totals.participated}</div>
+        <div className="premium-card p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#22c55e]/10 via-[#22c55e]/[0.03] to-transparent text-center">
+          <div className="text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Won / Participated</div>
+          <div className="font-heading text-xl sm:text-2xl font-bold text-[#22c55e] dark:text-[#4ade80] tabular-nums mt-0.5">{totals.won} / {totals.participated}</div>
         </div>
       </div>
 

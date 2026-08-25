@@ -71,19 +71,19 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
 
       {/* Quick Summary Metrics */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <div className="p-3.5 rounded-2xl border bg-white dark:bg-[#0b1422] border-[#dbdbdb]/80 dark:border-[#243244] text-[#212121] dark:text-white text-center shadow-xs">
+        <div className="premium-card p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#3fc073]/10 via-[#3fc073]/[0.03] to-transparent text-center">
           <div className="text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Total</div>
-          <div className="font-heading text-lg sm:text-2xl font-bold tabular-nums mt-0.5">{students.length}</div>
+          <div className="font-heading text-xl sm:text-2xl font-bold text-[#35a160] dark:text-[#6bd194] tabular-nums mt-0.5">{students.length}</div>
         </div>
 
-        <div className="p-3.5 rounded-2xl border bg-[#f0fdf4] dark:bg-emerald-950/40 border-emerald-200/70 dark:border-emerald-900/50 text-[#22c55e] dark:text-emerald-300 text-center">
-          <div className="text-xs font-bold uppercase tracking-wider opacity-90">Paid</div>
-          <div className="font-heading text-lg sm:text-2xl font-bold tabular-nums mt-0.5">{paidCount}</div>
+        <div className="premium-card p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#22c55e]/10 via-[#22c55e]/[0.03] to-transparent text-center">
+          <div className="text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Paid</div>
+          <div className="font-heading text-xl sm:text-2xl font-bold text-[#22c55e] dark:text-[#4ade80] tabular-nums mt-0.5">{paidCount}</div>
         </div>
 
-        <div className="p-3.5 rounded-2xl border bg-[#fef2f2] dark:bg-rose-950/40 border-rose-200/70 dark:border-rose-900/50 text-[#ef4444] dark:text-rose-300 text-center">
-          <div className="text-xs font-bold uppercase tracking-wider opacity-90">Pending</div>
-          <div className="font-heading text-lg sm:text-2xl font-bold tabular-nums mt-0.5">{pendingCount}</div>
+        <div className="premium-card p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#ef4444]/10 via-[#ef4444]/[0.03] to-transparent text-center">
+          <div className="text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Pending</div>
+          <div className="font-heading text-xl sm:text-2xl font-bold text-[#ef4444] dark:text-[#f87171] tabular-nums mt-0.5">{pendingCount}</div>
         </div>
       </div>
 

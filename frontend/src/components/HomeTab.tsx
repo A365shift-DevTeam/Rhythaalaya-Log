@@ -186,7 +186,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
         <Button type="button" onClick={() => setCurrentTab('students')}
-          className="premium-card-interactive min-h-[150px] p-4 sm:p-5 flex flex-col justify-between text-left">
+          className="premium-card-interactive min-h-[150px] p-4 sm:p-5 flex flex-col justify-between text-left bg-gradient-to-r from-[#3fc073]/10 via-[#3fc073]/[0.03] to-transparent">
           <div className="flex items-center justify-between">
             <span className="font-sans text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Active Students</span>
             <div className="w-8 h-8 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center">
@@ -194,7 +194,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             </div>
           </div>
           <div className="mt-3">
-            <p className="font-heading text-2xl md:text-3xl font-bold text-[#212121] dark:text-white tracking-tight">{students.length}</p>
+            <p className="font-heading text-2xl sm:text-3xl font-bold text-[#35a160] dark:text-[#6bd194] tracking-tight tabular-nums">{students.length}</p>
             <p className="font-sans text-xs text-[#22c55e] mt-1 font-semibold flex items-center gap-1">
               <JisIcon className="text-[14px]">person_add</JisIcon>{newStudentsThisMonth} joined this month
             </p>
@@ -203,21 +203,21 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         </Button>
 
         <Button type="button" onClick={() => setCurrentTab('batches')}
-          className="premium-card-interactive min-h-[150px] p-4 sm:p-5 flex flex-col justify-between text-left">
+          className="premium-card-interactive min-h-[150px] p-4 sm:p-5 flex flex-col justify-between text-left bg-gradient-to-r from-[#379fc8]/10 via-[#379fc8]/[0.03] to-transparent">
           <div className="flex items-center justify-between">
             <span className="font-sans text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Batches</span>
-            <div className="w-8 h-8 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-2xl bg-sky-50 dark:bg-sky-950/60 text-[#379fc8] dark:text-sky-400 flex items-center justify-center">
               <JisIcon className="text-[18px]">calendar_view_week</JisIcon>
             </div>
           </div>
           <div className="mt-3">
-            <p className="font-heading text-2xl md:text-3xl font-bold text-[#212121] dark:text-white tracking-tight">{batches.length}</p>
+            <p className="font-heading text-2xl sm:text-3xl font-bold text-[#379fc8] dark:text-[#64b7d8] tracking-tight tabular-nums">{batches.length}</p>
             <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] mt-1 font-medium">Schedules active</p>
           </div>
         </Button>
 
         <Button type="button" onClick={() => setCurrentTab('finance')}
-          className="premium-card-interactive min-h-[150px] p-4 sm:p-5 flex flex-col justify-between text-left">
+          className="premium-card-interactive min-h-[150px] p-4 sm:p-5 flex flex-col justify-between text-left bg-gradient-to-r from-[#22c55e]/10 via-[#22c55e]/[0.03] to-transparent">
           <div className="flex items-center justify-between">
             <span className="font-sans text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Fees Collected</span>
             <div className="w-8 h-8 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-[#22c55e] flex items-center justify-center">
@@ -225,22 +225,22 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             </div>
           </div>
           <div className="mt-3">
-            <p className="font-heading text-2xl md:text-3xl font-bold text-[#212121] dark:text-white tracking-tight">₹{totalCollected.toLocaleString('en-IN')}</p>
+            <p className="font-heading text-2xl sm:text-3xl font-bold text-[#22c55e] dark:text-[#4ade80] tracking-tight tabular-nums">₹{totalCollected.toLocaleString('en-IN')}</p>
             <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] mt-1 font-medium">Year to date</p>
           </div>
           <Sparkline data={feesSparkline} className="mt-3 -mb-1" strokeColor="#22c55e" />
         </Button>
 
         <Button type="button" onClick={() => setCurrentTab('log')}
-          className="premium-card-interactive min-h-[150px] p-4 sm:p-5 flex flex-col justify-between text-left">
+          className="premium-card-interactive min-h-[150px] p-4 sm:p-5 flex flex-col justify-between text-left bg-gradient-to-r from-[#f59e0b]/10 via-[#f59e0b]/[0.03] to-transparent">
           <div className="flex items-center justify-between">
             <span className="font-sans text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">Attendance Avg</span>
-            <div className="w-8 h-8 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-[#f59e0b] dark:text-amber-400 flex items-center justify-center">
               <JisIcon className="text-[18px]">how_to_reg</JisIcon>
             </div>
           </div>
           <div className="mt-3">
-            <p className="font-heading text-2xl md:text-3xl font-bold text-[#212121] dark:text-white tracking-tight">{averageAttendance}%</p>
+            <p className="font-heading text-2xl sm:text-3xl font-bold text-[#f59e0b] dark:text-[#fbbf24] tracking-tight tabular-nums">{averageAttendance}%</p>
             <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] mt-1 font-medium">Overall student roll</p>
           </div>
         </Button>
