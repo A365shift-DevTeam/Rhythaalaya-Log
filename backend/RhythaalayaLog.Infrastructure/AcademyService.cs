@@ -165,7 +165,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             .Where(x => batchIds.Contains(x.Id) && x.IsActive).ToListAsync(ct);
         if (batches.Count != batchIds.Count) throw new AppValidationException(nameof(request.BatchIds));
 
-        ValidateConcession(request.ConcessionPercent, request.ConcessionReason);
+        ValidateConcession(request.ConcessionPercent);
         var joinDate = request.JoinDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var student = new Student
         {
@@ -192,8 +192,9 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     public async Task<StudentDto> UpdateStudentAsync(Guid id, UpdateStudentRequest request, CancellationToken ct)
     {
         RequireText(request.Name, nameof(request.Name));
-        ValidateConcession(request.ConcessionPercent, request.ConcessionReason);
+        ValidateConcession(request.ConcessionPercent);
         var student = await db.Students.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Student));
+        var previousConcession = student.ConcessionPercent;
         student.Name = request.Name.Trim();
         student.DateOfBirth = request.DateOfBirth;
         student.ParentName = Clean(request.ParentName);
@@ -202,11 +203,13 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         student.Address = Clean(request.Address);
         student.JoinDate = request.JoinDate ?? student.JoinDate;
         student.IsActive = request.IsActive;
-        // A changed concession only shapes dues generated from now on; already-issued dues keep
-        // their recorded adjustments (money history is never rewritten silently).
         student.ConcessionPercent = request.ConcessionPercent;
         student.ConcessionReason = Clean(request.ConcessionReason);
         await db.SaveChangesAsync(ct);
+        // A changed concession immediately re-aligns the discount on all live unpaid dues
+        // (as append-only delta adjustments) and shapes every future due.
+        if (student.ConcessionPercent != previousConcession)
+            await dueGenerator.ResyncConcessionAsync(student.Id, ct);
         return await GetStudentAsync(id, ct);
     }
 
@@ -557,11 +560,9 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         ValidateCategories(request.ExpenseCategories, nameof(request.ExpenseCategories));
     }
 
-    private static void ValidateConcession(decimal percent, string? reason)
+    private static void ValidateConcession(decimal percent)
     {
         if (percent is < 0 or > 100) throw new AppValidationException("Concession must be between 0 and 100 percent.");
-        if (percent > 0 && string.IsNullOrWhiteSpace(reason))
-            throw new AppValidationException("A concession needs a reason, e.g. Orphan or Semi-orphan.");
     }
 
     private static void RequireText(string? value, string field)

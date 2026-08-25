@@ -203,6 +203,33 @@ public sealed class FeeDueGeneratorTests
     }
 
     [Fact]
+    public async Task ConcessionChange_ResyncsExistingUnpaidDues_ButNeverBelowPaid()
+    {
+        using var h = new TestHarness();
+        h.AddStructure(1500m, FeeFrequency.Monthly, Anchor);
+        var enrollment = h.Enroll(Anchor);
+        await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
+        var dues = h.DuesFor(enrollment.Id);
+        Assert.All(dues, due => Assert.Equal(1500m, due.NetAmount)); // generated before any concession
+
+        // one due is already fully paid; it must not be re-discounted below the money received
+        await h.Finance.RecordFeePaymentAsync(new RecordFeePaymentRequest(
+            h.Student.Id, dues[0].Id, 1500m, PaymentMethod.Cash, null, null, null), default);
+
+        h.SetConcession(50m, "Semi-orphan");
+        await h.Generator.ResyncConcessionAsync(h.Student.Id, default);
+
+        var refreshed = h.DuesFor(enrollment.Id);
+        Assert.Equal(1500m, refreshed[0].NetAmount); // paid due untouched
+        Assert.Equal(FeeDueStatus.Paid, refreshed[0].Status);
+        Assert.All(refreshed.Skip(1), due =>
+        {
+            Assert.Equal(750m, due.NetAmount);
+            Assert.Equal(750m, due.DiscountAmount);
+        });
+    }
+
+    [Fact]
     public async Task Concession_StacksOnProratedFirstPeriod()
     {
         using var h = new TestHarness(LateEnrollmentBillingPolicy.Prorated);

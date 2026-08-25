@@ -265,6 +265,55 @@ public sealed class FeeDueGenerator(AppDbContext db)
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Re-aligns the standing-concession discount on every live scheduled due of a student after
+    /// their concession percent changes. Corrections are appended as delta adjustment rows (the
+    /// ledger stays append-only); a due is never cut below what's already been paid, and manual
+    /// admin discounts (PerformedByUserId set) are left untouched.
+    /// </summary>
+    public async Task ResyncConcessionAsync(Guid studentId, CancellationToken ct)
+    {
+        var student = await db.Students.AsNoTracking().SingleAsync(x => x.Id == studentId, ct);
+        var dues = await db.FeeDues.Where(x => x.StudentId == studentId
+            && x.FeeStructureId != null && x.Status != FeeDueStatus.Cancelled).ToListAsync(ct);
+        if (dues.Count == 0) return;
+
+        var dueIds = dues.Select(x => x.Id).ToList();
+        var adjustments = await db.FeeAdjustments.AsNoTracking()
+            .Where(x => dueIds.Contains(x.FeeDueId)).ToListAsync(ct);
+        var paidByDue = await db.FeePaymentAllocations.Where(x => dueIds.Contains(x.FeeDueId))
+            .GroupBy(x => x.FeeDueId)
+            .Select(g => new { FeeDueId = g.Key, Paid = g.Sum(x => x.Amount) })
+            .ToDictionaryAsync(x => x.FeeDueId, x => x.Paid, ct);
+
+        var changedDueIds = new List<Guid>();
+        foreach (var due in dues)
+        {
+            var dueAdjustments = adjustments.Where(x => x.FeeDueId == due.Id).ToList();
+            var proration = dueAdjustments.Where(x => x.Type == FeeAdjustmentType.Proration).Sum(x => x.Amount);
+            var systemConcession = dueAdjustments
+                .Where(x => x.Type == FeeAdjustmentType.Discount && x.PerformedByUserId == null)
+                .Sum(x => x.Amount);
+            var target = Math.Round((due.Amount - proration) * student.ConcessionPercent / 100m, 2, MidpointRounding.AwayFromZero);
+            var delta = target - systemConcession;
+            if (delta == 0) continue;
+            var paid = paidByDue.GetValueOrDefault(due.Id);
+            var newNet = due.NetAmount - delta;
+            if (newNet < 0 || newNet < paid) continue;
+            db.FeeAdjustments.Add(new FeeAdjustment
+            {
+                TenantId = due.TenantId, FeeDueId = due.Id, Type = FeeAdjustmentType.Discount, Amount = delta,
+                Reason = $"Standing concession updated to {student.ConcessionPercent:0.##}%"
+            });
+            due.DiscountAmount += delta;
+            due.NetAmount = newNet;
+            changedDueIds.Add(due.Id);
+        }
+        if (changedDueIds.Count == 0) return;
+        await db.SaveChangesAsync(ct);
+        foreach (var dueId in changedDueIds) await RefreshDueStatusAsync(dueId, ct);
+    }
+
     public async Task RefreshDueStatusAsync(Guid dueId, CancellationToken ct)
     {
         var due = await db.FeeDues.SingleAsync(x => x.Id == dueId, ct);
