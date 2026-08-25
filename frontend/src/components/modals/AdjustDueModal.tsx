@@ -1,7 +1,7 @@
 import { Button } from '../ui/button';
 import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
-import { FeeDue } from '../../types';
+import { FeeAdjustment, FeeDue } from '../../types';
 import { api } from '../../api';
 import { useDialogLifecycle } from './useDialogLifecycle';
 
@@ -27,6 +27,8 @@ export const AdjustDueModal: React.FC<AdjustDueModalProps> = ({ isOpen, onClose,
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [history, setHistory] = useState<FeeAdjustment[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const dialogRef = useDialogLifecycle(isOpen, onClose);
 
   useEffect(() => {
@@ -37,6 +39,17 @@ export const AdjustDueModal: React.FC<AdjustDueModalProps> = ({ isOpen, onClose,
     setError('');
     setSubmitting(false);
   }, [isOpen, due?.id]);
+
+  useEffect(() => {
+    if (!isOpen || !due) { setHistory([]); return; }
+    let ignore = false;
+    setHistoryLoading(true);
+    api.dueAdjustments(token, due.id)
+      .then((rows) => { if (!ignore) setHistory(rows); })
+      .catch(() => { if (!ignore) setHistory([]); })
+      .finally(() => { if (!ignore) setHistoryLoading(false); });
+    return () => { ignore = true; };
+  }, [isOpen, due?.id, token]);
 
   if (!isOpen || !due) return null;
 
@@ -94,6 +107,40 @@ export const AdjustDueModal: React.FC<AdjustDueModalProps> = ({ isOpen, onClose,
             <span>Balance <span className="font-bold text-[#ef4444]">₹{due.balanceAmount.toLocaleString('en-IN')}</span></span>
           </div>
         </div>
+
+        {/* Adjustment history: the append-only FeeAdjustment ledger for this due */}
+        {(historyLoading || history.length > 0) && (
+          <div>
+            <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">
+              Adjustment history
+            </span>
+            {historyLoading ? (
+              <p className="text-xs text-[#9e9e9e]">Loading…</p>
+            ) : (
+              <div className="max-h-36 space-y-1.5 overflow-y-auto rounded-2xl border border-[#dbdbdb]/60 p-1.5 dark:border-[#243244]">
+                {history.map((item) => (
+                  <div key={item.id} className="flex items-start justify-between gap-3 rounded-xl px-2.5 py-1.5 hover:bg-[#f0f0f0] dark:hover:bg-[#172435] transition-colors">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#212121] dark:text-white">
+                        <JisIcon className="text-[15px] text-[#3fc073]">
+                          {item.type === 'Discount' ? 'percent' : item.type === 'Waiver' ? 'volunteer_activism' : 'event_repeat'}
+                        </JisIcon>
+                        <span>{item.type === 'Proration' ? 'Prorated' : item.type}</span>
+                        <span className="tabular-nums">₹{Math.abs(item.amount).toLocaleString('en-IN')}</span>
+                        {item.amount < 0 && <span className="font-semibold text-[#9e9e9e]">(reversed)</span>}
+                      </div>
+                      <div className="mt-0.5 truncate text-xs text-[#808080] dark:text-[#94a3b8]" title={item.reason}>{item.reason}</div>
+                    </div>
+                    <div className="shrink-0 text-right text-xs text-[#9e9e9e]">
+                      <div>{item.performedByName}</div>
+                      <div>{new Date(item.createdAt).toLocaleDateString('en-IN')}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4 font-sans text-sm">
           <div>
