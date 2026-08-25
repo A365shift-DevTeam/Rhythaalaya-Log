@@ -33,6 +33,7 @@ import { ReportsTab } from './components/ReportsTab';
 import { AddStudentModal } from './components/modals/AddStudentModal';
 import { RecordFeeModal } from './components/modals/RecordFeeModal';
 import { AdjustDueModal } from './components/modals/AdjustDueModal';
+import { AddChargeModal } from './components/modals/AddChargeModal';
 import { WhatsAppModal } from './components/modals/WhatsAppModal';
 import { AddTransactionModal } from './components/modals/AddTransactionModal';
 import { AddBatchModal } from './components/modals/AddBatchModal';
@@ -119,6 +120,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   const [isRecordFeeOpen, setIsRecordFeeOpen] = useState(false);
   const [feeTargetStudent, setFeeTargetStudent] = useState<Student | undefined>(undefined);
   const [adjustTargetDue, setAdjustTargetDue] = useState<FeeDue | null>(null);
+  const [isAddChargeOpen, setIsAddChargeOpen] = useState(false);
 
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const [whatsAppTargetStudent, setWhatsAppTargetStudent] = useState<Student | undefined>(undefined);
@@ -387,6 +389,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             onOpenAddTransaction={openAddTransaction}
             onEditTransaction={openEditTransaction}
             onAdjustDue={(due) => setAdjustTargetDue(due)}
+            onOpenAddCharge={() => setIsAddChargeOpen(true)}
           />
         )}
 
@@ -444,6 +447,14 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         due={adjustTargetDue}
         token={session.token}
         onApplied={reload}
+      />
+
+      <AddChargeModal
+        isOpen={isAddChargeOpen}
+        onClose={() => setIsAddChargeOpen(false)}
+        students={students}
+        token={session.token}
+        onCreated={reload}
       />
 
       <WhatsAppModal

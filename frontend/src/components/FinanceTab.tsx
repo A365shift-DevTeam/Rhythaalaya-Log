@@ -18,6 +18,7 @@ interface FinanceTabProps {
   onOpenAddTransaction: () => void;
   onEditTransaction: (transaction: Transaction) => void;
   onAdjustDue: (due: FeeDue) => void;
+  onOpenAddCharge: () => void;
 }
 
 const DUE_STATUS_STYLE: Record<string, string> = {
@@ -38,6 +39,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
   onOpenAddTransaction,
   onEditTransaction,
   onAdjustDue,
+  onOpenAddCharge,
 }) => {
   const categorical = darkMode ? CATEGORICAL_DARK : CATEGORICAL_LIGHT;
   const pendingStudents = students.filter((s) => s.outstandingBalance > 0);
@@ -304,15 +306,28 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
         {/* Dues & Collections */}
         <div className="premium-card p-4 sm:p-5 md:p-6 flex flex-col justify-between">
           <div>
-            <div className="mb-4">
-              <h3 className="font-heading text-base sm:text-lg font-bold text-[#212121] dark:text-white">Dues & Collections</h3>
-              {outstandingDues.length > 0 ? (
-                <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">
-                  <span className="font-bold text-[#ef4444]">₹{totalDuePending.toLocaleString('en-IN')}</span> pending
-                  from {pendingStudents.length} {pendingStudents.length === 1 ? 'student' : 'students'}
-                </p>
-              ) : (
-                <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">Nothing pending right now</p>
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-heading text-base sm:text-lg font-bold text-[#212121] dark:text-white">Dues & Collections</h3>
+                {outstandingDues.length > 0 ? (
+                  <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">
+                    <span className="font-bold text-[#ef4444]">₹{totalDuePending.toLocaleString('en-IN')}</span> pending
+                    from {pendingStudents.length} {pendingStudents.length === 1 ? 'student' : 'students'}
+                  </p>
+                ) : (
+                  <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">Nothing pending right now</p>
+                )}
+              </div>
+              {canManage && (
+                <Button
+                  type="button"
+                  onClick={onOpenAddCharge}
+                  title="Add a one-off charge like a costume or exam fee"
+                  className="min-h-9 sm:min-h-10 shrink-0 rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] px-3.5 font-sans text-xs font-bold uppercase tracking-wider text-[#3fc073] dark:text-[#b3e6c7] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 transition-colors inline-flex items-center gap-1 active:scale-95"
+                >
+                  <JisIcon className="text-[16px]">post_add</JisIcon>
+                  <span>Charge</span>
+                </Button>
               )}
             </div>
 
