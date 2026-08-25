@@ -66,6 +66,13 @@ public sealed class TestHarness : IDisposable
         return structure;
     }
 
+    public void SetConcession(decimal percent, string reason)
+    {
+        Student.ConcessionPercent = percent;
+        Student.ConcessionReason = reason;
+        Db.SaveChanges();
+    }
+
     public Enrollment Enroll(DateOnly enrolledOn)
     {
         var enrollment = new Enrollment

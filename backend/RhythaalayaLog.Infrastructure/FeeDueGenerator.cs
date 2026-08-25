@@ -33,9 +33,17 @@ public sealed class FeeDueGenerator(AppDbContext db)
         await RefreshDateDrivenStatusesAsync(null, ct);
     }
 
+    private (Guid StudentId, decimal Percent, string? Reason)? _concession;
+
     public async Task EnsureForEnrollmentAsync(Guid enrollmentId, CancellationToken ct)
     {
         var enrollment = await db.Enrollments.AsNoTracking().SingleAsync(x => x.Id == enrollmentId, ct);
+        if (_concession?.StudentId != enrollment.StudentId)
+        {
+            var concession = await db.Students.AsNoTracking().Where(x => x.Id == enrollment.StudentId)
+                .Select(x => new { x.ConcessionPercent, x.ConcessionReason }).SingleAsync(ct);
+            _concession = (enrollment.StudentId, concession.ConcessionPercent, concession.ConcessionReason);
+        }
         var settings = await GetSettingsAsync(ct);
         var today = BillingSchedule.TodayInTimeZone(settings.TimeZone);
         var horizon = today.AddDays(settings.FeeDueLeadDays);
@@ -187,6 +195,25 @@ public sealed class FeeDueGenerator(AppDbContext db)
                 {
                     TenantId = enrollment.TenantId, Type = FeeAdjustmentType.Proration, Amount = reduction,
                     Reason = $"Prorated first period ({billedDays}/{periodDays} days from {enrolledOn.Value:yyyy-MM-dd})"
+                });
+            }
+        }
+
+        // Standing student concession (e.g. orphan/semi-orphan): a system Discount adjustment on
+        // every scheduled due, computed on the amount left after proration.
+        if (_concession is { Percent: > 0 } concessionInfo && concessionInfo.StudentId == enrollment.StudentId)
+        {
+            var concession = Math.Round(due.NetAmount * concessionInfo.Percent / 100m, 2, MidpointRounding.AwayFromZero);
+            if (concession > 0)
+            {
+                due.DiscountAmount += concession;
+                due.NetAmount -= concession;
+                due.Adjustments.Add(new FeeAdjustment
+                {
+                    TenantId = enrollment.TenantId, Type = FeeAdjustmentType.Discount, Amount = concession,
+                    Reason = string.IsNullOrWhiteSpace(concessionInfo.Reason)
+                        ? $"Standing concession {concessionInfo.Percent:0.##}%"
+                        : $"Standing concession {concessionInfo.Percent:0.##}% — {concessionInfo.Reason}"
                 });
             }
         }

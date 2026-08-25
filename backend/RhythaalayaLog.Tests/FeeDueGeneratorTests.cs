@@ -162,6 +162,65 @@ public sealed class FeeDueGeneratorTests
     }
 
     [Fact]
+    public async Task StandingConcession_ReducesEveryScheduledDue()
+    {
+        using var h = new TestHarness();
+        h.SetConcession(50m, "Semi-orphan");
+        h.AddStructure(1500m, FeeFrequency.Monthly, Anchor);
+        var enrollment = h.Enroll(Anchor);
+
+        await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
+
+        var dues = h.DuesFor(enrollment.Id);
+        Assert.NotEmpty(dues);
+        Assert.All(dues, due =>
+        {
+            Assert.Equal(1500m, due.Amount);
+            Assert.Equal(750m, due.DiscountAmount);
+            Assert.Equal(750m, due.NetAmount);
+        });
+        var adjustment = h.Db.FeeAdjustments.First(x => x.FeeDueId == dues[0].Id);
+        Assert.Equal(FeeAdjustmentType.Discount, adjustment.Type);
+        Assert.Null(adjustment.PerformedByUserId); // system-applied
+        Assert.Contains("Semi-orphan", adjustment.Reason);
+    }
+
+    [Fact]
+    public async Task FullConcession_SettlesDuesAsPaid()
+    {
+        using var h = new TestHarness();
+        h.SetConcession(100m, "Orphan");
+        h.AddStructure(1500m, FeeFrequency.Monthly, Anchor);
+        var enrollment = h.Enroll(Anchor);
+
+        await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
+
+        Assert.All(h.DuesFor(enrollment.Id), due =>
+        {
+            Assert.Equal(0m, due.NetAmount);
+            Assert.Equal(FeeDueStatus.Paid, due.Status); // nothing to collect
+        });
+    }
+
+    [Fact]
+    public async Task Concession_StacksOnProratedFirstPeriod()
+    {
+        using var h = new TestHarness(LateEnrollmentBillingPolicy.Prorated);
+        h.SetConcession(50m, "Semi-orphan");
+        h.AddStructure(1000m, FeeFrequency.Monthly, Anchor);
+        var enrolledOn = Anchor.AddDays(10);
+        var enrollment = h.Enroll(enrolledOn);
+
+        await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
+
+        var first = h.DuesFor(enrollment.Id)[0];
+        var afterProration = 1000m - BillingSchedule.ProrationReduction(1000m, Anchor, enrolledOn, FeeFrequency.Monthly);
+        var expectedConcession = Math.Round(afterProration * 0.5m, 2, MidpointRounding.AwayFromZero);
+        Assert.Equal(afterProration - expectedConcession, first.NetAmount);
+        Assert.Equal(2, h.Db.FeeAdjustments.Count(x => x.FeeDueId == first.Id)); // proration + concession
+    }
+
+    [Fact]
     public async Task ArrivedUpcomingDues_FlipToPendingOrOverdue()
     {
         using var h = new TestHarness();

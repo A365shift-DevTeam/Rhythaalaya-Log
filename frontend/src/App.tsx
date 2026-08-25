@@ -137,6 +137,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   // Actions
   const handleAddStudent = async (payload: {
     name: string; dateOfBirth: string | null; joinDate: string; parentName: string; phone: string; email: string; address: string;
+    concessionPercent?: number; concessionReason?: string;
   }, batchIds: string[]) => {
     // One request: the server writes the student and every enrollment in a single transaction,
     // so a failure saves nothing and pressing Save again cannot create a duplicate student.
@@ -146,6 +147,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
 
   const handleUpdateStudent = async (studentId: string, payload: {
     name: string; dateOfBirth: string | null; joinDate: string; parentName: string; phone: string; email: string; address: string;
+    concessionPercent?: number; concessionReason?: string;
   }, batchIds: string[]) => {
     const existing = students.find((s) => s.id === studentId);
     let updated = await api.updateStudent(session.token, studentId, { ...payload, isActive: existing?.isActive ?? true });

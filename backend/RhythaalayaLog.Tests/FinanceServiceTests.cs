@@ -244,6 +244,20 @@ public sealed class FinanceServiceTests
     }
 
     [Fact]
+    public async Task Concession_DoesNotApplyToCustomCharges()
+    {
+        var (h, enrollment, _) = await SeedBilledEnrollmentAsync();
+        using var _1 = h;
+        h.SetConcession(50m, "Semi-orphan");
+
+        var custom = await h.Finance.CreateCustomFeeDueAsync(
+            new CreateCustomFeeDueRequest(h.Student.Id, enrollment.Id, "Costume fee", 800m, Today), default);
+
+        Assert.Equal(800m, custom.NetAmount); // one-off charges stay full price
+        Assert.Equal(0m, custom.DiscountAmount);
+    }
+
+    [Fact]
     public async Task FutureDatedFeeStructure_DoesNotDeactivateCurrentPlan()
     {
         using var h = new TestHarness();

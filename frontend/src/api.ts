@@ -138,10 +138,12 @@ export const api = {
   createStudent: (token: string, body: {
     name: string; dateOfBirth?: string | null; parentName?: string; phone?: string; email?: string;
     address?: string; joinDate?: string | null; batchIds?: string[];
+    concessionPercent?: number; concessionReason?: string;
   }) => request<any>('/students', { method: 'POST', body: JSON.stringify(body) }, token).then(mapStudent),
   updateStudent: (token: string, id: string, body: {
     name: string; dateOfBirth?: string | null; parentName?: string; phone?: string; email?: string;
     address?: string; joinDate?: string | null; isActive: boolean;
+    concessionPercent?: number; concessionReason?: string;
   }) => request<any>('/students/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapStudent),
   archiveStudent: (token: string, id: string) =>
     request<void>('/students/' + id, { method: 'DELETE' }, token),
@@ -322,6 +324,7 @@ function mapStudent(x: any): Student {
     parentName: x.parentName || undefined, address: x.address || undefined, phone: x.phone || undefined,
     email: x.email || undefined, joinDate: x.joinDate, isActive: x.isActive, outstandingBalance: x.outstandingBalance,
     overallAttendance: x.attendancePercentage, wonCount: x.wonCount ?? 0, participatedCount: x.participatedCount ?? 0,
+    concessionPercent: x.concessionPercent ?? 0, concessionReason: x.concessionReason || undefined,
     enrollments: (x.enrollments || []).map((e: any) => ({
       id: e.id, batchId: e.batchId, batchName: e.batchName, courseId: e.courseId, courseName: e.courseName,
       enrolledOn: e.enrolledOn, endedOn: e.endedOn || undefined, status: e.status, outstandingBalance: e.outstandingBalance

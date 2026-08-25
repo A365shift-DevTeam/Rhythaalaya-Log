@@ -165,6 +165,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             .Where(x => batchIds.Contains(x.Id) && x.IsActive).ToListAsync(ct);
         if (batches.Count != batchIds.Count) throw new AppValidationException(nameof(request.BatchIds));
 
+        ValidateConcession(request.ConcessionPercent, request.ConcessionReason);
         var joinDate = request.JoinDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var student = new Student
         {
@@ -172,7 +173,8 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             StudentNumber = string.Concat("STU", DateTime.UtcNow.Year, Guid.NewGuid().ToString()[..8]).ToUpperInvariant(),
             Name = request.Name.Trim(), DateOfBirth = request.DateOfBirth, ParentName = Clean(request.ParentName),
             Phone = Clean(request.Phone), Email = Clean(request.Email), Address = Clean(request.Address),
-            JoinDate = joinDate
+            JoinDate = joinDate,
+            ConcessionPercent = request.ConcessionPercent, ConcessionReason = Clean(request.ConcessionReason)
         };
         db.Students.Add(student);
         var enrollments = batches.Select(batch => new Enrollment
@@ -190,6 +192,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     public async Task<StudentDto> UpdateStudentAsync(Guid id, UpdateStudentRequest request, CancellationToken ct)
     {
         RequireText(request.Name, nameof(request.Name));
+        ValidateConcession(request.ConcessionPercent, request.ConcessionReason);
         var student = await db.Students.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Student));
         student.Name = request.Name.Trim();
         student.DateOfBirth = request.DateOfBirth;
@@ -199,6 +202,10 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         student.Address = Clean(request.Address);
         student.JoinDate = request.JoinDate ?? student.JoinDate;
         student.IsActive = request.IsActive;
+        // A changed concession only shapes dues generated from now on; already-issued dues keep
+        // their recorded adjustments (money history is never rewritten silently).
+        student.ConcessionPercent = request.ConcessionPercent;
+        student.ConcessionReason = Clean(request.ConcessionReason);
         await db.SaveChangesAsync(ct);
         return await GetStudentAsync(id, ct);
     }
@@ -432,7 +439,8 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             var (wonCount, participatedCount) = achievementCounts.GetValueOrDefault(student.Id);
             return new StudentDto(student.Id, student.StudentNumber, student.Name, student.DateOfBirth,
                 student.ParentName, student.Address, student.Phone, student.Email, student.JoinDate, student.IsActive,
-                studentBalances.GetValueOrDefault(student.Id), attendancePercentage, wonCount, participatedCount, enrollments);
+                studentBalances.GetValueOrDefault(student.Id), attendancePercentage, wonCount, participatedCount, enrollments,
+                student.ConcessionPercent, student.ConcessionReason);
         }).ToList();
     }
 
@@ -547,6 +555,13 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         }
         ValidateCategories(request.IncomeCategories, nameof(request.IncomeCategories));
         ValidateCategories(request.ExpenseCategories, nameof(request.ExpenseCategories));
+    }
+
+    private static void ValidateConcession(decimal percent, string? reason)
+    {
+        if (percent is < 0 or > 100) throw new AppValidationException("Concession must be between 0 and 100 percent.");
+        if (percent > 0 && string.IsNullOrWhiteSpace(reason))
+            throw new AppValidationException("A concession needs a reason, e.g. Orphan or Semi-orphan.");
     }
 
     private static void RequireText(string? value, string field)

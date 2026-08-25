@@ -17,9 +17,11 @@ public sealed record UpdateBatchRequest(string Name, Guid CourseId, Guid StaffId
 // student first and then enrolling in a loop meant a failure halfway left a half-saved student,
 // and retrying the save created a duplicate.
 public sealed record CreateStudentRequest(string Name, DateOnly? DateOfBirth, string? ParentName, string? Phone,
-    string? Email, string? Address, DateOnly? JoinDate, IReadOnlyList<Guid>? BatchIds = null);
+    string? Email, string? Address, DateOnly? JoinDate, IReadOnlyList<Guid>? BatchIds = null,
+    decimal ConcessionPercent = 0, string? ConcessionReason = null);
 public sealed record UpdateStudentRequest(string Name, DateOnly? DateOfBirth, string? ParentName, string? Phone,
-    string? Email, string? Address, DateOnly? JoinDate, bool IsActive);
+    string? Email, string? Address, DateOnly? JoinDate, bool IsActive,
+    decimal ConcessionPercent = 0, string? ConcessionReason = null);
 
 public sealed record CreateAchievementRequest(string Title, AchievementCategory Category, string? Level,
     DateOnly EventDate, string? Note);

@@ -102,6 +102,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         student.Property(x => x.Address).HasMaxLength(400);
         student.Property(x => x.Email).HasMaxLength(254);
         student.Property(x => x.Phone).HasMaxLength(32);
+        student.Property(x => x.ConcessionPercent).HasPrecision(5, 2);
+        student.Property(x => x.ConcessionReason).HasMaxLength(200);
         student.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
 
         var enrollment = modelBuilder.Entity<Enrollment>();

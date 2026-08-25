@@ -133,6 +133,10 @@ public sealed class Student : ITenantOwned
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public DateOnly JoinDate { get; set; }
+    /// <summary>Standing fee concession (0-100%), auto-applied as a Discount adjustment to every scheduled due.</summary>
+    public decimal ConcessionPercent { get; set; }
+    /// <summary>Why the concession exists, e.g. "Orphan", "Semi-orphan", "Staff child".</summary>
+    public string? ConcessionReason { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<Enrollment> Enrollments { get; set; } = [];

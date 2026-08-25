@@ -14,7 +14,8 @@ public sealed record EnrollmentSummaryDto(Guid Id, Guid BatchId, string BatchNam
 public sealed record StudentDto(Guid Id, string StudentNumber, string Name, DateOnly? DateOfBirth,
     string? ParentName, string? Address, string? Phone, string? Email, DateOnly JoinDate, bool IsActive,
     decimal OutstandingBalance, decimal AttendancePercentage, int WonCount, int ParticipatedCount,
-    IReadOnlyList<EnrollmentSummaryDto> Enrollments);
+    IReadOnlyList<EnrollmentSummaryDto> Enrollments,
+    decimal ConcessionPercent = 0, string? ConcessionReason = null);
 
 public sealed record StudentAchievementDto(Guid Id, Guid StudentId, string Title, AchievementCategory Category,
     string? Level, DateOnly EventDate, string? Note, string FileName, string ContentType, int FileSizeBytes,

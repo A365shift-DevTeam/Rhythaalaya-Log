@@ -32,6 +32,8 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
+  const [concessionPercent, setConcessionPercent] = useState('');
+  const [concessionReason, setConcessionReason] = useState('');
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   const [batchMenuOpen, setBatchMenuOpen] = useState(false);
   const [step, setStep] = useState(0);
@@ -87,6 +89,8 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       setPhone(editingStudent.phone || '');
       setEmail(editingStudent.email || '');
       setAddress(editingStudent.address || '');
+      setConcessionPercent(editingStudent.concessionPercent ? String(editingStudent.concessionPercent) : '');
+      setConcessionReason(editingStudent.concessionReason || '');
       setSelectedBatchIds(editingStudent.enrollments.filter((e) => e.status === 'Active').map((e) => e.batchId));
     } else {
       setName('');
@@ -96,6 +100,8 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       setPhone('');
       setEmail('');
       setAddress('');
+      setConcessionPercent('');
+      setConcessionReason('');
       setSelectedBatchIds([]);
     }
     setStep(0);
@@ -120,6 +126,9 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     event.preventDefault();
     if (isWizard && step < LAST_STEP) return;
     if (!name.trim()) { setError('Student name is required.'); return; }
+    const concession = Number(concessionPercent) || 0;
+    if (concession < 0 || concession > 100) { setError('Concession must be between 0 and 100 percent.'); return; }
+    if (concession > 0 && !concessionReason.trim()) { setError('A concession needs a reason, e.g. Orphan or Semi-orphan.'); return; }
     setSubmitting(true);
     setError('');
     try {
@@ -131,6 +140,8 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
         address: address.trim() || undefined,
+        concessionPercent: concession,
+        concessionReason: concession > 0 ? concessionReason.trim() : undefined,
       };
       if (editingStudent) {
         await onUpdateStudent(editingStudent.id, payload, selectedBatchIds);
@@ -187,6 +198,25 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       <input id="student-join-date" type="date" required value={joinDate} onChange={(event) => setJoinDate(event.target.value)}
         className="settings-input" />
     </div>
+  );
+  const concessionFields = (
+    <>
+      <div>
+        <label htmlFor="student-concession" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Fee concession (%)</label>
+        <input id="student-concession" type="number" min={0} max={100} step={1} placeholder="0" value={concessionPercent}
+          onChange={(event) => setConcessionPercent(event.target.value)}
+          className="settings-input" />
+        <p className="mt-1 text-xs text-[#9e9e9e]">Automatically reduces every course fee for this student.</p>
+      </div>
+      <div>
+        <label htmlFor="student-concession-reason" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">
+          Concession reason {Number(concessionPercent) > 0 && <span className="text-[#ef4444]" aria-hidden="true">*</span>}
+        </label>
+        <input id="student-concession-reason" type="text" maxLength={200} placeholder="e.g. Orphan, Semi-orphan" value={concessionReason}
+          onChange={(event) => setConcessionReason(event.target.value)}
+          className="settings-input" />
+      </div>
+    </>
   );
   const parentNameField = (
     <div>
@@ -332,6 +362,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                     {nameField}
                     {dateOfBirthField}
                     {joinDateField}
+                    {concessionFields}
                   </div>
                 </section>
               )}
@@ -363,6 +394,8 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                       <ReviewRow label="Student name" value={name.trim()} />
                       <ReviewRow label="Date of birth" value={formatDate(dateOfBirth)} />
                       <ReviewRow label="Date of joining" value={formatDate(joinDate)} />
+                      <ReviewRow label="Fee concession" value={Number(concessionPercent) > 0
+                        ? `${Number(concessionPercent)}% — ${concessionReason.trim()}` : ''} emptyText="None" />
                     </ReviewGroup>
                     <ReviewGroup title="Contact" onEdit={() => goToStep(1)}>
                       <ReviewRow label="Parent / guardian" value={parentName.trim()} />
@@ -394,6 +427,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                   {phoneField}
                   {emailField}
                   {addressField}
+                  {concessionFields}
                 </div>
               </section>
 

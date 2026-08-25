@@ -80,6 +80,8 @@ export interface Student {
   wonCount: number;
   participatedCount: number;
   enrollments: EnrollmentSummary[];
+  concessionPercent: number;
+  concessionReason?: string;
 }
 
 export interface Achievement {
