@@ -43,10 +43,30 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
 }) => {
   const categorical = darkMode ? CATEGORICAL_DARK : CATEGORICAL_LIGHT;
   const pendingStudents = students.filter((s) => s.outstandingBalance > 0);
+  const [expandedStudentId, setExpandedStudentId] = React.useState<string | null>(null);
   // Upcoming dues are visible but not yet payable, so they don't count as pending money
   const totalDuePending = outstandingDues
     .filter((due) => due.status !== 'Upcoming')
     .reduce((sum, due) => sum + due.balanceAmount, 0);
+
+  // One row per student in Dues & Collections; their individual dues expand on demand.
+  const STATUS_SEVERITY: Record<string, number> = { Overdue: 0, Partial: 1, Pending: 2, Upcoming: 3 };
+  const groupMap = new Map<string, { studentId: string; studentName: string; dues: FeeDue[] }>();
+  for (const due of outstandingDues) {
+    const group = groupMap.get(due.studentId) ?? { studentId: due.studentId, studentName: due.studentName, dues: [] };
+    group.dues.push(due);
+    groupMap.set(due.studentId, group);
+  }
+  const duesByStudent = Array.from(groupMap.values()).map((group) => {
+    const sorted = group.dues.slice().sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    return {
+      ...group,
+      dues: sorted,
+      total: sorted.reduce((sum, due) => sum + (due.status === 'Upcoming' ? 0 : due.balanceAmount), 0),
+      worstStatus: sorted.reduce((worst, due) =>
+        (STATUS_SEVERITY[due.status] ?? 9) < (STATUS_SEVERITY[worst] ?? 9) ? due.status : worst, sorted[0].status),
+    };
+  }).sort((a, b) => b.total - a.total);
 
   const totalIncome = transactions.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
   const totalExpense = transactions.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
@@ -334,53 +354,84 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
             </div>
 
             <div className="space-y-2.5">
-              {outstandingDues.length === 0 && <p className="text-xs text-[#808080] py-6 text-center">No outstanding dues — all clear!</p>}
-              {outstandingDues.slice(0, 4).map((due) => {
-                const student = students.find((s) => s.id === due.studentId);
+              {duesByStudent.length === 0 && <p className="text-xs text-[#808080] py-6 text-center">No outstanding dues — all clear!</p>}
+              {duesByStudent.slice(0, 4).map((group) => {
+                const student = students.find((s) => s.id === group.studentId);
+                const expanded = expandedStudentId === group.studentId;
                 return (
                   <div
-                    key={due.id}
-                    className="flex flex-col items-stretch justify-between gap-2.5 p-3 rounded-2xl bg-[#f0f0f0] dark:bg-[#111c2b]/60 border border-[#dbdbdb]/70 dark:border-[#243244] sm:flex-row sm:items-center"
+                    key={group.studentId}
+                    className="rounded-2xl bg-[#f0f0f0] dark:bg-[#111c2b]/60 border border-[#dbdbdb]/70 dark:border-[#243244] overflow-hidden"
                   >
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-2xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-white flex items-center justify-center font-bold text-xs shrink-0">
-                        {due.studentName.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-sans text-xs font-bold text-[#212121] dark:text-white truncate">{due.studentName}</div>
-                        <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${DUE_STATUS_STYLE[due.status] ?? DUE_STATUS_STYLE.Pending}`}>
-                            {due.status}
-                          </span>
-                          <span className="font-sans text-xs text-[#808080] dark:text-[#94a3b8]">
-                            {due.title || due.courseName} · due {new Date(due.dueDate).toLocaleDateString('en-IN')}
-                          </span>
+                    <div className="flex flex-col items-stretch justify-between gap-2.5 p-3 sm:flex-row sm:items-center">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedStudentId(expanded ? null : group.studentId)}
+                        aria-expanded={expanded}
+                        className="flex min-w-0 items-center gap-2.5 text-left"
+                      >
+                        <div className="w-8 h-8 rounded-2xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                          {group.studentName.charAt(0)}
                         </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 sm:justify-end pt-1 sm:pt-0 border-t sm:border-t-0 border-[#dbdbdb]/60 dark:border-[#243244]">
-                      <span className="font-sans text-xs font-bold text-[#212121] dark:text-white tabular-nums">
-                        ₹{due.balanceAmount.toLocaleString('en-IN')}
-                      </span>
-                      {canManage && (
+                        <div className="min-w-0">
+                          <div className="font-sans text-xs font-bold text-[#212121] dark:text-white truncate">{group.studentName}</div>
+                          <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${DUE_STATUS_STYLE[group.worstStatus] ?? DUE_STATUS_STYLE.Pending}`}>
+                              {group.worstStatus}
+                            </span>
+                            <span className="font-sans text-xs text-[#808080] dark:text-[#94a3b8]">
+                              {group.dues.length} {group.dues.length === 1 ? 'due' : 'dues'} · oldest {new Date(group.dues[0].dueDate).toLocaleDateString('en-IN')}
+                            </span>
+                            <JisIcon className="text-[16px] text-[#9e9e9e]">{expanded ? 'expand_less' : 'expand_more'}</JisIcon>
+                          </div>
+                        </div>
+                      </button>
+                      <div className="flex items-center justify-between gap-3 sm:justify-end pt-1 sm:pt-0 border-t sm:border-t-0 border-[#dbdbdb]/60 dark:border-[#243244]">
+                        <span className="font-sans text-xs font-bold text-[#212121] dark:text-white tabular-nums">
+                          ₹{group.total.toLocaleString('en-IN')}
+                        </span>
                         <Button
                           type="button"
-                          onClick={() => onAdjustDue(due)}
-                          aria-label={`Adjust due for ${due.studentName}`}
-                          title="Discount, waive, or cancel this due"
-                          className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] text-[#808080] hover:text-[#3fc073] hover:border-[#3fc073]/40 transition-all active:scale-95"
+                          onClick={() => onOpenRecordFee(student)}
+                          className="min-h-9 px-3 py-1 bg-white dark:bg-[#0b1422] text-[#3fc073] dark:text-[#b3e6c7] hover:bg-[#3fc073] hover:text-white dark:hover:bg-[#3fc073] dark:hover:text-white rounded-2xl border border-[#dbdbdb] dark:border-[#243244] text-xs font-bold transition-all active:scale-95 shadow-xs"
                         >
-                          <JisIcon className="text-[16px]">tune</JisIcon>
+                          Collect
                         </Button>
-                      )}
-                      <Button
-                        type="button"
-                        onClick={() => onOpenRecordFee(student)}
-                        className="min-h-9 px-3 py-1 bg-white dark:bg-[#0b1422] text-[#3fc073] dark:text-[#b3e6c7] hover:bg-[#3fc073] hover:text-white dark:hover:bg-[#3fc073] dark:hover:text-white rounded-2xl border border-[#dbdbdb] dark:border-[#243244] text-xs font-bold transition-all active:scale-95 shadow-xs"
-                      >
-                        Collect
-                      </Button>
+                      </div>
                     </div>
+
+                    {expanded && (
+                      <div className="border-t border-[#dbdbdb]/60 dark:border-[#243244] divide-y divide-[#dbdbdb]/40 dark:divide-[#243244]/60">
+                        {group.dues.map((due) => (
+                          <div key={due.id} className="flex items-center justify-between gap-3 px-3 py-2 pl-[3.25rem]">
+                            <div className="flex min-w-0 items-center gap-1.5 flex-wrap">
+                              <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${DUE_STATUS_STYLE[due.status] ?? DUE_STATUS_STYLE.Pending}`}>
+                                {due.status}
+                              </span>
+                              <span className="font-sans text-xs text-[#808080] dark:text-[#94a3b8]">
+                                {due.title || due.courseName} · due {new Date(due.dueDate).toLocaleDateString('en-IN')}
+                              </span>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <span className="font-sans text-xs font-bold text-[#212121] dark:text-white tabular-nums">
+                                ₹{due.balanceAmount.toLocaleString('en-IN')}
+                              </span>
+                              {canManage && (
+                                <Button
+                                  type="button"
+                                  onClick={() => onAdjustDue(due)}
+                                  aria-label={`Adjust due for ${due.studentName}`}
+                                  title="Discount, waive, or cancel this due"
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] text-[#808080] hover:text-[#3fc073] hover:border-[#3fc073]/40 transition-all active:scale-95"
+                                >
+                                  <JisIcon className="text-[15px]">tune</JisIcon>
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}

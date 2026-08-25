@@ -211,6 +211,38 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
             )}
           </div>
 
+          {/* The student's outstanding dues, so the cashier sees exactly what this payment settles.
+              Payments auto-allocate oldest first. */}
+          {selectedStudentId && !pickerOpen && dues.length > 0 && (
+            <div>
+              <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">
+                Outstanding dues
+              </span>
+              <div className="max-h-36 space-y-0.5 overflow-y-auto rounded-2xl border border-[#dbdbdb]/60 p-1.5 dark:border-[#243244]">
+                {dues.map((due) => (
+                  <div key={due.id} className="flex items-center justify-between gap-3 rounded-xl px-2.5 py-1.5">
+                    <div className="flex min-w-0 items-center gap-1.5 flex-wrap">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                        due.status === 'Overdue' ? 'bg-rose-100 text-[#ef4444] dark:bg-rose-950/80 dark:text-rose-300'
+                        : due.status === 'Partial' ? 'bg-amber-100 text-[#f59e0b] dark:bg-amber-950/80 dark:text-amber-300'
+                        : due.status === 'Upcoming' ? 'bg-sky-100 text-[#0284c7] dark:bg-sky-950/80 dark:text-sky-300'
+                        : 'bg-[#f0f0f0] text-[#6b6b6b] dark:bg-[#111c2b] dark:text-[#cbd5e1]'}`}>
+                        {due.status}
+                      </span>
+                      <span className="truncate text-xs text-[#808080] dark:text-[#94a3b8]">
+                        {due.title || due.courseName} · due {new Date(due.dueDate).toLocaleDateString('en-IN')}
+                      </span>
+                    </div>
+                    <span className="shrink-0 text-xs font-bold tabular-nums text-[#212121] dark:text-white">
+                      ₹{due.balanceAmount.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-[#9e9e9e]">Payments settle the oldest due first.</p>
+            </div>
+          )}
+
           {/* Step 2: amount & method */}
           {selectedStudentId && (
             <div className="space-y-3">
