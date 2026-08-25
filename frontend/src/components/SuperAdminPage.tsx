@@ -1,5 +1,6 @@
 import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
+import { Spinner } from './ui/spinner';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ApiError, api, Plan, Session, Tenant, TenantUser } from '../api';
 import { toIsoDate } from '../lib/schedule';
@@ -541,7 +542,7 @@ function TenantUsersPanel({ tenant, plan, users, loading, busy, onSubmit, onClos
     </div>}
 
     <div className={compact ? 'space-y-2' : 'grid sm:grid-cols-2 lg:grid-cols-3 gap-2'}>
-      {loading ? <div className="text-xs text-[#808080] py-4">Loading tenant users…</div> :
+      {loading ? <div className="py-4"><Spinner size="sm" inline text="Loading tenant users…" /></div> :
         users.map((user) => <div key={user.id}
           className="rounded-2xl border border-[#dbdbdb] bg-white p-3 flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-[#e9f7ee] text-[#3fc073] font-bold text-xs flex items-center justify-center shrink-0">
@@ -615,8 +616,16 @@ function MiniInfo({ icon, label, value }: { icon: string; label: string; value: 
 }
 
 function LoadingRows() {
-  return <div className="p-6 space-y-3">{[1, 2, 3].map((item) =>
-    <div key={item} className="h-16 rounded-2xl bg-[#f0f0f0] animate-pulse" />)}</div>;
+  return (
+    <div className="p-6 space-y-3">
+      <div className="flex items-center gap-2 py-1 text-xs text-[#808080]">
+        <Spinner size="xs" inline text="Loading academies…" />
+      </div>
+      {[1, 2, 3].map((item) => (
+        <div key={item} className="h-16 rounded-2xl bg-[#f0f0f0] animate-pulse" />
+      ))}
+    </div>
+  );
 }
 
 function EmptyState({ hasTenants, onCreate }: { hasTenants: boolean; onCreate: () => void }) {

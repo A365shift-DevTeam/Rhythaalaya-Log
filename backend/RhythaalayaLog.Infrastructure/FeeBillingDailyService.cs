@@ -57,7 +57,9 @@ public sealed class FeeBillingDailyService(IServiceProvider services, ILogger<Fe
 
     private async Task RunSweepAsync(CancellationToken ct)
     {
-        var options = services.GetRequiredService<DbContextOptions<AppDbContext>>();
+        // AddDbContext registers the options per-scope, so a singleton hosted service needs its own scope.
+        await using var scope = services.CreateAsyncScope();
+        var options = scope.ServiceProvider.GetRequiredService<DbContextOptions<AppDbContext>>();
         List<Guid> tenantIds;
         await using (var db = new AppDbContext(options, new FixedTenantContext()))
         {

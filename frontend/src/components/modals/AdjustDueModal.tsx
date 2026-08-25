@@ -1,5 +1,6 @@
 import { Button } from '../ui/button';
 import { JisIcon } from '../JisIcon';
+import { Spinner } from '../ui/spinner';
 import React, { useEffect, useState } from 'react';
 import { FeeAdjustment, FeeDue } from '../../types';
 import { api } from '../../api';
@@ -115,7 +116,9 @@ export const AdjustDueModal: React.FC<AdjustDueModalProps> = ({ isOpen, onClose,
               Adjustment history
             </span>
             {historyLoading ? (
-              <p className="text-xs text-[#9e9e9e]">Loading…</p>
+              <div className="py-1">
+                <Spinner size="xs" inline text="Loading history…" />
+              </div>
             ) : (
               <div className="max-h-36 space-y-1.5 overflow-y-auto rounded-2xl border border-[#dbdbdb]/60 p-1.5 dark:border-[#243244]">
                 {history.map((item) => (

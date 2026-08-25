@@ -1,5 +1,6 @@
 import { Button } from './components/ui/button';
 import { JisIcon } from './components/JisIcon';
+import { Spinner } from './components/ui/spinner';
 import React, { useState, useEffect } from 'react';
 import {
   Student,
@@ -288,14 +289,48 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   const openStudentDetails = (student: Student) => { setDetailsTargetStudent(student); setIsStudentDetailsOpen(true); };
 
   if (loading) return (
-    <div className="min-h-screen bg-[#f4fbf7] dark:bg-[#07111f] p-4 md:p-8" role="status" aria-live="polite">
-      <span className="sr-only">Loading academy</span>
-      <div className="mx-auto max-w-6xl animate-pulse space-y-5 pt-16 md:pt-24">
-        <div className="h-8 w-56 rounded-2xl bg-[#e9f7ee] dark:bg-[#1d492f]/50" />
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((item) => <div key={item} className="h-32 rounded-3xl bg-white dark:bg-[#0b1422] border border-[#dbdbdb]/60 dark:border-[#243244]" />)}
+    <div className="min-h-screen bg-[#f4fbf7] dark:bg-[#07111f] p-4 sm:p-6 md:p-8 flex flex-col justify-start" role="status" aria-live="polite">
+      <div className="mx-auto max-w-6xl w-full space-y-6 pt-6 sm:pt-10 md:pt-14">
+        {/* Visible Loading Header with Spinner & Text */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-3xl border border-[#dbdbdb]/80 bg-white/90 p-4 sm:p-5 shadow-xs backdrop-blur-xl dark:border-[#243244] dark:bg-[#0b1422]/90">
+          <div className="flex items-center gap-3.5">
+            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20 shadow-inner">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#3fc073]/25 border-t-[#3fc073]" aria-hidden="true" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-bold text-[#212121] dark:text-white">Loading academy…</h2>
+                <span className="inline-flex h-2 w-2 rounded-full bg-[#3fc073] animate-ping" />
+              </div>
+              <p className="text-xs text-[#808080] dark:text-[#94a3b8]">Fetching your students, batches, and dashboard data</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#3fc073] bg-[#e9f7ee] dark:bg-[#3fc073]/15 px-3 py-1.5 rounded-xl self-end sm:self-auto">
+            <span className="w-2 h-2 rounded-full bg-[#3fc073] animate-pulse" />
+            <span>Please wait…</span>
+          </div>
         </div>
-        <div className="h-80 rounded-3xl bg-white dark:bg-[#0b1422] border border-[#dbdbdb]/60 dark:border-[#243244]" />
+
+        {/* Skeleton Layout */}
+        <div className="animate-pulse space-y-5">
+          <div className="h-8 w-56 rounded-2xl bg-[#e9f7ee] dark:bg-[#1d492f]/50" />
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((item) => (
+              <div key={item} className="h-32 rounded-3xl bg-white dark:bg-[#0b1422] border border-[#dbdbdb]/60 dark:border-[#243244] p-4 flex flex-col justify-between">
+                <div className="h-4 w-20 rounded-lg bg-[#f0f0f0] dark:bg-[#152336]" />
+                <div className="h-8 w-16 rounded-lg bg-[#e9f7ee] dark:bg-[#1d492f]/40" />
+              </div>
+            ))}
+          </div>
+          <div className="h-80 rounded-3xl bg-white dark:bg-[#0b1422] border border-[#dbdbdb]/60 dark:border-[#243244] p-6 space-y-4">
+            <div className="h-6 w-44 rounded-lg bg-[#f0f0f0] dark:bg-[#152336]" />
+            <div className="space-y-3 pt-2">
+              {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="h-10 rounded-xl bg-[#f0f0f0]/70 dark:bg-[#152336]/60" />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -336,8 +371,8 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         </div>}
         {currentTab === 'home' && (
           <React.Suspense fallback={
-            <div className="min-h-[420px] rounded-3xl border border-[#dbdbdb]/80 dark:border-[#243244] bg-white dark:bg-[#0b1422] flex items-center justify-center text-sm font-semibold text-[#3fc073]">
-              Loading dashboard…
+            <div className="min-h-[420px] rounded-3xl border border-[#dbdbdb]/80 dark:border-[#243244] bg-white dark:bg-[#0b1422] flex flex-col items-center justify-center gap-2 p-8">
+              <Spinner size="lg" text="Loading dashboard…" subtext="Please wait a moment" />
             </div>
           }>
             <HomeTab

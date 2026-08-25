@@ -21,4 +21,14 @@
     <ProjectReference Include="..\RhythaalayaLog.Infrastructure\RhythaalayaLog.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!-- SkiaSharp ships an 85 MB native symbol file per platform; IIS never needs it.
+       Managed .pdb files stay, so exception stack traces keep their line numbers. -->
+  <Target Name="TrimNativePdbsFromPublish" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <ResolvedFileToPublish
+        Remove="@(ResolvedFileToPublish)"
+        Condition="'%(Extension)' == '.pdb' And '%(ResolvedFileToPublish.AssetType)' == 'native'" />
+    </ItemGroup>
+  </Target>
+
 </Project>

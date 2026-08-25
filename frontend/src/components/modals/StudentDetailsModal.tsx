@@ -1,5 +1,6 @@
 import { Button } from '../ui/button';
 import { JisIcon } from '../JisIcon';
+import { Spinner } from '../ui/spinner';
 import React, { useEffect, useState } from 'react';
 import { Achievement, FeeDue, FeePayment, PAYMENT_METHOD_LABELS, Student } from '../../types';
 import { api } from '../../api';
@@ -136,7 +137,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
         {/* Fee dues */}
         <section>
           <h4 className="text-xs font-bold uppercase tracking-wider text-[#808080] mb-2">Fee dues</h4>
-          {loading ? <p className="text-xs text-[#9e9e9e]">Loading…</p> : dues.length === 0 ? (
+          {loading ? <div className="py-2"><Spinner size="xs" inline text="Loading dues…" /></div> : dues.length === 0 ? (
             <p className="text-xs text-[#808080]">No dues generated yet.</p>
           ) : (
             <div className="space-y-1.5 max-h-40 overflow-y-auto">
@@ -155,7 +156,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
         {/* Payment history */}
         <section>
           <h4 className="text-xs font-bold uppercase tracking-wider text-[#808080] mb-2">Payment history</h4>
-          {loading ? <p className="text-xs text-[#9e9e9e]">Loading…</p> : payments.length === 0 ? (
+          {loading ? <div className="py-2"><Spinner size="xs" inline text="Loading payments…" /></div> : payments.length === 0 ? (
             <p className="text-xs text-[#808080]">No payments recorded yet.</p>
           ) : (
             <div className="space-y-1.5 max-h-40 overflow-y-auto">
@@ -175,7 +176,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
         <section>
           <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#808080]">Achievements & certificates</h4>
           {achievementError && <div role="alert" className="mb-2 p-2.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-[#ef4444] text-xs font-bold">{achievementError}</div>}
-          {loading ? <p className="text-xs text-[#9e9e9e]">Loading…</p> : achievements.length === 0 ? (
+          {loading ? <div className="py-2"><Spinner size="xs" inline text="Loading certificates…" /></div> : achievements.length === 0 ? (
             <p className="text-xs text-[#808080]">No certificates uploaded yet.</p>
           ) : (
             <div className="space-y-1.5 max-h-52 overflow-y-auto">
@@ -207,7 +208,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
             </div>
           )}
           <Button type="button" onClick={() => setIsAddAchievementOpen(true)}
-            className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#b9e6cb] bg-[#e9f7ee] px-4 py-2.5 text-xs font-bold text-[#257347] shadow-sm hover:bg-[#d9f2e3] dark:border-[#3fc073]/35 dark:bg-[#3fc073]/15 dark:text-[#b3e6c7] dark:hover:bg-[#3fc073]/25">
+            className="btn-brand mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-bold shadow-sm">
             <JisIcon className="text-[18px]">add</JisIcon>
             <span>Add achievement or certificate</span>
           </Button>

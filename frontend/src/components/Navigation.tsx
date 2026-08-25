@@ -142,13 +142,26 @@ export const Navigation: React.FC<NavigationProps> = ({
             onClick={(event) => event.stopPropagation()}
           >
             <p className="px-3 pb-2 pt-1 text-xs font-bold uppercase tracking-wider text-[#9e9e9e]">More</p>
-            {mobileMoreItems.map((item) => (
-              <Button key={item.id} type="button" onClick={() => navigate(item.id)}
-                className="flex min-h-12 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-semibold text-[#212121] hover:bg-[#f0f0f0] dark:text-[#e2e8f0] dark:hover:bg-[#172435]">
-                <JisIcon className="text-[21px] text-[#3fc073]">{item.icon}</JisIcon>
-                <span>{item.label}</span>
-              </Button>
-            ))}
+            {mobileMoreItems.map((item) => {
+              const isActive = currentTab === item.id;
+              return (
+                <Button
+                  key={item.id}
+                  type="button"
+                  onClick={() => navigate(item.id)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex min-h-12 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-semibold transition-all ${
+                    isActive
+                      ? 'bg-gradient-to-r from-[#4d999d] to-[#64a85a] text-white shadow-md shadow-[#4d999d]/25 font-semibold'
+                      : 'text-[#212121] dark:text-[#e2e8f0] hover:bg-[#f0f0f0] dark:hover:bg-[#172435]'
+                  }`}
+                >
+                  <JisIcon className={`text-[21px] ${isActive ? 'text-white filled' : 'text-[#3fc073]'}`}>{item.icon}</JisIcon>
+                  <span className="flex-1">{item.label}</span>
+                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                </Button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -164,7 +177,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               aria-current={isActive ? 'page' : undefined}
               className={`relative min-h-[60px] flex flex-col items-center justify-center rounded-2xl px-1 py-1 transition-all ${
                 isActive
-                  ? 'bg-[#e9f7ee] text-[#35a160] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7] font-bold'
+                  ? 'bg-gradient-to-r from-[#4d999d] to-[#64a85a] text-white shadow-sm shadow-[#4d999d]/25 font-bold'
                   : 'text-[#6b6b6b] dark:text-[#94a3b8] hover:text-[#3fc073]'
               }`}
             >
@@ -177,8 +190,16 @@ export const Navigation: React.FC<NavigationProps> = ({
             </Button>
           );
         })}
-        <Button type="button" onClick={() => setIsMoreOpen((open) => !open)} aria-expanded={isMoreOpen}
-          className={`relative min-h-[60px] flex flex-col items-center justify-center rounded-2xl px-1 py-1 transition-all ${moreIsActive || isMoreOpen ? 'bg-[#e9f7ee] text-[#35a160] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7] font-bold' : 'text-[#6b6b6b] dark:text-[#94a3b8]'}`}>
+        <Button
+          type="button"
+          onClick={() => setIsMoreOpen((open) => !open)}
+          aria-expanded={isMoreOpen}
+          className={`relative min-h-[60px] flex flex-col items-center justify-center rounded-2xl px-1 py-1 transition-all ${
+            moreIsActive || isMoreOpen
+              ? 'bg-gradient-to-r from-[#4d999d] to-[#64a85a] text-white shadow-sm shadow-[#4d999d]/25 font-bold'
+              : 'text-[#6b6b6b] dark:text-[#94a3b8]'
+          }`}
+        >
           <JisIcon className={`text-[20px] ${moreIsActive ? 'filled' : ''}`}>more_horiz</JisIcon>
           <span className="font-sans text-xs leading-tight tracking-tight font-semibold mt-1">More</span>
         </Button>
