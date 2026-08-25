@@ -16,8 +16,6 @@ interface AddChargeModalProps {
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-const TITLE_PRESETS = ['Costume fee', 'Exam fee', 'Annual day', 'Workshop'];
-
 /// One-off charge outside the fee schedule. Batch-first flow: pick a batch, charge everyone in
 /// it or only the students you tick, and the summary line always shows the money consequence
 /// (N students × amount = total) before anything is committed.
@@ -170,14 +168,44 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
             <span className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">
               <StepBadge n={1} /> Which batch?
             </span>
-            <select id="charge-batch" required value={batchId} disabled={submitting}
-              onChange={(event) => handlePickBatch(event.target.value)}
-              className="settings-input" aria-label="Batch">
-              <option value="" disabled>Select a batch…</option>
-              {activeBatches.map((batch) => (
-                <option key={batch.id} value={batch.id}>{batch.courseName} · {batch.name} ({batch.enrolledCount} students)</option>
-              ))}
-            </select>
+            {selectedBatch ? (
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#dbdbdb] bg-[#f0f0f0] p-3 dark:border-[#243244] dark:bg-[#111c2b]">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-white shadow-xs">
+                    <JisIcon className="text-[20px]">groups</JisIcon>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate font-bold text-[#212121] dark:text-white">{selectedBatch.name}</div>
+                    <div className="text-xs text-[#808080]">{selectedBatch.courseName} · {batchStudents.length} students</div>
+                  </div>
+                </div>
+                <Button type="button" onClick={() => handlePickBatch('')} disabled={submitting}
+                  className="min-h-9 shrink-0 rounded-xl px-3 text-xs font-bold text-[#3fc073] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 transition-colors">
+                  Change
+                </Button>
+              </div>
+            ) : (
+              <div className="max-h-52 space-y-1 overflow-y-auto rounded-2xl border border-[#dbdbdb]/60 p-1 dark:border-[#243244]">
+                {activeBatches.length === 0 && <p className="p-2 text-xs text-[#808080]">No active batches.</p>}
+                {activeBatches.map((batch) => (
+                  <Button key={batch.id} type="button" disabled={submitting} onClick={() => handlePickBatch(batch.id)}
+                    className="flex w-full items-center justify-between gap-3 rounded-xl px-2.5 py-2 text-left hover:bg-[#f0f0f0] dark:hover:bg-[#172435] transition-colors">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#dbdbdb] text-[#575757] dark:bg-[#111c2b] dark:text-[#cbd5e1]">
+                        <JisIcon className="text-[17px]">groups</JisIcon>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate text-xs font-bold text-[#212121] dark:text-white">{batch.name}</div>
+                        <div className="text-xs text-[#808080]">{batch.courseName}</div>
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-xs font-semibold text-[#9e9e9e]">
+                      {batch.enrolledCount} {batch.enrolledCount === 1 ? 'student' : 'students'}
+                    </span>
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Step 2: everyone or ticked students */}
@@ -258,14 +286,6 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
                   onChange={(event) => setTitle(event.target.value)}
                   placeholder="e.g. Costume fee"
                   className="settings-input" />
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {TITLE_PRESETS.map((preset) => (
-                    <Button key={preset} type="button" disabled={submitting} onClick={() => setTitle(preset)}
-                      className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors ${title === preset ? 'border-[#3fc073] bg-[#e9f7ee] text-[#35a160] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]' : 'border-[#dbdbdb] text-[#808080] hover:border-[#3fc073]/40 hover:text-[#35a160] dark:border-[#243244] dark:text-[#94a3b8]'}`}>
-                      {preset}
-                    </Button>
-                  ))}
-                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
