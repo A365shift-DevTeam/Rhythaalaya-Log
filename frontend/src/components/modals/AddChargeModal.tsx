@@ -16,14 +16,17 @@ interface AddChargeModalProps {
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-/// One-off charge outside the fee schedule (costume, exam, event fee). Batch-first flow: pick a
-/// batch, then charge the whole batch or only the students you tick. Students pay through the
-/// normal Collect Fee flow.
+const TITLE_PRESETS = ['Costume fee', 'Exam fee', 'Annual day', 'Workshop'];
+
+/// One-off charge outside the fee schedule. Batch-first flow: pick a batch, charge everyone in
+/// it or only the students you tick, and the summary line always shows the money consequence
+/// (N students × amount = total) before anything is committed.
 export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose, students, batches, token, onCreated }) => {
   const activeBatches = batches.filter((batch) => batch.isActive);
   const [batchId, setBatchId] = useState('');
   const [wholeBatch, setWholeBatch] = useState(true);
   const [selectedEnrollmentIds, setSelectedEnrollmentIds] = useState<Set<string>>(new Set());
+  const [query, setQuery] = useState('');
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState(todayIso());
@@ -36,6 +39,7 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
     setBatchId('');
     setWholeBatch(true);
     setSelectedEnrollmentIds(new Set());
+    setQuery('');
     setTitle('');
     setAmount('');
     setDueDate(todayIso());
@@ -60,11 +64,23 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
 
   const selectedBatch = activeBatches.find((batch) => batch.id === batchId);
   const targetCount = wholeBatch ? batchStudents.length : selectedEnrollmentIds.size;
+  const chargeAmount = Number(amount);
+  const validAmount = Number.isFinite(chargeAmount) && chargeAmount > 0;
+  const totalAmount = validAmount ? targetCount * chargeAmount : 0;
+  const allSelected = batchStudents.length > 0 && selectedEnrollmentIds.size === batchStudents.length;
+
+  const filteredStudents = query.trim()
+    ? batchStudents.filter(({ student }) => {
+        const term = query.trim().toLowerCase();
+        return student.name.toLowerCase().includes(term) || student.studentNumber.toLowerCase().includes(term);
+      })
+    : batchStudents;
 
   const handlePickBatch = (id: string) => {
     setBatchId(id);
     setWholeBatch(true);
     setSelectedEnrollmentIds(new Set());
+    setQuery('');
   };
 
   const toggleStudent = (enrollmentId: string) => {
@@ -76,14 +92,17 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
     });
   };
 
+  const toggleAll = () => {
+    setSelectedEnrollmentIds(allSelected ? new Set() : new Set(batchStudents.map((item) => item.enrollmentId)));
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    const chargeAmount = Number(amount);
     if (!selectedBatch) { setError('Select a batch.'); return; }
     if (batchStudents.length === 0) { setError('This batch has no active students.'); return; }
-    if (!wholeBatch && selectedEnrollmentIds.size === 0) { setError('Tick at least one student, or choose whole batch.'); return; }
+    if (!wholeBatch && selectedEnrollmentIds.size === 0) { setError('Tick at least one student, or switch to Everyone.'); return; }
     if (!title.trim()) { setError('Give the charge a name, e.g. Costume fee.'); return; }
-    if (!Number.isFinite(chargeAmount) || chargeAmount <= 0) { setError('Enter a valid amount.'); return; }
+    if (!validAmount) { setError('Enter a valid amount.'); return; }
     if (!dueDate) { setError('Pick a due date.'); return; }
 
     setSubmitting(true);
@@ -125,7 +144,7 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
           </Button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 font-sans text-sm">
+        <form onSubmit={handleSubmit} className="space-y-5 font-sans text-sm">
           {/* Step 1: batch */}
           <div>
             <span className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">
@@ -141,42 +160,60 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
             </select>
           </div>
 
-          {/* Step 2: whole batch or particular students */}
+          {/* Step 2: everyone or ticked students */}
           {selectedBatch && (
             <div>
               <span className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">
-                <StepBadge n={2} /> Who in {selectedBatch.name}?
+                <StepBadge n={2} /> Who pays?
               </span>
-              <div className="grid grid-cols-2 gap-2">
-                <Button type="button" disabled={submitting} onClick={() => setWholeBatch(true)}
-                  className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-xs font-bold transition-all ${wholeBatch ? 'border-[#3fc073] bg-[#e9f7ee] text-[#35a160] dark:border-[#3fc073] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]' : 'border-[#dbdbdb] text-[#575757] hover:border-[#3fc073]/40 dark:border-[#243244] dark:text-[#cbd5e1]'}`}>
-                  <JisIcon className="text-[20px]">groups</JisIcon>
-                  Whole batch ({batchStudents.length})
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Who pays">
+                <Button type="button" role="radio" aria-checked={wholeBatch} disabled={submitting} onClick={() => setWholeBatch(true)}
+                  className={`flex min-h-12 items-center justify-center gap-2 rounded-2xl border text-xs font-bold transition-all ${wholeBatch ? 'border-[#3fc073] bg-[#e9f7ee] text-[#35a160] dark:border-[#3fc073] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]' : 'border-[#dbdbdb] text-[#575757] hover:border-[#3fc073]/40 dark:border-[#243244] dark:text-[#cbd5e1]'}`}>
+                  <JisIcon className="text-[18px]">groups</JisIcon>
+                  Everyone ({batchStudents.length})
                 </Button>
-                <Button type="button" disabled={submitting} onClick={() => setWholeBatch(false)}
-                  className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border text-xs font-bold transition-all ${!wholeBatch ? 'border-[#3fc073] bg-[#e9f7ee] text-[#35a160] dark:border-[#3fc073] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]' : 'border-[#dbdbdb] text-[#575757] hover:border-[#3fc073]/40 dark:border-[#243244] dark:text-[#cbd5e1]'}`}>
-                  <JisIcon className="text-[20px]">checklist</JisIcon>
-                  Choose students
+                <Button type="button" role="radio" aria-checked={!wholeBatch} disabled={submitting} onClick={() => setWholeBatch(false)}
+                  className={`flex min-h-12 items-center justify-center gap-2 rounded-2xl border text-xs font-bold transition-all ${!wholeBatch ? 'border-[#3fc073] bg-[#e9f7ee] text-[#35a160] dark:border-[#3fc073] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]' : 'border-[#dbdbdb] text-[#575757] hover:border-[#3fc073]/40 dark:border-[#243244] dark:text-[#cbd5e1]'}`}>
+                  <JisIcon className="text-[18px]">checklist</JisIcon>
+                  Only some
                 </Button>
               </div>
 
               {!wholeBatch && (
-                <div className="mt-2 max-h-48 space-y-1 overflow-y-auto rounded-2xl border border-[#dbdbdb]/60 p-1.5 dark:border-[#243244]">
-                  {batchStudents.length === 0 && <p className="p-2 text-xs text-[#808080]">No active students in this batch.</p>}
-                  {batchStudents.map(({ student, enrollmentId }) => (
-                    <label key={enrollmentId} className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-1.5 hover:bg-[#f0f0f0] dark:hover:bg-[#172435] transition-colors">
-                      <input type="checkbox" checked={selectedEnrollmentIds.has(enrollmentId)} disabled={submitting}
-                        onChange={() => toggleStudent(enrollmentId)}
-                        className="h-4 w-4 shrink-0 accent-[#3fc073] rounded" />
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#dbdbdb] text-xs font-bold text-[#575757] dark:bg-[#111c2b] dark:text-[#cbd5e1]">
-                        {student.name.charAt(0).toUpperCase()}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-xs font-bold text-[#212121] dark:text-white">{student.name}</span>
-                        <span className="block text-xs text-[#808080]">{student.studentNumber}</span>
-                      </span>
+                <div className="mt-2 rounded-2xl border border-[#dbdbdb]/60 dark:border-[#243244] overflow-hidden">
+                  <div className="flex items-center gap-2 border-b border-[#dbdbdb]/60 dark:border-[#243244] bg-[#f0f0f0]/60 dark:bg-[#111c2b]/60 px-3 py-2">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-[#575757] dark:text-[#cbd5e1]">
+                      <input type="checkbox" checked={allSelected} disabled={submitting} onChange={toggleAll}
+                        className="h-4 w-4 accent-[#3fc073] rounded" />
+                      {selectedEnrollmentIds.size === 0 ? 'Select all' : `${selectedEnrollmentIds.size} of ${batchStudents.length} selected`}
                     </label>
-                  ))}
+                    {batchStudents.length > 6 && (
+                      <div className="relative ml-auto">
+                        <JisIcon className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[15px] text-[#9e9e9e]">search</JisIcon>
+                        <input type="text" value={query} onChange={(event) => setQuery(event.target.value)}
+                          placeholder="Search" aria-label="Search students"
+                          className="w-32 rounded-xl border border-[#dbdbdb] bg-white py-1 pl-7 pr-2 text-xs text-[#212121] outline-none focus:border-[#3fc073] dark:border-[#243244] dark:bg-[#0b1422] dark:text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="max-h-44 space-y-0.5 overflow-y-auto p-1.5">
+                    {filteredStudents.length === 0 && (
+                      <p className="p-2 text-xs text-[#808080]">
+                        {query ? `No students match "${query}".` : 'No active students in this batch.'}
+                      </p>
+                    )}
+                    {filteredStudents.map(({ student, enrollmentId }) => (
+                      <label key={enrollmentId} className="flex min-h-10 cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-1 hover:bg-[#f0f0f0] dark:hover:bg-[#172435] transition-colors">
+                        <input type="checkbox" checked={selectedEnrollmentIds.has(enrollmentId)} disabled={submitting}
+                          onChange={() => toggleStudent(enrollmentId)}
+                          className="h-4 w-4 shrink-0 accent-[#3fc073] rounded" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-bold text-[#212121] dark:text-white">{student.name}</span>
+                        </span>
+                        <span className="shrink-0 text-xs text-[#9e9e9e]">{student.studentNumber}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -186,14 +223,22 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
           {selectedBatch && (
             <div className="space-y-3">
               <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">
-                <StepBadge n={3} /> Charge details
+                <StepBadge n={3} /> What for, and how much?
               </span>
               <div>
-                <label htmlFor="charge-title" className="mb-1 block text-xs font-semibold text-[#575757] dark:text-[#cbd5e1]">What is this charge for?</label>
+                <label htmlFor="charge-title" className="mb-1 block text-xs font-semibold text-[#575757] dark:text-[#cbd5e1]">Charge name</label>
                 <input id="charge-title" type="text" required maxLength={160} value={title} disabled={submitting}
                   onChange={(event) => setTitle(event.target.value)}
-                  placeholder="e.g. Costume fee, Exam fee, Annual day"
+                  placeholder="e.g. Costume fee"
                   className="settings-input" />
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {TITLE_PRESETS.map((preset) => (
+                    <Button key={preset} type="button" disabled={submitting} onClick={() => setTitle(preset)}
+                      className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors ${title === preset ? 'border-[#3fc073] bg-[#e9f7ee] text-[#35a160] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]' : 'border-[#dbdbdb] text-[#808080] hover:border-[#3fc073]/40 hover:text-[#35a160] dark:border-[#243244] dark:text-[#94a3b8]'}`}>
+                      {preset}
+                    </Button>
+                  ))}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -211,26 +256,34 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
                     className="settings-input" />
                 </div>
               </div>
+            </div>
+          )}
 
-              <p className="text-xs text-[#9e9e9e]">
-                A future due date shows as “Upcoming” until it arrives. Advance credit is applied automatically, and students already holding an identical charge are skipped.
-              </p>
+          {/* Live collection summary: the money consequence, always visible before committing */}
+          {selectedBatch && targetCount > 0 && validAmount && (
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#3fc073]/40 bg-[#e9f7ee]/60 px-3.5 py-2.5 dark:border-[#3fc073]/30 dark:bg-[#3fc073]/10">
+              <span className="text-xs font-semibold text-[#35a160] dark:text-[#b3e6c7]">
+                {targetCount} {targetCount === 1 ? 'student' : 'students'} × ₹{chargeAmount.toLocaleString('en-IN')}
+                {dueDate > todayIso() ? ' · upcoming' : ''}
+              </span>
+              <span className="text-sm font-bold tabular-nums text-[#212121] dark:text-white">
+                ₹{totalAmount.toLocaleString('en-IN')} total
+              </span>
             </div>
           )}
 
           {error && <div role="alert" className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-[#ef4444] text-xs font-bold">{error}</div>}
 
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
             <Button type="button" onClick={onClose} disabled={submitting} className="min-h-11 px-4 py-2 rounded-2xl text-xs font-semibold text-[#575757] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] disabled:opacity-50">
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting || !batchId} className="btn-brand min-h-11 px-5 py-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+            <Button type="submit" disabled={submitting || !batchId || targetCount === 0} className="btn-brand min-h-11 px-5 py-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
               <JisIcon className="text-[16px]">{submitting ? 'progress_activity' : 'check'}</JisIcon>
               <span>
                 {submitting ? 'Adding…'
-                  : targetCount > 0 && amount
-                    ? `Charge ${targetCount} ${targetCount === 1 ? 'student' : 'students'} ₹${Number(amount).toLocaleString('en-IN')} each`
-                    : 'Add charge'}
+                  : targetCount > 0 ? `Charge ${targetCount} ${targetCount === 1 ? 'student' : 'students'}`
+                  : 'Add charge'}
               </span>
             </Button>
           </div>
