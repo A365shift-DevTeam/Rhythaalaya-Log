@@ -411,6 +411,20 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             onEditCourse={(course) => { setEditingCourse(course); setIsAddCourseOpen(true); }}
             onOpenAddStaff={() => { setEditingStaff(null); setIsAddStaffOpen(true); }}
             onEditStaff={(member) => { setEditingStaff(member); setIsAddStaffOpen(true); }}
+            onRestoreCourse={async (course) => {
+              await api.updateCourse(session.token, course.id, {
+                name: course.name, description: course.description || undefined, isActive: true,
+              });
+              await reload();
+            }}
+            onRestoreBatch={async (batch) => {
+              await api.updateBatch(session.token, batch.id, {
+                name: batch.name, courseId: batch.courseId, staffId: batch.staffId, days: batch.days,
+                startTime: batch.startTime, endTime: batch.endTime, startDate: batch.startDate,
+                endDate: batch.endDate || null, isActive: true,
+              });
+              await reload();
+            }}
           />
         )}
 

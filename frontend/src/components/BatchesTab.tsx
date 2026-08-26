@@ -14,6 +14,8 @@ interface BatchesTabProps {
   onEditCourse: (course: Course) => void;
   onOpenAddStaff: () => void;
   onEditStaff: (member: Staff) => void;
+  onRestoreCourse: (course: Course) => Promise<void>;
+  onRestoreBatch: (batch: Batch) => Promise<void>;
 }
 
 const formatTime = (value: string) => {
@@ -36,13 +38,24 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
   onEditCourse,
   onOpenAddStaff,
   onEditStaff,
+  onRestoreCourse,
+  onRestoreBatch,
 }) => {
   const [search, setSearch] = useState('');
   const [courseFilter, setCourseFilter] = useState('All');
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+
+  // Archived courses and batches live only in the Archive section below, never in the main lists.
+  const activeCourses = useMemo(() => courses.filter((c) => c.isActive), [courses]);
+  const archivedCourses = useMemo(() => courses.filter((c) => !c.isActive), [courses]);
+  const activeBatches = useMemo(() => batches.filter((b) => b.isActive), [batches]);
+  const archivedBatches = useMemo(() => batches.filter((b) => !b.isActive), [batches]);
+  const archivedCount = archivedCourses.length + archivedBatches.length;
 
   const filteredBatches = useMemo(
     () =>
-      batches.filter((batch) => {
+      activeBatches.filter((batch) => {
         const term = search.trim().toLowerCase();
         const matchesSearch =
           !term ||
@@ -51,19 +64,28 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
           batch.staffName.toLowerCase().includes(term);
         return matchesSearch && (courseFilter === 'All' || batch.courseName === courseFilter);
       }),
-    [batches, search, courseFilter]
+    [activeBatches, search, courseFilter]
   );
 
-  const totalStudents = batches.reduce((sum, batch) => sum + batch.enrolledCount, 0);
+  const totalStudents = activeBatches.reduce((sum, batch) => sum + batch.enrolledCount, 0);
+
+  const handleRestore = async (id: string, restore: () => Promise<void>) => {
+    setRestoringId(id);
+    try {
+      await restore();
+    } finally {
+      setRestoringId(null);
+    }
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8 pb-12">
       {/* KPI Stats */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-        <BatchStat icon="calendar_view_week" label="Total batches" value={batches.length} color="blue" />
+        <BatchStat icon="calendar_view_week" label="Total batches" value={activeBatches.length} color="blue" />
         <BatchStat icon="school" label="Students enrolled" value={totalStudents} color="indigo" />
         <BatchStat icon="co_present" label="Staff / mentors" value={staff.length} color="violet" />
-        <BatchStat icon="menu_book" label="Courses" value={courses.length} color="amber" />
+        <BatchStat icon="menu_book" label="Courses" value={activeCourses.length} color="amber" />
       </section>
 
       {/* Courses & Staff side-by-side */}
@@ -73,7 +95,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
           <div className="p-4 sm:p-5 flex items-center justify-between border-b border-[#dbdbdb]/60 dark:border-[#243244]">
             <div>
               <h3 className="font-heading text-base sm:text-lg font-bold text-[#212121] dark:text-white">Courses</h3>
-              <p className="text-xs text-[#808080] dark:text-[#94a3b8]">{courses.length} active programs</p>
+              <p className="text-xs text-[#808080] dark:text-[#94a3b8]">{activeCourses.length} active programs</p>
             </div>
             {canManage && (
               <Button
@@ -87,12 +109,12 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
             )}
           </div>
           <div className="divide-y divide-[#dbdbdb]/60 dark:divide-[#243244] max-h-72 overflow-y-auto">
-            {courses.length === 0 && (
+            {activeCourses.length === 0 && (
               <p className="p-5 text-xs text-[#808080]">
                 No courses yet. {canManage ? 'Create one to start scheduling batches.' : 'Ask your admin to add one.'}
               </p>
             )}
-            {courses.map((course) => (
+            {activeCourses.map((course) => (
               <Button
                 key={course.id}
                 type="button"
@@ -173,7 +195,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
             <div>
               <h3 className="font-heading text-lg sm:text-xl font-bold text-[#212121] dark:text-white">All batches</h3>
-              <p className="text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">{filteredBatches.length} of {batches.length} batches shown</p>
+              <p className="text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">{filteredBatches.length} of {activeBatches.length} batches shown</p>
             </div>
 
             <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2">
@@ -217,7 +239,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
                 className="rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-[#f0f0f0] dark:bg-[#0b1422] px-3.5 py-2.5 min-h-11 text-xs font-semibold text-[#212121] dark:text-[#e2e8f0] outline-none focus:border-[#3fc073] cursor-pointer"
               >
                 <option value="All">All courses</option>
-                {courses.map((course) => (
+                {activeCourses.map((course) => (
                   <option key={course.id} value={course.name}>{course.name}</option>
                 ))}
               </select>
@@ -251,6 +273,74 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
           </div>
         )}
       </section>
+
+      {/* Archive: removed courses and batches live here, out of the way but restorable */}
+      {archivedCount > 0 && (
+        <section className="premium-card rounded-3xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setArchiveOpen((open) => !open)}
+            aria-expanded={archiveOpen}
+            className="w-full p-4 sm:p-5 flex items-center justify-between gap-3 text-left hover:bg-[#f0f0f0]/50 dark:hover:bg-[#172435]/40 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-2xl bg-[#f0f0f0] dark:bg-[#111c2b] text-[#808080] inline-flex items-center justify-center">
+                <JisIcon className="text-[18px]">inventory_2</JisIcon>
+              </span>
+              <div>
+                <h3 className="font-heading text-base sm:text-lg font-bold text-[#212121] dark:text-white">Archive</h3>
+                <p className="text-xs text-[#808080] dark:text-[#94a3b8]">
+                  {archivedCourses.length} {archivedCourses.length === 1 ? 'course' : 'courses'} · {archivedBatches.length} {archivedBatches.length === 1 ? 'batch' : 'batches'}
+                </p>
+              </div>
+            </div>
+            <JisIcon className="text-[20px] text-[#9e9e9e]">{archiveOpen ? 'expand_less' : 'expand_more'}</JisIcon>
+          </button>
+
+          {archiveOpen && (
+            <div className="border-t border-[#dbdbdb]/60 dark:border-[#243244] divide-y divide-[#dbdbdb]/50 dark:divide-[#243244]/60">
+              {archivedCourses.map((course) => (
+                <div key={course.id} className="flex items-center justify-between gap-3 p-3.5 sm:px-5">
+                  <div className="min-w-0 opacity-60">
+                    <div className="text-xs sm:text-sm font-bold text-[#212121] dark:text-white truncate">{course.name}</div>
+                    <div className="text-xs text-[#808080] dark:text-[#94a3b8]">Course · {course.batchCount} batch{course.batchCount === 1 ? '' : 'es'}</div>
+                  </div>
+                  {canManage && (
+                    <Button
+                      type="button"
+                      disabled={restoringId !== null}
+                      onClick={() => handleRestore(course.id, () => onRestoreCourse(course))}
+                      className="min-h-9 shrink-0 rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] px-3.5 text-xs font-bold text-[#3fc073] dark:text-[#b3e6c7] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 transition-colors disabled:opacity-50"
+                    >
+                      {restoringId === course.id ? 'Restoring…' : 'Restore'}
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {archivedBatches.map((batch) => (
+                <div key={batch.id} className="flex items-center justify-between gap-3 p-3.5 sm:px-5">
+                  <div className="min-w-0 opacity-60">
+                    <div className="text-xs sm:text-sm font-bold text-[#212121] dark:text-white truncate">{batch.name}</div>
+                    <div className="text-xs text-[#808080] dark:text-[#94a3b8] truncate">
+                      Batch · {batch.courseName} · {formatDays(batch.days)} {formatTime(batch.startTime)}
+                    </div>
+                  </div>
+                  {canManage && (
+                    <Button
+                      type="button"
+                      disabled={restoringId !== null}
+                      onClick={() => handleRestore(batch.id, () => onRestoreBatch(batch))}
+                      className="min-h-9 shrink-0 rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] px-3.5 text-xs font-bold text-[#3fc073] dark:text-[#b3e6c7] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 transition-colors disabled:opacity-50"
+                    >
+                      {restoringId === batch.id ? 'Restoring…' : 'Restore'}
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 };
