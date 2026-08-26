@@ -29,7 +29,6 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
   const [filterBatch, setFilterBatch] = useState('All');
   const [sortBy, setSortBy] = useState<'name' | 'attendance'>('name');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const activeFilterCount =
     (filterFeeStatus !== 'All' ? 1 : 0) + (filterCourse !== 'All' ? 1 : 0) + (filterBatch !== 'All' ? 1 : 0);
@@ -124,10 +123,10 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
         </div>
       </div>
 
-      {/* Toolbar: Search, Filters & View Toggle */}
+      {/* Toolbar: Search, unified Filter & View Toggle */}
       <div className="premium-card p-3.5 sm:p-4 space-y-3">
-        <div className="flex flex-col sm:flex-row gap-2.5">
-          <div className="relative flex-1">
+        <div className="flex gap-2.5">
+          <div className="relative flex-1 min-w-0">
             <label htmlFor="student-search" className="sr-only">Search students</label>
             <JisIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9e9e9e] pointer-events-none text-[18px]">
               search
@@ -152,88 +151,79 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
             )}
           </div>
 
-          <div className="flex items-center justify-between sm:justify-start gap-2 overflow-x-auto pb-1 sm:pb-0">
-            <div className="flex bg-[#f0f0f0] dark:bg-[#111c2b] p-1 rounded-2xl shrink-0" role="group" aria-label="Filter by fee status">
-              <Button
-                type="button"
-                onClick={() => setFilterFeeStatus('All')}
-                aria-pressed={filterFeeStatus === 'All'}
-                className={`min-h-9 px-3.5 py-1 text-xs font-bold rounded-xl transition-all ${
-                  filterFeeStatus === 'All'
-                    ? 'bg-white dark:bg-[#0b1422] text-[#212121] dark:text-white shadow-xs'
-                    : 'text-[#6b6b6b] dark:text-[#94a3b8] hover:text-[#212121]'
-                }`}
-              >
-                All
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setFilterFeeStatus('Paid')}
-                aria-pressed={filterFeeStatus === 'Paid'}
-                className={`min-h-9 px-3.5 py-1 text-xs font-bold rounded-xl transition-all ${
-                  filterFeeStatus === 'Paid'
-                    ? 'bg-[#22c55e] text-white shadow-xs'
-                    : 'text-[#6b6b6b] dark:text-[#94a3b8] hover:text-[#212121]'
-                }`}
-              >
-                Paid
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setFilterFeeStatus('Pending')}
-                aria-pressed={filterFeeStatus === 'Pending'}
-                className={`min-h-9 px-3.5 py-1 text-xs font-bold rounded-xl transition-all ${
-                  filterFeeStatus === 'Pending'
-                    ? 'bg-[#ef4444] text-white shadow-xs'
-                    : 'text-[#6b6b6b] dark:text-[#94a3b8] hover:text-[#212121]'
-                }`}
-              >
-                Pending
-              </Button>
-            </div>
-
+          <div className="hidden sm:flex bg-[#f0f0f0] dark:bg-[#111c2b] p-1 rounded-2xl shrink-0" role="group" aria-label="Student view">
             <Button
               type="button"
-              onClick={() => setSortBy(sortBy === 'name' ? 'attendance' : 'name')}
-              className="min-h-10 px-3.5 py-1.5 bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl font-sans text-xs font-semibold text-[#575757] dark:text-[#cbd5e1] hover:bg-[#f0f0f0] dark:hover:bg-[#223148] transition-colors flex items-center gap-1.5 shrink-0"
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+              aria-pressed={viewMode === 'grid'}
+              className={`w-9 h-9 inline-flex items-center justify-center rounded-xl transition-all ${
+                viewMode === 'grid' ? 'bg-white dark:bg-[#0b1422] text-[#3fc073] shadow-xs font-bold' : 'text-[#808080] hover:text-[#212121]'
+              }`}
+              title="Grid View"
             >
-              <JisIcon className="text-[16px]">sort</JisIcon>
-              <span>{sortBy === 'name' ? 'Name' : 'Attendance'}</span>
+              <JisIcon className="text-[18px]">grid_view</JisIcon>
             </Button>
-
-            <div className="hidden sm:flex bg-[#f0f0f0] dark:bg-[#111c2b] p-1 rounded-2xl shrink-0" role="group" aria-label="Student view">
-              <Button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                aria-label="Grid view"
-                aria-pressed={viewMode === 'grid'}
-                className={`w-9 h-9 inline-flex items-center justify-center rounded-xl transition-all ${
-                  viewMode === 'grid' ? 'bg-white dark:bg-[#0b1422] text-[#3fc073] shadow-xs font-bold' : 'text-[#808080] hover:text-[#212121]'
-                }`}
-                title="Grid View"
-              >
-                <JisIcon className="text-[18px]">grid_view</JisIcon>
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setViewMode('table')}
-                aria-label="Table view"
-                aria-pressed={viewMode === 'table'}
-                className={`w-9 h-9 inline-flex items-center justify-center rounded-xl transition-all ${
-                  viewMode === 'table' ? 'bg-white dark:bg-[#0b1422] text-[#3fc073] shadow-xs font-bold' : 'text-[#808080] hover:text-[#212121]'
-                }`}
-                title="Table View"
-              >
-                <JisIcon className="text-[18px]">format_list_bulleted</JisIcon>
-              </Button>
-            </div>
+            <Button
+              type="button"
+              onClick={() => setViewMode('table')}
+              aria-label="Table view"
+              aria-pressed={viewMode === 'table'}
+              className={`w-9 h-9 inline-flex items-center justify-center rounded-xl transition-all ${
+                viewMode === 'table' ? 'bg-white dark:bg-[#0b1422] text-[#3fc073] shadow-xs font-bold' : 'text-[#808080] hover:text-[#212121]'
+              }`}
+              title="Table View"
+            >
+              <JisIcon className="text-[18px]">format_list_bulleted</JisIcon>
+            </Button>
           </div>
         </div>
 
-        {/* Course & Batch filters */}
-        <div className="flex flex-col sm:flex-row gap-2.5">
-          <div className="flex-1">
+        {/* Unified filter pill bar */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mb-1" role="group" aria-label="Filter and sort students">
+          <div className="relative shrink-0">
+            <label htmlFor="student-filter-fee" className="sr-only">Filter by fee status</label>
+            <JisIcon
+              className={`absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] ${
+                filterFeeStatus === 'Paid' ? 'text-white' : filterFeeStatus === 'Pending' ? 'text-white' : 'text-[#9e9e9e]'
+              }`}
+            >
+              payments
+            </JisIcon>
+            <select
+              id="student-filter-fee"
+              value={filterFeeStatus}
+              onChange={(e) => setFilterFeeStatus(e.target.value as 'All' | 'Paid' | 'Pending')}
+              className={`appearance-none min-h-10 pl-9 pr-8 py-1.5 rounded-full font-sans text-xs font-bold border transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-[#3fc073]/15 ${
+                filterFeeStatus === 'Paid'
+                  ? 'bg-[#22c55e] border-[#22c55e] text-white'
+                  : filterFeeStatus === 'Pending'
+                    ? 'bg-[#ef4444] border-[#ef4444] text-white'
+                    : 'bg-[#f0f0f0] dark:bg-[#111c2b] border-[#dbdbdb] dark:border-[#243244] text-[#575757] dark:text-[#cbd5e1]'
+              }`}
+            >
+              <option value="All">All fees</option>
+              <option value="Paid">Paid</option>
+              <option value="Pending">Pending</option>
+            </select>
+            <JisIcon
+              className={`absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] ${
+                filterFeeStatus !== 'All' ? 'text-white' : 'text-[#9e9e9e]'
+              }`}
+            >
+              expand_more
+            </JisIcon>
+          </div>
+
+          <div className="relative shrink-0">
             <label htmlFor="student-filter-course" className="sr-only">Filter by course</label>
+            <JisIcon
+              className={`absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] ${
+                filterCourse !== 'All' ? 'text-[#35a160] dark:text-[#6bd194]' : 'text-[#9e9e9e]'
+              }`}
+            >
+              school
+            </JisIcon>
             <select
               id="student-filter-course"
               value={filterCourse}
@@ -241,40 +231,86 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                 setFilterCourse(e.target.value);
                 setFilterBatch('All');
               }}
-              className="w-full min-h-11 px-3.5 py-2.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl font-sans text-xs sm:text-sm font-semibold text-[#212121] dark:text-white focus:outline-none focus:bg-white dark:focus:bg-[#0b1422] focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] transition-all cursor-pointer"
+              className={`appearance-none min-h-10 pl-9 pr-8 py-1.5 rounded-full font-sans text-xs font-bold border transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-[#3fc073]/15 max-w-44 truncate ${
+                filterCourse !== 'All'
+                  ? 'bg-[#e9f7ee] dark:bg-[#3fc073]/20 border-[#3fc073]/40 text-[#35a160] dark:text-[#6bd194]'
+                  : 'bg-[#f0f0f0] dark:bg-[#111c2b] border-[#dbdbdb] dark:border-[#243244] text-[#575757] dark:text-[#cbd5e1]'
+              }`}
             >
               <option value="All">All courses</option>
               {courseOptions.map((course) => (
                 <option key={course} value={course}>{course}</option>
               ))}
             </select>
+            <JisIcon
+              className={`absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] ${
+                filterCourse !== 'All' ? 'text-[#35a160] dark:text-[#6bd194]' : 'text-[#9e9e9e]'
+              }`}
+            >
+              expand_more
+            </JisIcon>
           </div>
 
-          <div className="flex-1">
+          <div className="relative shrink-0">
             <label htmlFor="student-filter-batch" className="sr-only">Filter by batch</label>
+            <JisIcon
+              className={`absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] ${
+                filterBatch !== 'All' ? 'text-[#35a160] dark:text-[#6bd194]' : 'text-[#9e9e9e]'
+              }`}
+            >
+              groups
+            </JisIcon>
             <select
               id="student-filter-batch"
               value={filterBatch}
               onChange={(e) => setFilterBatch(e.target.value)}
-              className="w-full min-h-11 px-3.5 py-2.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl font-sans text-xs sm:text-sm font-semibold text-[#212121] dark:text-white focus:outline-none focus:bg-white dark:focus:bg-[#0b1422] focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] transition-all cursor-pointer"
+              className={`appearance-none min-h-10 pl-9 pr-8 py-1.5 rounded-full font-sans text-xs font-bold border transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-[#3fc073]/15 max-w-44 truncate ${
+                filterBatch !== 'All'
+                  ? 'bg-[#e9f7ee] dark:bg-[#3fc073]/20 border-[#3fc073]/40 text-[#35a160] dark:text-[#6bd194]'
+                  : 'bg-[#f0f0f0] dark:bg-[#111c2b] border-[#dbdbdb] dark:border-[#243244] text-[#575757] dark:text-[#cbd5e1]'
+              }`}
             >
               <option value="All">All batches</option>
               {batchOptions.map((batch) => (
                 <option key={batch} value={batch}>{batch}</option>
               ))}
             </select>
+            <JisIcon
+              className={`absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] ${
+                filterBatch !== 'All' ? 'text-[#35a160] dark:text-[#6bd194]' : 'text-[#9e9e9e]'
+              }`}
+            >
+              expand_more
+            </JisIcon>
           </div>
 
-          {(filterCourse !== 'All' || filterBatch !== 'All') && (
+          <div className="relative shrink-0">
+            <label htmlFor="student-sort" className="sr-only">Sort students</label>
+            <JisIcon className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] text-[#9e9e9e]">
+              sort
+            </JisIcon>
+            <select
+              id="student-sort"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'name' | 'attendance')}
+              className="appearance-none min-h-10 pl-9 pr-8 py-1.5 rounded-full font-sans text-xs font-bold border bg-[#f0f0f0] dark:bg-[#111c2b] border-[#dbdbdb] dark:border-[#243244] text-[#575757] dark:text-[#cbd5e1] transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-[#3fc073]/15"
+            >
+              <option value="name">By name</option>
+              <option value="attendance">By attendance</option>
+            </select>
+            <JisIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] text-[#9e9e9e]">
+              expand_more
+            </JisIcon>
+          </div>
+
+          {activeFilterCount > 0 && (
             <Button
               type="button"
-              onClick={() => {
-                setFilterCourse('All');
-                setFilterBatch('All');
-              }}
-              className="min-h-11 px-4 py-2.5 rounded-2xl font-sans text-xs font-semibold text-[#808080] dark:text-[#94a3b8] bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] hover:text-[#212121] dark:hover:text-white transition-colors shrink-0"
+              onClick={clearAllFilters}
+              className="min-h-10 px-3.5 py-1.5 rounded-full font-sans text-xs font-bold text-[#808080] dark:text-[#94a3b8] hover:text-[#212121] dark:hover:text-white hover:bg-[#f0f0f0] dark:hover:bg-[#172435] border border-transparent transition-colors flex items-center gap-1 shrink-0"
             >
-              Clear filters
+              <JisIcon className="text-[16px]">close</JisIcon>
+              <span>Reset</span>
             </Button>
           )}
         </div>
