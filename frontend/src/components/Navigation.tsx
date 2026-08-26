@@ -166,43 +166,53 @@ export const Navigation: React.FC<NavigationProps> = ({
         </div>
       )}
 
-      <nav aria-label="Primary navigation" className="md:hidden fixed bottom-0 left-0 w-full z-[60] grid grid-cols-5 items-stretch px-2 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] bg-white/85 dark:bg-[#0b1422]/85 backdrop-blur-xl border-t border-[#dbdbdb]/80 dark:border-[#243244] shadow-[0_-8px_24px_rgba(0,0,0,0.06)]">
+      <nav aria-label="Primary navigation" className="md:hidden fixed bottom-0 left-0 w-full z-[60] grid grid-cols-5 items-stretch p-0 bg-white/95 dark:bg-[#0b1422]/95 backdrop-blur-xl border-t border-[#dbdbdb]/80 dark:border-[#243244] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
         {mobileNavItems.map((item) => {
           const isActive = currentTab === item.id;
           return (
-            <Button
+            <button
               key={item.id}
               type="button"
               onClick={() => navigate(item.id)}
               aria-current={isActive ? 'page' : undefined}
-              className={`relative min-h-[60px] flex flex-col items-center justify-center rounded-2xl px-1 py-1 transition-all ${
+              className={`relative flex flex-col items-center justify-center py-2.5 px-1 rounded-none transition-all focus-visible:outline-none ${
                 isActive
-                  ? 'bg-gradient-to-r from-[#4d999d] to-[#64a85a] text-white shadow-sm shadow-[#4d999d]/25 font-bold'
-                  : 'text-[#6b6b6b] dark:text-[#94a3b8] hover:text-[#3fc073]'
+                  ? 'bg-gradient-to-r from-[#4d999d] to-[#64a85a] text-white shadow-xs'
+                  : 'text-[#6b6b6b] dark:text-[#94a3b8] hover:bg-[#f0f0f0]/50 dark:hover:bg-[#172435]/50 hover:text-[#212121] dark:hover:text-white'
               }`}
             >
               <JisIcon className={`text-[20px] ${isActive ? 'filled' : ''}`}>
                 {item.icon}
               </JisIcon>
-              <span className="font-sans text-xs leading-tight tracking-tight font-semibold mt-1">
+              <span
+                className={`font-sans text-[11px] leading-tight tracking-tight mt-1 truncate max-w-full ${
+                  isActive ? 'font-semibold text-white' : 'font-medium'
+                }`}
+              >
                 {item.label}
               </span>
-            </Button>
+            </button>
           );
         })}
-        <Button
+        <button
           type="button"
           onClick={() => setIsMoreOpen((open) => !open)}
           aria-expanded={isMoreOpen}
-          className={`relative min-h-[60px] flex flex-col items-center justify-center rounded-2xl px-1 py-1 transition-all ${
+          className={`relative flex flex-col items-center justify-center py-2.5 px-1 rounded-none transition-all focus-visible:outline-none ${
             moreIsActive || isMoreOpen
-              ? 'bg-gradient-to-r from-[#4d999d] to-[#64a85a] text-white shadow-sm shadow-[#4d999d]/25 font-bold'
-              : 'text-[#6b6b6b] dark:text-[#94a3b8]'
+              ? 'bg-gradient-to-r from-[#4d999d] to-[#64a85a] text-white shadow-xs'
+              : 'text-[#6b6b6b] dark:text-[#94a3b8] hover:bg-[#f0f0f0]/50 dark:hover:bg-[#172435]/50 hover:text-[#212121] dark:hover:text-white'
           }`}
         >
           <JisIcon className={`text-[20px] ${moreIsActive ? 'filled' : ''}`}>more_horiz</JisIcon>
-          <span className="font-sans text-xs leading-tight tracking-tight font-semibold mt-1">More</span>
-        </Button>
+          <span
+            className={`font-sans text-[11px] leading-tight tracking-tight mt-1 truncate max-w-full ${
+              moreIsActive || isMoreOpen ? 'font-semibold text-white' : 'font-medium'
+            }`}
+          >
+            More
+          </span>
+        </button>
       </nav>
     </>
   );
