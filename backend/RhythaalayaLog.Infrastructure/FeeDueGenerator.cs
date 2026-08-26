@@ -60,20 +60,26 @@ public sealed class FeeDueGenerator(AppDbContext db)
             .Where(x => x.EnrollmentId == enrollmentId && x.FeeStructureId != null)
             .OrderByDescending(x => x.DueDate).FirstOrDefaultAsync(ct);
 
+        // The chain anchor is set once, by the plan that STARTED the chain, and survives every
+        // later plan change. Anchoring on the current plan's EffectiveFrom instead caused a
+        // second due in the same month when a new price plan started mid-period (e.g. dues on
+        // the 10th, a new plan effective the 11th produced an extra due on the 11th).
         DateOnly nextDueDate;
+        DateOnly chainAnchor;
         if (latest is null)
         {
             var first = ComputeFirstDue(structures, enrollment.EnrolledOn, settings.LateEnrollmentBillingPolicy);
             if (first is null) return;
+            chainAnchor = first.ChainAnchor;
             if (first.PartialPeriodStart is DateOnly partialStart)
             {
                 // Off-anchor partial first period (Full or Prorated policy): due dated on the
-                // enrollment day; the chain then resumes on the plan's own anchor cadence.
+                // enrollment day; the chain then resumes on the plan's anchor cadence.
                 if (first.DueDate > horizon) return;
                 var structure = BillingSchedule.ResolveStructure(structures, first.DueDate)!;
                 await CreateDueAsync(enrollment, structure, first.DueDate, today,
                     first.Prorate ? partialStart : null, first.Prorate ? enrollment.EnrolledOn : null, ct);
-                nextDueDate = BillingSchedule.FirstOnOrAfter(structure.EffectiveFrom, first.DueDate.AddDays(1), structure.Frequency);
+                nextDueDate = BillingSchedule.FirstOnOrAfter(chainAnchor, first.DueDate.AddDays(1), structure.Frequency);
             }
             else
             {
@@ -82,21 +88,32 @@ public sealed class FeeDueGenerator(AppDbContext db)
         }
         else
         {
-            // Preserve the recurrence anchor across plan changes: step from the last scheduled due
-            // using the cadence of the plan effective on that date.
+            // Recover the original anchor from the earliest recurring due's own plan.
+            var oneTimeStructureIds = structures.Where(x => x.Frequency == FeeFrequency.OneTime)
+                .Select(x => x.Id).ToList();
+            var chainOrigin = await db.FeeDues.AsNoTracking()
+                .Where(x => x.EnrollmentId == enrollmentId && x.FeeStructureId != null
+                    && !oneTimeStructureIds.Contains(x.FeeStructureId!.Value))
+                .OrderBy(x => x.DueDate).FirstOrDefaultAsync(ct);
+            var originStructure = chainOrigin is null ? null
+                : structures.FirstOrDefault(x => x.Id == chainOrigin.FeeStructureId);
             var current = BillingSchedule.ResolveStructure(structures, latest.DueDate)
                 ?? structures.FirstOrDefault(x => x.Id == latest.FeeStructureId)
                 ?? structures[0];
-            if (current.Frequency == FeeFrequency.OneTime)
+            if (chainOrigin is null || current.Frequency == FeeFrequency.OneTime)
             {
+                // No recurring cadence yet (only one-time charges so far): the first recurring
+                // plan starting after them begins a fresh chain on its own anchor.
                 var next = structures.Where(x => x.EffectiveFrom > latest.DueDate && x.Frequency != FeeFrequency.OneTime)
                     .OrderBy(x => x.EffectiveFrom).FirstOrDefault();
                 if (next is null) return;
+                chainAnchor = next.EffectiveFrom;
                 nextDueDate = next.EffectiveFrom;
             }
             else
             {
-                nextDueDate = BillingSchedule.FirstOnOrAfter(current.EffectiveFrom, latest.DueDate.AddDays(1), current.Frequency);
+                chainAnchor = originStructure?.EffectiveFrom ?? chainOrigin.DueDate;
+                nextDueDate = BillingSchedule.FirstOnOrAfter(chainAnchor, latest.DueDate.AddDays(1), current.Frequency);
             }
         }
 
@@ -106,12 +123,12 @@ public sealed class FeeDueGenerator(AppDbContext db)
             var structure = BillingSchedule.ResolveStructure(structures, nextDueDate);
             if (structure is null)
             {
-                // Gap between plans: no charge for this date; jump to the next plan if one starts
-                // later, otherwise keep stepping with the last known cadence until the horizon.
+                // Gap between plans: no charge for this date; jump forward on the chain cadence
+                // to the next plan if one starts later, otherwise stop at the horizon.
                 var upcomingPlan = structures.Where(x => x.EffectiveFrom > nextDueDate)
                     .OrderBy(x => x.EffectiveFrom).FirstOrDefault();
                 if (upcomingPlan is null) break;
-                nextDueDate = BillingSchedule.FirstOnOrAfter(nextDueDate, upcomingPlan.EffectiveFrom, stepFrequency);
+                nextDueDate = BillingSchedule.FirstOnOrAfter(chainAnchor, upcomingPlan.EffectiveFrom, stepFrequency);
                 continue;
             }
             stepFrequency = structure.Frequency == FeeFrequency.OneTime ? stepFrequency : structure.Frequency;
@@ -124,21 +141,23 @@ public sealed class FeeDueGenerator(AppDbContext db)
                 var nextPlan = structures.Where(x => x.EffectiveFrom > nextDueDate && x.Frequency != FeeFrequency.OneTime)
                     .OrderBy(x => x.EffectiveFrom).FirstOrDefault();
                 if (nextPlan is null) break;
+                chainAnchor = nextPlan.EffectiveFrom;
                 nextDueDate = nextPlan.EffectiveFrom;
                 continue;
             }
 
             await CreateDueAsync(enrollment, structure, nextDueDate, today, null, null, ct);
-            nextDueDate = BillingSchedule.FirstOnOrAfter(structure.EffectiveFrom, nextDueDate.AddDays(1), structure.Frequency);
+            nextDueDate = BillingSchedule.FirstOnOrAfter(chainAnchor, nextDueDate.AddDays(1), structure.Frequency);
         }
     }
 
-    private sealed record FirstDue(DateOnly DueDate, DateOnly? PartialPeriodStart, bool Prorate);
+    private sealed record FirstDue(DateOnly DueDate, DateOnly? PartialPeriodStart, bool Prorate, DateOnly ChainAnchor);
 
     /// <summary>
     /// First scheduled due for a fresh enrollment. Returns null when no plan ever applies.
     /// PartialPeriodStart is set when the due sits off-anchor inside a partial period
     /// (Full or Prorated policy); Prorate additionally asks for a proration adjustment.
+    /// ChainAnchor is the cadence origin the whole chain keeps forever.
     /// </summary>
     private static FirstDue? ComputeFirstDue(
         IReadOnlyList<FeeStructure> structures, DateOnly enrolledOn, LateEnrollmentBillingPolicy policy)
@@ -148,18 +167,18 @@ public sealed class FeeDueGenerator(AppDbContext db)
         if (structure is null) return null;
 
         if (structure.Frequency == FeeFrequency.OneTime)
-            return new(structure.EffectiveFrom > enrolledOn ? structure.EffectiveFrom : enrolledOn, null, false);
+            return new(structure.EffectiveFrom > enrolledOn ? structure.EffectiveFrom : enrolledOn, null, false, structure.EffectiveFrom);
 
-        if (structure.EffectiveFrom >= enrolledOn) return new(structure.EffectiveFrom, null, false);
+        if (structure.EffectiveFrom >= enrolledOn) return new(structure.EffectiveFrom, null, false, structure.EffectiveFrom);
 
         var periodStart = BillingSchedule.LastOnOrBefore(structure.EffectiveFrom, enrolledOn, structure.Frequency);
-        if (periodStart == enrolledOn) return new(periodStart, null, false);
+        if (periodStart == enrolledOn) return new(periodStart, null, false, structure.EffectiveFrom);
 
         return policy switch
         {
-            LateEnrollmentBillingPolicy.Full => new(enrolledOn, periodStart, false),
-            LateEnrollmentBillingPolicy.Prorated => new(enrolledOn, periodStart, true),
-            _ => new(BillingSchedule.AddPeriod(periodStart, structure.Frequency), null, false)
+            LateEnrollmentBillingPolicy.Full => new(enrolledOn, periodStart, false, structure.EffectiveFrom),
+            LateEnrollmentBillingPolicy.Prorated => new(enrolledOn, periodStart, true, structure.EffectiveFrom),
+            _ => new(BillingSchedule.AddPeriod(periodStart, structure.Frequency), null, false, structure.EffectiveFrom)
         };
     }
 

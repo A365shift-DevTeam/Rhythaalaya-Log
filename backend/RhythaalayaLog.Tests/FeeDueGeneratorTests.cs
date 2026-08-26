@@ -128,6 +128,28 @@ public sealed class FeeDueGeneratorTests
     }
 
     [Fact]
+    public async Task MidPeriodPlanChange_DoesNotCreateSecondDueInSameMonth()
+    {
+        // Regression: dues ran on the anchor day; a new price plan effective mid-period
+        // re-anchored the chain and produced an extra due one day after the last one.
+        using var h = new TestHarness(leadDays: 20);
+        var planChangeDate = Today.AddDays(1); // new plan starts tomorrow, mid-period
+        h.AddStructure(2000m, FeeFrequency.Monthly, Anchor, planChangeDate.AddDays(-1));
+        h.AddStructure(3000m, FeeFrequency.Monthly, planChangeDate);
+        var enrollment = h.Enroll(Anchor);
+
+        await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
+
+        var dues = h.DuesFor(enrollment.Id);
+        // every due sits on the original anchor cadence — never on the plan-change date
+        Assert.Equal(ExpectedAnchorDates(Anchor, Today.AddDays(20)), dues.Select(x => x.DueDate).ToList());
+        Assert.DoesNotContain(dues, x => x.DueDate == planChangeDate);
+        // and re-running after the plan change adds nothing new
+        await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
+        Assert.Equal(dues.Count, h.DuesFor(enrollment.Id).Count);
+    }
+
+    [Fact]
     public async Task PlanGap_ProducesNoDueForUncoveredPeriod_AndResumesOnAnchor()
     {
         using var h = new TestHarness(leadDays: 7);

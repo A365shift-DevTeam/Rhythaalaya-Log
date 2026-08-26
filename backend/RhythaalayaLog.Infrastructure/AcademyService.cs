@@ -194,7 +194,6 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         RequireText(request.Name, nameof(request.Name));
         ValidateConcession(request.ConcessionPercent);
         var student = await db.Students.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Student));
-        var previousConcession = student.ConcessionPercent;
         student.Name = request.Name.Trim();
         student.DateOfBirth = request.DateOfBirth;
         student.ParentName = Clean(request.ParentName);
@@ -206,10 +205,10 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         student.ConcessionPercent = request.ConcessionPercent;
         student.ConcessionReason = Clean(request.ConcessionReason);
         await db.SaveChangesAsync(ct);
-        // A changed concession immediately re-aligns the discount on all live unpaid dues
-        // (as append-only delta adjustments) and shapes every future due.
-        if (student.ConcessionPercent != previousConcession)
-            await dueGenerator.ResyncConcessionAsync(student.Id, ct);
+        // Always re-align the concession discount on live unpaid dues after a save — it's
+        // idempotent (no-op when already in sync), and gating it on "did the percent change"
+        // silently skipped students whose dues were issued before their concession was recorded.
+        await dueGenerator.ResyncConcessionAsync(student.Id, ct);
         return await GetStudentAsync(id, ct);
     }
 
@@ -510,11 +509,21 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         TimeOnly startTime, TimeOnly endTime, DateOnly startDate, DateOnly? endDate, CancellationToken ct, Guid? excludingId = null)
     {
         RequireText(name, nameof(name));
-        if (days.Count == 0) throw new AppValidationException(nameof(days));
-        if (startTime >= endTime) throw new AppValidationException(nameof(endTime));
-        if (endDate.HasValue && endDate.Value < startDate) throw new AppValidationException(nameof(endDate));
-        if (!await db.Courses.AnyAsync(x => x.Id == courseId && x.IsActive, ct)) throw new AppValidationException(nameof(courseId));
-        if (!await db.Staff.AnyAsync(x => x.Id == staffId && x.IsActive, ct)) throw new AppValidationException(nameof(staffId));
+        if (days.Count == 0) throw new AppValidationException("Pick at least one class day.");
+        if (startTime >= endTime) throw new AppValidationException("The end time must be after the start time.");
+        if (endDate.HasValue && endDate.Value < startDate) throw new AppValidationException("The end date must be after the start date.");
+        var course = await db.Courses.AsNoTracking()
+            .Where(x => x.Id == courseId).Select(x => new { x.Name, x.IsActive }).FirstOrDefaultAsync(ct);
+        if (course is null)
+            throw new AppValidationException("The selected course no longer exists — refresh and pick another course.");
+        if (!course.IsActive)
+            throw new AppValidationException($"The course \"{course.Name}\" is archived — restore it or pick an active course.");
+        var staffMember = await db.Staff.AsNoTracking()
+            .Where(x => x.Id == staffId).Select(x => new { x.Name, x.IsActive }).FirstOrDefaultAsync(ct);
+        if (staffMember is null)
+            throw new AppValidationException("The selected staff member no longer exists — refresh and pick another.");
+        if (!staffMember.IsActive)
+            throw new AppValidationException($"\"{staffMember.Name}\" is archived — restore them or pick an active staff member.");
         var duplicate = await db.Batches.AnyAsync(x => x.CourseId == courseId
             && x.Name.ToLower() == name.Trim().ToLower() && x.Id != (excludingId ?? Guid.Empty), ct);
         if (duplicate) throw new ConflictException("A batch with this name already exists for the course.");
