@@ -600,6 +600,9 @@ namespace RhythaalayaLog.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("WhatsappTemplate")
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId")

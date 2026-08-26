@@ -1,5 +1,6 @@
 import { Achievement, AchievementCategory, Batch, Course, FeeAdjustment, FeeAdjustmentType, FeeDue, FeeDueStatus,
   FeeFrequency, FeePayment, FeeStructure, OrgSettings, PaymentMethod, Receipt, Staff, Student, Transaction } from './types';
+import { DEFAULT_WHATSAPP_TEMPLATE } from './whatsappTemplate';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5101/api').replace(/\/$/, '');
 const SESSION_KEY = 'rhythaalaya_session';
@@ -266,7 +267,8 @@ export const api = {
       paymentNotifications: settings.notifications.paymentUpdates,
       attendanceNotifications: settings.notifications.attendanceAlerts,
       feeDueLeadDays: settings.feeDueLeadDays,
-      lateEnrollmentBillingPolicy: settings.lateEnrollmentBillingPolicy
+      lateEnrollmentBillingPolicy: settings.lateEnrollmentBillingPolicy,
+      whatsappTemplate: settings.whatsappTemplate || null
     }) }, token).then(mapSettings),
 
   plans: (token: string) => request<Plan[]>('/superadmin/plans', {}, token),
@@ -400,6 +402,7 @@ function mapSettings(x: any): OrgSettings {
       attendanceAlerts: x.attendanceNotifications ?? true
     },
     feeDueLeadDays: x.feeDueLeadDays ?? 7,
-    lateEnrollmentBillingPolicy: x.lateEnrollmentBillingPolicy ?? 'Skip'
+    lateEnrollmentBillingPolicy: x.lateEnrollmentBillingPolicy ?? 'Skip',
+    whatsappTemplate: x.whatsappTemplate || DEFAULT_WHATSAPP_TEMPLATE
   };
 }

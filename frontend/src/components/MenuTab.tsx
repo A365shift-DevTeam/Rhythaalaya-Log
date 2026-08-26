@@ -1,9 +1,10 @@
 import { Button } from './ui/button';
 import { Switch } from './ui/switch';
 import { JisIcon } from './JisIcon';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { OrgSettings } from '../types';
 import { FinancialSettings } from './FinancialSettings';
+import { DEFAULT_WHATSAPP_TEMPLATE, WHATSAPP_TEMPLATE_VARIABLES } from '../whatsappTemplate';
 
 interface MenuTabProps {
   settings: OrgSettings;
@@ -50,6 +51,34 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   const [orgLogoUrl, setOrgLogoUrl] = useState(settings.logoUrl);
   const [logoProcessing, setLogoProcessing] = useState(false);
   const [logoError, setLogoError] = useState('');
+  const [templateDraft, setTemplateDraft] = useState(settings.whatsappTemplate);
+  const templateRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setTemplateDraft(settings.whatsappTemplate);
+  }, [settings.whatsappTemplate]);
+
+  const templateDirty = templateDraft !== settings.whatsappTemplate;
+
+  const insertTemplateVariable = (token: string) => {
+    const el = templateRef.current;
+    if (!el) {
+      setTemplateDraft((prev) => prev + token);
+      return;
+    }
+    const start = el.selectionStart ?? templateDraft.length;
+    const end = el.selectionEnd ?? start;
+    const next = templateDraft.slice(0, start) + token + templateDraft.slice(end);
+    setTemplateDraft(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + token.length, start + token.length);
+    });
+  };
+
+  const handleSaveTemplate = () => {
+    setSettings((prev) => ({ ...prev, whatsappTemplate: templateDraft.trim() || DEFAULT_WHATSAPP_TEMPLATE }));
+  };
 
   const openEditOrg = () => {
     setOrgName(settings.name);
@@ -271,6 +300,78 @@ export const MenuTab: React.FC<MenuTabProps> = ({
       </section>
 
       <FinancialSettings settings={settings} setSettings={setSettings} />
+
+      {/* WhatsApp Template Section */}
+      <section className="space-y-3">
+        <h3 className="font-heading text-xs font-bold text-[#808080] dark:text-[#94a3b8] uppercase tracking-wider px-1">
+          WhatsApp Message Template
+        </h3>
+        <div className="premium-card p-4 sm:p-6 space-y-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-[#25D366]/15 text-[#13773a] dark:text-emerald-300 flex items-center justify-center shrink-0">
+              <JisIcon className="">forum</JisIcon>
+            </div>
+            <div>
+              <div className="font-sans text-sm font-bold text-[#212121] dark:text-white">Fee reminder message</div>
+              <div className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">
+                This template fills the WhatsApp message for a student. Variables in curly braces are replaced with the
+                student's real details when you send.
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="whatsapp-template" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">
+              Message template
+            </label>
+            <textarea
+              id="whatsapp-template"
+              ref={templateRef}
+              rows={6}
+              value={templateDraft}
+              onChange={(e) => setTemplateDraft(e.target.value)}
+              maxLength={2000}
+              className="w-full p-3.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm text-[#212121] dark:text-white focus:outline-none focus:bg-white dark:focus:bg-[#0b1422] focus:border-[#25D366] focus:ring-4 focus:ring-[#25D366]/20 transition-all"
+            />
+          </div>
+
+          <div>
+            <div className="text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Insert a variable</div>
+            <div className="flex flex-wrap gap-1.5">
+              {WHATSAPP_TEMPLATE_VARIABLES.map(({ token, label }) => (
+                <Button
+                  key={token}
+                  type="button"
+                  onClick={() => insertTemplateVariable(token)}
+                  title={`Insert ${label}`}
+                  className="min-h-8 px-2.5 py-0.5 rounded-full bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] text-xs font-semibold text-[#575757] dark:text-[#cbd5e1] hover:border-[#25D366]/50 hover:text-[#13773a] dark:hover:text-emerald-300 transition-colors"
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Button
+              type="button"
+              onClick={() => setTemplateDraft(DEFAULT_WHATSAPP_TEMPLATE)}
+              disabled={templateDraft === DEFAULT_WHATSAPP_TEMPLATE}
+              className="min-h-11 px-4 py-2 rounded-2xl text-xs font-semibold text-[#808080] dark:text-[#94a3b8] hover:text-[#212121] dark:hover:text-white hover:bg-[#f0f0f0] dark:hover:bg-[#172435] disabled:opacity-50 transition-colors"
+            >
+              Reset to default
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveTemplate}
+              disabled={!templateDirty}
+              className="btn-brand min-h-11 px-5 py-2.5 rounded-2xl text-xs font-bold disabled:opacity-50"
+            >
+              Save template
+            </Button>
+          </div>
+        </div>
+      </section>
 
       {/* Data Backup Section */}
       <section className="space-y-3">

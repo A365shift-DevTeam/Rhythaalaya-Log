@@ -56,4 +56,5 @@ public sealed record UpdateSettingsRequest(string Name, string Type, string? Log
     IReadOnlyList<string> IncomeCategories, IReadOnlyList<string> ExpenseCategories,
     bool NotificationsEnabled, bool FeeReminderNotifications, bool PaymentNotifications,
     bool AttendanceNotifications, int FeeDueLeadDays = 7,
-    LateEnrollmentBillingPolicy LateEnrollmentBillingPolicy = LateEnrollmentBillingPolicy.Skip);
+    LateEnrollmentBillingPolicy LateEnrollmentBillingPolicy = LateEnrollmentBillingPolicy.Skip,
+    string? WhatsappTemplate = null);

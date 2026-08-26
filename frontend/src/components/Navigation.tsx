@@ -108,8 +108,13 @@ export const Navigation: React.FC<NavigationProps> = ({
       </aside>
 
       {/* Mobile Top Header */}
-      <header className="md:hidden sticky top-0 z-40 flex justify-between items-center px-4 py-2.5 bg-white/85 dark:bg-[#0b1422]/85 backdrop-blur-xl border-b border-[#dbdbdb]/80 dark:border-[#243244] shadow-xs">
-        <Button type="button" className="flex min-h-11 items-center gap-2.5 rounded-2xl text-left min-w-0 flex-1 pr-2" onClick={() => navigate('home')} aria-label="Go to dashboard">
+      <header className="md:hidden sticky top-0 z-40 flex items-center px-4 py-2.5 bg-white/85 dark:bg-[#0b1422]/85 backdrop-blur-xl border-b border-[#dbdbdb]/80 dark:border-[#243244] shadow-xs">
+        <button
+          type="button"
+          className="flex items-center gap-2.5 text-left min-w-0 py-1 focus-visible:outline-none"
+          onClick={() => navigate('home')}
+          aria-label="Go to dashboard"
+        >
           <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-white flex items-center justify-center font-bold text-xs overflow-hidden shrink-0 border border-white/20 shadow-xs">
             {settings.logoUrl ? (
               <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover" />
@@ -120,15 +125,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           <h1 className="font-heading text-base font-bold text-[#212121] dark:text-white tracking-tight truncate">
             {settings.name}
           </h1>
-        </Button>
-        <Button
-          type="button"
-          onClick={onOpenAddStudent}
-          className="btn-brand min-h-10 px-3.5 py-1.5 rounded-2xl font-sans text-xs font-semibold flex items-center gap-1.5 shrink-0"
-        >
-          <JisIcon className="text-[16px]">add</JisIcon>
-          <span>Student</span>
-        </Button>
+        </button>
       </header>
 
       {/* Mobile Bottom Navigation Bar */}
@@ -166,7 +163,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         </div>
       )}
 
-      <nav aria-label="Primary navigation" className="md:hidden fixed bottom-0 left-0 w-full z-[60] grid grid-cols-5 items-stretch p-0 bg-white/95 dark:bg-[#0b1422]/95 backdrop-blur-xl border-t border-[#dbdbdb]/80 dark:border-[#243244] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
+      <nav aria-label="Primary navigation" className="md:hidden fixed bottom-0 left-0 w-full z-[45] grid grid-cols-5 items-stretch p-0 bg-white/95 dark:bg-[#0b1422]/95 backdrop-blur-xl border-t border-[#dbdbdb]/80 dark:border-[#243244] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
         {mobileNavItems.map((item) => {
           const isActive = currentTab === item.id;
           return (

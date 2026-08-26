@@ -1,31 +1,42 @@
 import { Button } from '../ui/button';
 import { JisIcon } from '../JisIcon';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Student } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
+import { renderWhatsAppTemplate, whatsAppValuesForStudent } from '../../whatsappTemplate';
 
 interface WhatsAppModalProps {
   isOpen: boolean;
   onClose: () => void;
   student?: Student;
   allOverdueStudents?: Student[];
+  academyName: string;
+  template: string;
 }
 
 export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
   isOpen,
   onClose,
   student,
-  allOverdueStudents = []
+  allOverdueStudents = [],
+  academyName,
+  template
 }) => {
   const isBulk = !student;
   const targetList = isBulk ? allOverdueStudents : [student];
 
-  const defaultMsg = isBulk
-    ? `Dear Students / Parents,\nThis is a friendly reminder from Rhythaalaya that your academy fee is currently due. Please complete the payment at your earliest convenience.\nThank you!`
-    : `Hi ${student?.name},\nThis is a friendly reminder from Rhythaalaya regarding your outstanding fee of ₹${student?.outstandingBalance || 0}. Please let us know if you have any questions!\nThank you.`;
+  const defaultMsg = student
+    ? renderWhatsAppTemplate(template, whatsAppValuesForStudent(student, academyName))
+    : `Dear Students / Parents,\nThis is a friendly reminder from ${academyName} that your academy fee is currently due. Please complete the payment at your earliest convenience.\nThank you!`;
 
   const [message, setMessage] = useState(defaultMsg);
   const dialogRef = useDialogLifecycle(isOpen, onClose);
+
+  useEffect(() => {
+    if (isOpen) setMessage(defaultMsg);
+    // Re-seed the template whenever the modal opens for a (different) student.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, student?.id, academyName, template]);
 
   if (!isOpen) return null;
 

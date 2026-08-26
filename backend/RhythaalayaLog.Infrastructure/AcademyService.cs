@@ -490,7 +490,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             ParseCategories(x.IncomeCategoriesJson, ["Student Fees", "Registration", "Events", "Other Income"]),
             ParseCategories(x.ExpenseCategoriesJson, ["Rent & Operations", "Instructor Salary", "Equipment", "Utilities", "Marketing", "Other Expense", "Refund"]),
             x.NotificationsEnabled, x.FeeReminderNotifications, x.PaymentNotifications, x.AttendanceNotifications,
-            x.FeeDueLeadDays, x.LateEnrollmentBillingPolicy);
+            x.FeeDueLeadDays, x.LateEnrollmentBillingPolicy, x.WhatsappTemplate);
 
     private static void ApplySettings(OrganizationSettings x, UpdateSettingsRequest request)
     {
@@ -518,6 +518,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         x.AttendanceNotifications = request.AttendanceNotifications;
         x.FeeDueLeadDays = request.FeeDueLeadDays;
         x.LateEnrollmentBillingPolicy = request.LateEnrollmentBillingPolicy;
+        x.WhatsappTemplate = Clean(request.WhatsappTemplate);
     }
 
     private async Task ValidateBatchAsync(string name, Guid courseId, Guid staffId, IReadOnlyList<DayOfWeek> days,
@@ -571,6 +572,8 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         if (request.Currency.Trim().Length != 3) throw new AppValidationException(nameof(request.Currency));
         if (request.ReceiptPrefix.Trim().Length > 16) throw new AppValidationException(nameof(request.ReceiptPrefix));
         if (request.FeeDueLeadDays is < 0 or > 90) throw new AppValidationException(nameof(request.FeeDueLeadDays));
+        if (request.WhatsappTemplate is { Length: > 2000 })
+            throw new AppValidationException("The WhatsApp template is too long — keep it under 2000 characters.");
         if (!Enum.IsDefined(request.LateEnrollmentBillingPolicy)) throw new AppValidationException(nameof(request.LateEnrollmentBillingPolicy));
         try
         {

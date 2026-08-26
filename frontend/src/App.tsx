@@ -544,6 +544,8 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
         onClose={() => setIsWhatsAppOpen(false)}
         student={whatsAppTargetStudent}
         allOverdueStudents={students.filter((s) => s.outstandingBalance > 0)}
+        academyName={settings.name}
+        template={settings.whatsappTemplate}
       />
 
       <AddTransactionModal

@@ -226,4 +226,5 @@ export interface OrgSettings {
   notifications: NotificationSettings;
   feeDueLeadDays: number;
   lateEnrollmentBillingPolicy: LateEnrollmentBillingPolicy;
+  whatsappTemplate: string;
 }

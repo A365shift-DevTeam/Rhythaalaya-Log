@@ -336,4 +336,6 @@ public sealed class OrganizationSettings : ITenantOwned
     public bool FeeReminderNotifications { get; set; } = true;
     public bool PaymentNotifications { get; set; } = true;
     public bool AttendanceNotifications { get; set; } = true;
+    /// <summary>Fee-reminder WhatsApp message template with {placeholder} variables. Null means the client default.</summary>
+    public string? WhatsappTemplate { get; set; }
 }

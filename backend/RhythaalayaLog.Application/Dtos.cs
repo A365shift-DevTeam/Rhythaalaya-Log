@@ -63,4 +63,5 @@ public sealed record SettingsDto(Guid Id, string Name, string Type, string? Logo
     IReadOnlyList<string> IncomeCategories, IReadOnlyList<string> ExpenseCategories,
     bool NotificationsEnabled, bool FeeReminderNotifications, bool PaymentNotifications,
     bool AttendanceNotifications, int FeeDueLeadDays = 7,
-    LateEnrollmentBillingPolicy LateEnrollmentBillingPolicy = LateEnrollmentBillingPolicy.Skip);
+    LateEnrollmentBillingPolicy LateEnrollmentBillingPolicy = LateEnrollmentBillingPolicy.Skip,
+    string? WhatsappTemplate = null);

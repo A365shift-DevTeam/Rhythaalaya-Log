@@ -1,4 +1,5 @@
 import { OrgSettings } from '../types';
+import { DEFAULT_WHATSAPP_TEMPLATE } from '../whatsappTemplate';
 
 export const INITIAL_SETTINGS: OrgSettings = {
   name: 'Rhythaalaya Academy',
@@ -17,5 +18,6 @@ export const INITIAL_SETTINGS: OrgSettings = {
     enabled: true, feeReminders: true, paymentUpdates: true, attendanceAlerts: true
   },
   feeDueLeadDays: 7,
-  lateEnrollmentBillingPolicy: 'Skip'
+  lateEnrollmentBillingPolicy: 'Skip',
+  whatsappTemplate: DEFAULT_WHATSAPP_TEMPLATE
 };
