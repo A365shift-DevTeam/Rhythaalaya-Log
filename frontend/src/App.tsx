@@ -135,6 +135,33 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
   const [lastReceipt, setLastReceipt] = useState<Receipt | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
+  const closeAllModals = () => {
+    setIsAddStudentOpen(false);
+    setEditingStudent(null);
+    setIsAddBatchOpen(false);
+    setEditingBatch(null);
+    setIsAddCourseOpen(false);
+    setEditingCourse(null);
+    setIsAddStaffOpen(false);
+    setEditingStaff(null);
+    setIsRecordFeeOpen(false);
+    setFeeTargetStudent(undefined);
+    setAdjustTargetDue(null);
+    setIsAddChargeOpen(false);
+    setIsWhatsAppOpen(false);
+    setWhatsAppTargetStudent(undefined);
+    setIsAddTransactionOpen(false);
+    setEditingTransaction(null);
+    setIsStudentDetailsOpen(false);
+    setDetailsTargetStudent(null);
+    setIsReceiptOpen(false);
+  };
+
+  const handleTabChange = (tab: AppTab) => {
+    closeAllModals();
+    setCurrentTab(tab);
+  };
+
   // Actions
   const handleAddStudent = async (payload: {
     name: string; dateOfBirth: string | null; joinDate: string; parentName: string; phone: string; email: string; address: string;
@@ -340,8 +367,11 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <Navigation
         currentTab={currentTab}
-        setCurrentTab={setCurrentTab}
-        onOpenAddStudent={openAddStudent}
+        setCurrentTab={handleTabChange}
+        onOpenAddStudent={() => {
+          closeAllModals();
+          openAddStudent();
+        }}
         settings={settings}
       />
 
@@ -354,7 +384,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <NotificationCenter tenantKey={session.user.tenantId || session.user.email} preferences={settings.notifications}
-              students={students} transactions={transactions} onNavigate={setCurrentTab} />
+              students={students} transactions={transactions} onNavigate={handleTabChange} />
             <Button type="button" onClick={onLogout} aria-label="Sign out" className="min-h-9 sm:min-h-11 shrink-0 rounded-2xl border border-[#dbdbdb] px-2.5 sm:px-3.5 text-xs font-semibold bg-white text-[#212121] transition-all hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-[#243244] dark:bg-[#111c2b] dark:text-[#e2e8f0] dark:hover:bg-rose-950/40 flex items-center gap-1 active:scale-95">
               <span className="hidden sm:inline">Sign out</span>
               <JisIcon className="text-[17px] sm:hidden">logout</JisIcon>
@@ -381,7 +411,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
               transactions={transactions}
               outstandingDues={outstandingDues}
               darkMode={settings.darkMode}
-              setCurrentTab={setCurrentTab}
+              setCurrentTab={handleTabChange}
               onOpenAddStudent={openAddStudent}
               onOpenAddBatch={() => { setEditingBatch(null); setIsAddBatchOpen(true); }}
               onOpenRecordFee={openRecordFee}

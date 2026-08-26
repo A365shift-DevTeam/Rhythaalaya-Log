@@ -11,8 +11,10 @@ interface StudentsTabProps {
   onSendMessage: (student: Student) => void;
 }
 
+const activeEnrollments = (student: Student) => student.enrollments.filter((e) => e.status === 'Active');
+
 const courseNames = (student: Student) =>
-  student.enrollments.filter((e) => e.status === 'Active').map((e) => e.courseName).join(', ') || 'Not enrolled';
+  activeEnrollments(student).map((e) => `${e.courseName} ${e.batchName}`).join(', ') || 'Not enrolled';
 
 export const StudentsTab: React.FC<StudentsTabProps> = ({
   students,
@@ -23,8 +25,34 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFeeStatus, setFilterFeeStatus] = useState<'All' | 'Paid' | 'Pending'>('All');
+  const [filterCourse, setFilterCourse] = useState('All');
+  const [filterBatch, setFilterBatch] = useState('All');
   const [sortBy, setSortBy] = useState<'name' | 'attendance'>('name');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const activeFilterCount =
+    (filterFeeStatus !== 'All' ? 1 : 0) + (filterCourse !== 'All' ? 1 : 0) + (filterBatch !== 'All' ? 1 : 0);
+
+  const clearAllFilters = () => {
+    setFilterFeeStatus('All');
+    setFilterCourse('All');
+    setFilterBatch('All');
+  };
+
+  const courseOptions = Array.from(
+    new Set<string>(students.flatMap((s) => activeEnrollments(s).map((e) => e.courseName)))
+  ).sort((a, b) => a.localeCompare(b));
+
+  const batchOptions = Array.from(
+    new Set<string>(
+      students.flatMap((s) =>
+        activeEnrollments(s)
+          .filter((e) => filterCourse === 'All' || e.courseName === filterCourse)
+          .map((e) => e.batchName)
+      )
+    )
+  ).sort((a, b) => a.localeCompare(b));
 
   const filteredStudents = students
     .filter((s) => {
@@ -36,7 +64,16 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
       const feeStatus = s.outstandingBalance > 0 ? 'Pending' : 'Paid';
       const matchesStatus = filterFeeStatus === 'All' ? true : feeStatus === filterFeeStatus;
 
-      return matchesSearch && matchesStatus;
+      const matchesCourse =
+        filterCourse === 'All' || activeEnrollments(s).some((e) => e.courseName === filterCourse);
+
+      const matchesBatch =
+        filterBatch === 'All' ||
+        activeEnrollments(s).some(
+          (e) => (filterCourse === 'All' || e.courseName === filterCourse) && e.batchName === filterBatch
+        );
+
+      return matchesSearch && matchesStatus && matchesCourse && matchesBatch;
     })
     .sort((a, b) => {
       if (sortBy === 'attendance') return b.overallAttendance - a.overallAttendance;
@@ -100,7 +137,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by student name, course, or ID…"
+              placeholder="Search by student name, course, batch, or ID…"
               className="w-full min-h-11 pl-10 pr-16 py-2.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl font-sans text-xs sm:text-sm font-medium text-[#212121] dark:text-white placeholder:text-[#9e9e9e] focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] transition-all"
             />
             {searchQuery && (
@@ -192,6 +229,55 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Course & Batch filters */}
+        <div className="flex flex-col sm:flex-row gap-2.5">
+          <div className="flex-1">
+            <label htmlFor="student-filter-course" className="sr-only">Filter by course</label>
+            <select
+              id="student-filter-course"
+              value={filterCourse}
+              onChange={(e) => {
+                setFilterCourse(e.target.value);
+                setFilterBatch('All');
+              }}
+              className="w-full min-h-11 px-3.5 py-2.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl font-sans text-xs sm:text-sm font-semibold text-[#212121] dark:text-white focus:outline-none focus:bg-white dark:focus:bg-[#0b1422] focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] transition-all cursor-pointer"
+            >
+              <option value="All">All courses</option>
+              {courseOptions.map((course) => (
+                <option key={course} value={course}>{course}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex-1">
+            <label htmlFor="student-filter-batch" className="sr-only">Filter by batch</label>
+            <select
+              id="student-filter-batch"
+              value={filterBatch}
+              onChange={(e) => setFilterBatch(e.target.value)}
+              className="w-full min-h-11 px-3.5 py-2.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl font-sans text-xs sm:text-sm font-semibold text-[#212121] dark:text-white focus:outline-none focus:bg-white dark:focus:bg-[#0b1422] focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] transition-all cursor-pointer"
+            >
+              <option value="All">All batches</option>
+              {batchOptions.map((batch) => (
+                <option key={batch} value={batch}>{batch}</option>
+              ))}
+            </select>
+          </div>
+
+          {(filterCourse !== 'All' || filterBatch !== 'All') && (
+            <Button
+              type="button"
+              onClick={() => {
+                setFilterCourse('All');
+                setFilterBatch('All');
+              }}
+              className="min-h-11 px-4 py-2.5 rounded-2xl font-sans text-xs font-semibold text-[#808080] dark:text-[#94a3b8] bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] hover:text-[#212121] dark:hover:text-white transition-colors shrink-0"
+            >
+              Clear filters
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Grid View */}
@@ -228,7 +314,16 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                           <JisIcon className="text-[18px]">more_vert</JisIcon>
                         </Button>
                       </div>
-                      <p className="font-sans text-xs text-[#3fc073] font-semibold truncate mt-0.5">{courseNames(student)}</p>
+                      {activeEnrollments(student).length === 0 ? (
+                        <p className="font-sans text-xs text-[#3fc073] font-semibold truncate mt-0.5">Not enrolled</p>
+                      ) : (
+                        activeEnrollments(student).map((e) => (
+                          <p key={e.id} className="font-sans text-xs truncate mt-0.5">
+                            <span className="text-[#3fc073] font-semibold">{e.courseName}</span>
+                            <span className="text-[#808080] dark:text-[#94a3b8]"> · {e.batchName}</span>
+                          </p>
+                        ))
+                      )}
                       <p className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] truncate">{student.studentNumber}</p>
                     </div>
                   </div>
@@ -303,11 +398,12 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
       ) : (
         <div className="premium-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[600px]">
+            <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="border-b border-[#dbdbdb]/80 dark:border-[#243244] bg-[#f0f0f0]/90 dark:bg-[#111c2b]/50 text-xs font-bold text-[#808080] dark:text-[#94a3b8] uppercase tracking-wider">
                   <th className="p-4">Student</th>
-                  <th className="p-4">Courses</th>
+                  <th className="p-4">Course</th>
+                  <th className="p-4">Batch</th>
                   <th className="p-4">Fee Status</th>
                   <th className="p-4">Attendance</th>
                   <th className="p-4 text-right">Actions</th>
@@ -330,7 +426,26 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                         </div>
                       </td>
                       <td className="p-4">
-                        <div className="font-semibold text-[#212121] dark:text-[#e2e8f0]">{courseNames(student)}</div>
+                        {activeEnrollments(student).length === 0 ? (
+                          <div className="font-semibold text-[#212121] dark:text-[#e2e8f0]">Not enrolled</div>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {activeEnrollments(student).map((e) => (
+                              <div key={e.id} className="font-semibold text-[#212121] dark:text-[#e2e8f0]">{e.courseName}</div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        {activeEnrollments(student).length === 0 ? (
+                          <div className="text-[#808080] dark:text-[#94a3b8]">—</div>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {activeEnrollments(student).map((e) => (
+                              <div key={e.id} className="text-[#575757] dark:text-[#cbd5e1]">{e.batchName}</div>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="p-4">
                         {!isPending ? (

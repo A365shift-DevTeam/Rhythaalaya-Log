@@ -310,8 +310,9 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-student-title"
+      onClick={onClose}
     >
-      <div className="bg-white dark:bg-[#0b1422] rounded-3xl max-w-2xl w-full max-h-[92dvh] overflow-hidden shadow-2xl border border-[#dbdbdb] dark:border-[#243244]">
+      <div className="bg-white dark:bg-[#0b1422] rounded-3xl max-w-2xl w-full max-h-[92dvh] overflow-hidden shadow-2xl border border-[#dbdbdb] dark:border-[#243244]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start gap-4 px-5 sm:px-7 py-5 border-b border-[#dbdbdb]/60 dark:border-[#243244]">
           <div className="pr-10">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#3fc073]">
