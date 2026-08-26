@@ -318,8 +318,22 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             .OrderBy(x => x.Student.Name).ToListAsync(ct);
         var records = await db.AttendanceRecords.AsNoTracking()
             .Where(x => x.Date == date && x.Enrollment.BatchId == batchId).ToDictionaryAsync(x => x.EnrollmentId, ct);
-        var entries = roster.Select(x => new AttendanceRecordDto(x.Id, x.StudentId, x.Student.Name,
-            records.TryGetValue(x.Id, out var record) ? record.Status : AttendanceStatus.Present)).ToList();
+        // A removed (archived) student stays visible as a faded, read-only row carrying their
+        // attendance track record — history is preserved, but no new attendance can be taken.
+        var inactiveEnrollmentIds = roster.Where(x => !x.Student.IsActive).Select(x => x.Id).ToList();
+        var attendedDays = inactiveEnrollmentIds.Count == 0 ? new Dictionary<Guid, int>() :
+            await db.AttendanceRecords.AsNoTracking()
+                .Where(x => inactiveEnrollmentIds.Contains(x.EnrollmentId) && x.Status == AttendanceStatus.Present)
+                .GroupBy(x => x.EnrollmentId)
+                .Select(g => new { EnrollmentId = g.Key, Days = g.Count() })
+                .ToDictionaryAsync(x => x.EnrollmentId, x => x.Days, ct);
+        var entries = roster.Select(x =>
+        {
+            var hasRecord = records.TryGetValue(x.Id, out var record);
+            return new AttendanceRecordDto(x.Id, x.StudentId, x.Student.Name,
+                hasRecord ? record!.Status : AttendanceStatus.Present,
+                x.Student.IsActive, attendedDays.GetValueOrDefault(x.Id), hasRecord);
+        }).ToList();
         return new AttendanceLogDto(date, batchId, batch.Name, entries);
     }
 
@@ -328,8 +342,9 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         if (request.Entries.Count == 0) throw new AppValidationException(nameof(request.Entries));
         var ids = request.Entries.Select(x => x.EnrollmentId).ToList();
         if (ids.Distinct().Count() != ids.Count) throw new AppValidationException(nameof(request.Entries));
+        // Archived students are read-only history: attendance can no longer be taken for them.
         var validCount = await db.Enrollments.CountAsync(x => ids.Contains(x.Id)
-            && x.BatchId == request.BatchId && x.Status == EnrollmentStatus.Active, ct);
+            && x.BatchId == request.BatchId && x.Status == EnrollmentStatus.Active && x.Student.IsActive, ct);
         if (validCount != ids.Count) throw new AppValidationException(nameof(request.BatchId));
         var existing = await db.AttendanceRecords.Where(x => x.Date == request.Date
             && ids.Contains(x.EnrollmentId)).ToDictionaryAsync(x => x.EnrollmentId, ct);

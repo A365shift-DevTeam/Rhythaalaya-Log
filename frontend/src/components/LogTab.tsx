@@ -18,6 +18,11 @@ interface RosterEntry {
   enrollmentId: string;
   studentId: string;
   studentName: string;
+  /// false = the student was removed; the row is read-only history
+  isActive: boolean;
+  attendedDays: number;
+  hasRecord: boolean;
+  recordStatus: RollCallStatus;
 }
 
 type RollCallStatus = Extract<AttendanceStatus, 'P' | 'A'>;
@@ -50,11 +55,13 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
     setLoading(true);
     void api.attendance(token, selectedDate, selectedBatchId).then(result => {
       const nextRoster: RosterEntry[] = result.entries.map((entry: any) => ({
-        enrollmentId: entry.enrollmentId, studentId: entry.studentId, studentName: entry.studentName
+        enrollmentId: entry.enrollmentId, studentId: entry.studentId, studentName: entry.studentName,
+        isActive: entry.studentIsActive ?? true, attendedDays: entry.attendedDays ?? 0,
+        hasRecord: entry.hasRecord ?? true, recordStatus: entry.status === 'Present' ? 'P' as const : 'A' as const,
       }));
       const nextAttendance: Record<string, RollCallStatus> = {};
       result.entries.forEach((entry: any) => {
-        nextAttendance[entry.enrollmentId] = entry.status === 'Present' ? 'P' : 'A';
+        if (entry.studentIsActive ?? true) nextAttendance[entry.enrollmentId] = entry.status === 'Present' ? 'P' : 'A';
       });
       setRoster(nextRoster);
       setAttendance(nextAttendance);
@@ -66,9 +73,12 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
     setAttendance((prev) => ({ ...prev, [enrollmentId]: status }));
   };
 
+  // Removed students stay visible as faded history but take no part in the roll call.
+  const activeRoster = useMemo(() => roster.filter((entry) => entry.isActive), [roster]);
+
   const markAllPresent = () => {
     const next: Record<string, RollCallStatus> = {};
-    roster.forEach((entry) => { next[entry.enrollmentId] = 'P'; });
+    activeRoster.forEach((entry) => { next[entry.enrollmentId] = 'P'; });
     setAttendance(next);
     setToastMessage('Marked all students as Present!');
     setTimeout(() => setToastMessage(null), 2500);
@@ -76,7 +86,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
 
   const markAllAbsent = () => {
     const next: Record<string, RollCallStatus> = {};
-    roster.forEach((entry) => { next[entry.enrollmentId] = 'A'; });
+    activeRoster.forEach((entry) => { next[entry.enrollmentId] = 'A'; });
     setAttendance(next);
     setToastMessage('Marked all students as Absent.');
     setTimeout(() => setToastMessage(null), 2500);
@@ -84,15 +94,18 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
 
   const presentCount = Object.values(attendance).filter((s) => s === 'P').length;
   const absentCount = Object.values(attendance).filter((s) => s === 'A').length;
-  const presentPct = roster.length ? Math.round((presentCount / roster.length) * 100) : 0;
+  const presentPct = activeRoster.length ? Math.round((presentCount / activeRoster.length) * 100) : 0;
 
   const filteredRoster = useMemo(() => {
     return roster.filter((entry) => {
       const matchesSearch = !searchQuery.trim() || entry.studentName.toLowerCase().includes(searchQuery.trim().toLowerCase());
+      if (!entry.isActive) return matchesSearch && filterStatus === 'ALL';
       const current = attendance[entry.enrollmentId] || 'P';
       const matchesFilter = filterStatus === 'ALL' || current === filterStatus;
       return matchesSearch && matchesFilter;
-    });
+    })
+      // removed students always sit below every active one (stable sort keeps names ordered)
+      .sort((a, b) => Number(b.isActive) - Number(a.isActive));
   }, [roster, searchQuery, filterStatus, attendance]);
 
   const todayIso = todayIsoDate();
@@ -125,9 +138,9 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
   };
 
   const handleSubmitAttendance = async () => {
-    if (!selectedBatchId || roster.length === 0 || saving) return;
+    if (!selectedBatchId || activeRoster.length === 0 || saving) return;
     setSaving(true);
-    const entries = roster.map((entry) => ({ enrollmentId: entry.enrollmentId, status: attendance[entry.enrollmentId] || 'P' }));
+    const entries = activeRoster.map((entry) => ({ enrollmentId: entry.enrollmentId, status: attendance[entry.enrollmentId] || 'P' }));
     try {
       await api.submitAttendance(token, selectedDate, selectedBatchId, entries);
       setToastMessage('Attendance saved successfully!');
@@ -343,7 +356,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
                     Attendance List
                   </h3>
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#f0f0f0] dark:bg-[#111c2b] text-[#6b6b6b] dark:text-[#cbd5e1]">
-                    {roster.length}
+                    {activeRoster.length}
                   </span>
                 </div>
 
@@ -399,6 +412,31 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
                     const currentStatus = attendance[entry.enrollmentId] || 'P';
                     const isPresent = currentStatus === 'P';
                     const initials = entry.studentName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+
+                    // Removed student: faded, read-only history row — shows their track record
+                    // (days attended) and this date's saved status, with no toggle.
+                    if (!entry.isActive) {
+                      return (
+                        <div key={entry.enrollmentId} className="p-3 sm:p-4 flex items-center justify-between gap-3 opacity-50">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-2xl bg-[#9e9e9e] text-white flex items-center justify-center font-heading font-bold text-xs shrink-0">
+                              {initials}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-sans text-sm font-bold text-[#212121] dark:text-white truncate">
+                                {entry.studentName}
+                              </div>
+                              <div className="text-xs font-semibold text-[#808080] dark:text-[#94a3b8]">
+                                Removed · attended {entry.attendedDays} {entry.attendedDays === 1 ? 'day' : 'days'}
+                              </div>
+                            </div>
+                          </div>
+                          <span className="shrink-0 font-sans text-xs font-bold text-[#808080]">
+                            {entry.hasRecord ? (entry.recordStatus === 'P' ? 'Present' : 'Absent') : '—'}
+                          </span>
+                        </div>
+                      );
+                    }
 
                     return (
                       <div
@@ -468,7 +506,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
                 <h3 className="font-heading text-lg font-bold opacity-90">Session Summary</h3>
                 <div className="flex items-end gap-2">
                   <span className="font-heading text-5xl font-bold leading-none tabular-nums">{presentCount}</span>
-                  <span className="font-heading text-lg font-bold opacity-70 mb-1 tabular-nums">/ {roster.length}</span>
+                  <span className="font-heading text-lg font-bold opacity-70 mb-1 tabular-nums">/ {activeRoster.length}</span>
                 </div>
                 <div className="flex items-center gap-2 font-sans text-xs font-bold bg-white/20 w-max px-3 py-1 rounded-full backdrop-blur-md">
                   <JisIcon className="text-[16px]">trending_up</JisIcon>

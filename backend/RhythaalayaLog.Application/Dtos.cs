@@ -22,7 +22,8 @@ public sealed record StudentAchievementDto(Guid Id, Guid StudentId, string Title
     DateTimeOffset CreatedAt);
 
 public sealed record AttendanceEntryDto(Guid EnrollmentId, AttendanceStatus Status);
-public sealed record AttendanceRecordDto(Guid EnrollmentId, Guid StudentId, string StudentName, AttendanceStatus Status);
+public sealed record AttendanceRecordDto(Guid EnrollmentId, Guid StudentId, string StudentName, AttendanceStatus Status,
+    bool StudentIsActive = true, int AttendedDays = 0, bool HasRecord = true);
 public sealed record AttendanceLogDto(DateOnly Date, Guid BatchId, string BatchName, IReadOnlyList<AttendanceRecordDto> Entries);
 
 public sealed record FeeStructureDto(Guid Id, Guid CourseId, string CourseName, string Name, decimal Amount,
