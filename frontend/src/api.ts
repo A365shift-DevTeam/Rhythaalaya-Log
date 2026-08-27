@@ -320,8 +320,16 @@ export const api = {
       { method: 'PATCH', body: JSON.stringify({ otpEnabled }) }, token),
 
   // A TenantAdmin managing their own Staff (as opposed to a SuperAdmin managing any tenant's
-  // users via the two methods above).
+  // users via the two methods above). Role is always 'Staff' — the backend rejects anything else
+  // from this endpoint.
   myTeam: (token: string) => request<TenantUser[]>('/tenant/users', {}, token),
+  createTeamMember: (token: string, body: { fullName: string; email: string; password: string }) =>
+    request<TenantUser>('/tenant/users', { method: 'POST', body: JSON.stringify({ ...body, role: 'Staff' }) }, token),
+  updateTeamMember: (token: string, userId: string, body: { fullName: string; email: string; newPassword?: string }) =>
+    request<TenantUser>(`/tenant/users/${userId}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+  setTeamMemberActive: (token: string, userId: string, isActive: boolean) =>
+    request<TenantUser>(`/tenant/users/${userId}/status`,
+      { method: 'PATCH', body: JSON.stringify({ isActive }) }, token),
   setMyTeamMemberOtp: (token: string, userId: string, otpEnabled: boolean) =>
     request<TenantUser>(`/tenant/users/${userId}/otp`,
       { method: 'PATCH', body: JSON.stringify({ otpEnabled }) }, token)

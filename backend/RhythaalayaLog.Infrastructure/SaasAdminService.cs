@@ -195,6 +195,60 @@ public sealed class SaasAdminService(AppDbContext db, PasswordHasher<UserAccount
         return MapUser(user);
     }
 
+    public async Task<TenantUserDto> UpdateTenantUserAsync(Guid tenantId, Guid userId,
+        UpdateTenantUserRequest request, bool restrictToStaff, CancellationToken ct)
+    {
+        var user = await ManagedTenantUserAsync(tenantId, userId, restrictToStaff, ct, "edited");
+        if (string.IsNullOrWhiteSpace(request.FullName) || string.IsNullOrWhiteSpace(request.Email)
+            || !request.Email.Contains('@'))
+            throw new AppValidationException("A valid name and email are required.");
+        if (!string.IsNullOrEmpty(request.NewPassword) && request.NewPassword.Length < 8)
+            throw new AppValidationException("The new password must be at least 8 characters.");
+
+        var email = request.Email.Trim().ToLowerInvariant();
+        if (await db.Users.IgnoreQueryFilters().AnyAsync(x => x.Email == email && x.Id != userId, ct))
+            throw new ConflictException("Email already exists.");
+
+        user.FullName = request.FullName.Trim();
+        user.Email = email;
+        if (!string.IsNullOrEmpty(request.NewPassword))
+            user.PasswordHash = hasher.HashPassword(user, request.NewPassword);
+        await db.SaveChangesAsync(ct);
+        return MapUser(user);
+    }
+
+    public async Task<TenantUserDto> SetTenantUserActiveAsync(Guid tenantId, Guid userId, bool isActive,
+        bool restrictToStaff, CancellationToken ct)
+    {
+        var user = await ManagedTenantUserAsync(tenantId, userId, restrictToStaff, ct, "deactivated");
+        if (!isActive && user.Role == UserRole.TenantAdmin)
+        {
+            var otherActiveAdmins = await db.Users.IgnoreQueryFilters().CountAsync(x =>
+                x.TenantId == tenantId && x.Role == UserRole.TenantAdmin && x.IsActive && x.Id != userId, ct);
+            if (otherActiveAdmins == 0)
+                throw new ConflictException("Cannot deactivate the academy's only active admin.");
+        }
+        user.IsActive = isActive;
+        await db.SaveChangesAsync(ct);
+        return MapUser(user);
+    }
+
+    // Shared lookup+guard for UpdateTenantUserAsync/SetTenantUserActiveAsync/SetUserOtpEnabledAsync's
+    // "target user" step: must belong to tenantId, can never be a SuperAdmin, and (for the
+    // TenantAdmin self-service path) must be Staff.
+    private async Task<UserAccount> ManagedTenantUserAsync(Guid tenantId, Guid userId, bool restrictToStaff,
+        CancellationToken ct, string action)
+    {
+        var user = await db.Users.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId, ct)
+            ?? throw new NotFoundException("Tenant user not found.");
+        if (user.Role == UserRole.SuperAdmin)
+            throw new AppValidationException($"Super Admin accounts cannot be {action} here.");
+        if (restrictToStaff && user.Role != UserRole.Staff)
+            throw new AppValidationException("Tenant administrators can manage Staff users only.");
+        return user;
+    }
+
     private static void ValidateTenant(CreateTenantRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Slug))

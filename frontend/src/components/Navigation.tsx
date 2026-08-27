@@ -8,13 +8,15 @@ interface NavigationProps {
   setCurrentTab: (tab: AppTab) => void;
   onOpenAddStudent: () => void;
   settings: OrgSettings;
+  isAdmin: boolean;
 }
 
 export const Navigation: React.FC<NavigationProps> = ({
   currentTab,
   setCurrentTab,
   onOpenAddStudent,
-  settings
+  settings,
+  isAdmin
 }) => {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const navItems = [
@@ -24,13 +26,15 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'finance', label: 'Finance', icon: 'payments' },
     { id: 'log', label: 'Attendance', icon: 'fact_check' },
     { id: 'reports', label: 'Reports', icon: 'insights' },
-    { id: 'menu', label: 'Settings', icon: 'settings' },
+    // Admin gathers account/config management (team, org profile, financial settings, WhatsApp
+    // template, backup) — Staff has no use for it, so it's the one tab hidden from that role.
+    ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: 'admin_panel_settings' }] as const : []),
   ] as const;
   const mobileNavItems = navItems.filter((item) =>
     ['home', 'students', 'batches', 'log'].includes(item.id)
   );
-  const mobileMoreItems = navItems.filter((item) => ['finance', 'reports', 'menu'].includes(item.id));
-  const moreIsActive = currentTab === 'finance' || currentTab === 'reports' || currentTab === 'menu';
+  const mobileMoreItems = navItems.filter((item) => ['finance', 'reports', 'admin'].includes(item.id));
+  const moreIsActive = currentTab === 'finance' || currentTab === 'reports' || currentTab === 'admin';
 
   const navigate = (tab: AppTab) => {
     setCurrentTab(tab);

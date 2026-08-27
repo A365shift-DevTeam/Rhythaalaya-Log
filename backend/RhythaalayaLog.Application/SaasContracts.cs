@@ -43,6 +43,9 @@ public sealed record AssignSubscriptionRequest(Guid PlanId, SubscriptionStatus S
     DateTimeOffset StartsAt, DateTimeOffset EndsAt);
 public sealed record CreateTenantUserRequest(string FullName, string Email, string Password, UserRole Role);
 public sealed record UpdateUserOtpRequest(bool OtpEnabled);
+/// <summary>NewPassword is optional — leave it null/blank to keep the current password.</summary>
+public sealed record UpdateTenantUserRequest(string FullName, string Email, string? NewPassword);
+public sealed record UpdateTenantUserStatusRequest(bool IsActive);
 
 public interface IAuthService
 {
@@ -76,5 +79,14 @@ public interface ISaasAdminService
     /// role's OTP bypass isn't toggleable) and, when restrictToStaff is set (the TenantAdmin
     /// self-service path), rejects a non-Staff target too.</summary>
     Task<TenantUserDto> SetUserOtpEnabledAsync(Guid tenantId, Guid userId, bool otpEnabled,
+        bool restrictToStaff, CancellationToken cancellationToken);
+    /// <summary>Edits a tenant user's name/email (and optionally password). Same SuperAdmin/
+    /// restrictToStaff rules as SetUserOtpEnabledAsync.</summary>
+    Task<TenantUserDto> UpdateTenantUserAsync(Guid tenantId, Guid userId, UpdateTenantUserRequest request,
+        bool restrictToStaff, CancellationToken cancellationToken);
+    /// <summary>Activates/deactivates a tenant user ("delete" in the UI — never a hard delete,
+    /// since fee payments/adjustments/cancellations reference a user's ID for audit history).
+    /// Refuses to deactivate the tenant's last active TenantAdmin.</summary>
+    Task<TenantUserDto> SetTenantUserActiveAsync(Guid tenantId, Guid userId, bool isActive,
         bool restrictToStaff, CancellationToken cancellationToken);
 }

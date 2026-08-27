@@ -1,5 +1,5 @@
 export type AttendanceStatus = 'P' | 'A' | 'L';
-export type AppTab = 'home' | 'students' | 'batches' | 'finance' | 'log' | 'reports' | 'menu';
+export type AppTab = 'home' | 'students' | 'batches' | 'finance' | 'log' | 'reports' | 'admin';
 
 export type EnrollmentStatus = 'Active' | 'Completed' | 'Withdrawn';
 export type FeeFrequency = 'Monthly' | 'Quarterly' | 'HalfYearly' | 'Yearly' | 'OneTime';
