@@ -50,8 +50,8 @@ export function NotificationCenter({ tenantKey, preferences, students, transacti
 
   return <div className="relative" ref={containerRef}>
     <Button type="button" onClick={() => setOpen((value) => !value)} aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`} aria-expanded={open}
-      className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-[#dbdbdb] bg-white text-[#575757] transition-all hover:border-[#3fc073] hover:bg-[#e9f7ee] hover:text-[#3fc073] dark:border-[#243244] dark:bg-[#111c2b] dark:text-[#cbd5e1] dark:hover:bg-[#3fc073]/20 active:scale-95">
-      <JisIcon className="text-[21px]" aria-hidden="true">notifications</JisIcon>
+      className="relative flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-2xl border border-[#dbdbdb] bg-white text-[#575757] transition-all hover:border-[#3fc073] hover:bg-[#e9f7ee] hover:text-[#3fc073] dark:border-[#243244] dark:bg-[#111c2b] dark:text-[#cbd5e1] dark:hover:bg-[#3fc073]/20 active:scale-95">
+      <JisIcon className="text-[19px] sm:text-[21px]" aria-hidden="true">notifications</JisIcon>
       {unreadCount > 0 && <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#ef4444] px-1 text-xs font-bold text-white dark:border-[#1e293b]">{unreadCount > 9 ? '9+' : unreadCount}</span>}
     </Button>
 

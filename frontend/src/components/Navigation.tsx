@@ -9,6 +9,7 @@ interface NavigationProps {
   onOpenAddStudent: () => void;
   settings: OrgSettings;
   isAdmin: boolean;
+  actions?: React.ReactNode;
 }
 
 export const Navigation: React.FC<NavigationProps> = ({
@@ -16,7 +17,8 @@ export const Navigation: React.FC<NavigationProps> = ({
   setCurrentTab,
   onOpenAddStudent,
   settings,
-  isAdmin
+  isAdmin,
+  actions
 }) => {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const navItems = [
@@ -112,7 +114,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       </aside>
 
       {/* Mobile Top Header */}
-      <header className="md:hidden sticky top-0 z-40 flex items-center px-4 py-2.5 bg-white/85 dark:bg-[#0b1422]/85 backdrop-blur-xl border-b border-[#dbdbdb]/80 dark:border-[#243244] shadow-xs">
+      <header className="md:hidden sticky top-0 z-40 flex items-center justify-between gap-2 px-4 py-2.5 bg-white/85 dark:bg-[#0b1422]/85 backdrop-blur-xl border-b border-[#dbdbdb]/80 dark:border-[#243244] shadow-xs">
         <button
           type="button"
           className="flex items-center gap-2.5 text-left min-w-0 py-1 focus-visible:outline-none"
@@ -130,6 +132,11 @@ export const Navigation: React.FC<NavigationProps> = ({
             {settings.name}
           </h1>
         </button>
+        {actions && (
+          <div className="flex shrink-0 items-center gap-1.5">
+            {actions}
+          </div>
+        )}
       </header>
 
       {/* Mobile Bottom Navigation Bar */}

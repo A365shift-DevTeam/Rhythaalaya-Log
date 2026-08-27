@@ -1,19 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Eye,
-  EyeOff,
-  Loader2,
-  Check,
-  Mail,
-  ShieldCheck,
-  Lock,
-  GraduationCap,
-  CalendarCheck,
-  Layers,
-  ArrowLeft,
-  Sparkles
-} from 'lucide-react';
+  IconEye as Eye,
+  IconEyeOff as EyeOff,
+  IconLoader2 as Loader2,
+  IconCheck as Check,
+  IconMail as Mail,
+  IconShieldCheck as ShieldCheck,
+  IconLock as Lock,
+  IconSchool as GraduationCap,
+  IconCalendarCheck as CalendarCheck,
+  IconArrowLeft as ArrowLeft
+} from '@tabler/icons-react';
 import { ApiError, api, Session } from '../api';
 
 // Validate email regex

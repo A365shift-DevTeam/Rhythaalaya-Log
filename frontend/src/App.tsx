@@ -368,6 +368,18 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
     </div>
   );
 
+  const headerActions = (
+    <>
+      <DarkModeToggle darkMode={darkMode} onToggle={onToggleDarkMode} />
+      <NotificationCenter tenantKey={session.user.tenantId || session.user.email} preferences={settings.notifications}
+        students={students} transactions={transactions} onNavigate={handleTabChange} />
+      <Button type="button" onClick={onLogout} aria-label="Sign out" className="min-h-9 sm:min-h-11 shrink-0 rounded-2xl border border-[#dbdbdb] px-2.5 sm:px-3.5 text-xs font-semibold bg-white text-[#212121] transition-all hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-[#243244] dark:bg-[#111c2b] dark:text-[#e2e8f0] dark:hover:bg-rose-950/40 flex items-center gap-1 active:scale-95">
+        <span className="hidden md:inline">Sign out</span>
+        <JisIcon className="text-[17px] md:hidden">logout</JisIcon>
+      </Button>
+    </>
+  );
+
   return (
     <div className="app-shell min-h-screen bg-[#f4fbf7] dark:bg-[#07111f] text-[#212121] dark:text-[#e2e8f0] font-sans antialiased selection:bg-[#3fc073] selection:text-white">
       <a href="#main-content" className="skip-link">Skip to main content</a>
@@ -380,23 +392,18 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
         }}
         settings={settings}
         isAdmin={isAdmin}
+        actions={headerActions}
       />
 
       <main id="main-content" tabIndex={-1} className="md:ml-[270px] min-h-screen px-3 sm:px-6 lg:px-8 py-3 sm:py-6 md:py-8 pb-28 md:pb-12">
         <div className="mx-auto w-full max-w-[1440px]">
-        <header className="relative z-30 mb-4 sm:mb-5 flex min-w-0 items-center justify-between gap-2.5 rounded-2xl border border-[#dbdbdb]/80 bg-white/80 px-3.5 py-2 sm:py-2.5 shadow-xs backdrop-blur-xl dark:border-[#243244] dark:bg-[#0b1422]/80 sm:px-4">
+        <header className="relative z-30 mb-4 sm:mb-5 hidden md:flex min-w-0 items-center justify-between gap-2.5 rounded-2xl border border-[#dbdbdb]/80 bg-white/80 px-3.5 py-2 sm:py-2.5 shadow-xs backdrop-blur-xl dark:border-[#243244] dark:bg-[#0b1422]/80 sm:px-4">
           <div className="min-w-0">
             <p className="truncate text-xs sm:text-sm font-bold text-[#212121] dark:text-white">{session.user.tenantName}</p>
             <p className="truncate text-xs sm:text-xs text-[#808080] dark:text-[#94a3b8]">Signed in as {session.user.fullName}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <DarkModeToggle darkMode={darkMode} onToggle={onToggleDarkMode} />
-            <NotificationCenter tenantKey={session.user.tenantId || session.user.email} preferences={settings.notifications}
-              students={students} transactions={transactions} onNavigate={handleTabChange} />
-            <Button type="button" onClick={onLogout} aria-label="Sign out" className="min-h-9 sm:min-h-11 shrink-0 rounded-2xl border border-[#dbdbdb] px-2.5 sm:px-3.5 text-xs font-semibold bg-white text-[#212121] transition-all hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-[#243244] dark:bg-[#111c2b] dark:text-[#e2e8f0] dark:hover:bg-rose-950/40 flex items-center gap-1 active:scale-95">
-              <span className="hidden sm:inline">Sign out</span>
-              <JisIcon className="text-[17px] sm:hidden">logout</JisIcon>
-            </Button>
+            {headerActions}
           </div>
         </header>
         {loadError && <div role="alert" className="mb-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200">

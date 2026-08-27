@@ -54,7 +54,7 @@ function Button({
   const Comp = asChild ? Slot.Root : "button"
   const resolvedVariant = variant ?? (className?.includes("btn-brand") ? "default" : "ghost")
   const isSurfaceAction = className?.includes("premium-card-interactive")
-  const resolvedSize = size === "default" && props["aria-label"] && /(?:^|\s)(?:h|w|size)-/.test(className ?? "")
+  const resolvedSize = size === "default" && props["aria-label"] && /(?:^|\s)(?:h|w|size)-\d/.test(className ?? "")
     ? "icon"
     : size
   const surfaceClasses = "group/button rounded-xl transition-all outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/35 disabled:pointer-events-none disabled:opacity-50"
