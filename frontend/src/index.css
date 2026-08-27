@@ -351,8 +351,7 @@
   line-height: 1;
 }
 
-.jis3r-icon > .jis3r-icon__inner,
-.jis3r-icon > .jis3r-icon__inner > svg {
+.jis3r-icon > svg {
   width: 1em;
   height: 1em;
   pointer-events: none;
