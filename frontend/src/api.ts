@@ -35,7 +35,7 @@ export interface Subscription {
 }
 export interface Tenant {
   id: string; name: string; slug: string; isActive: boolean;
-  userCount: number; studentCount: number; subscription?: Subscription;
+  userCount: number; studentCount: number; subscription?: Subscription; createdAt: string;
 }
 export interface TenantUser {
   id: string;
@@ -45,6 +45,7 @@ export interface TenantUser {
   role: 'TenantAdmin' | 'Staff';
   isActive: boolean;
   otpEnabled: boolean;
+  lastLoginAt?: string;
 }
 
 export class ApiError extends Error {
@@ -318,6 +319,12 @@ export const api = {
   setTenantUserOtp: (token: string, tenantId: string, userId: string, otpEnabled: boolean) =>
     request<TenantUser>(`/superadmin/tenants/${tenantId}/users/${userId}/otp`,
       { method: 'PATCH', body: JSON.stringify({ otpEnabled }) }, token),
+  updateTenantUser: (token: string, tenantId: string, userId: string, body: { fullName: string; email: string; newPassword?: string }) =>
+    request<TenantUser>(`/superadmin/tenants/${tenantId}/users/${userId}`,
+      { method: 'PUT', body: JSON.stringify(body) }, token),
+  setTenantUserActive: (token: string, tenantId: string, userId: string, isActive: boolean) =>
+    request<TenantUser>(`/superadmin/tenants/${tenantId}/users/${userId}/status`,
+      { method: 'PATCH', body: JSON.stringify({ isActive }) }, token),
 
   // A TenantAdmin managing their own Staff (as opposed to a SuperAdmin managing any tenant's
   // users via the two methods above). Role is always 'Staff' — the backend rejects anything else

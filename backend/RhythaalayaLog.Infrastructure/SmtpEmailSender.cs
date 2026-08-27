@@ -35,12 +35,12 @@ public sealed class SmtpEmailSender(IConfiguration configuration, IHostEnvironme
         }
 
         var message = new MimeMessage();
-        var fromName = configuration["Smtp:FromName"] ?? "Rhythaalaya Log";
+        var fromName = configuration["Smtp:FromName"] ?? "Batchly";
         var fromAddress = configuration["Smtp:FromAddress"] ?? configuration["Smtp:Username"]
             ?? throw new InvalidOperationException("Smtp:FromAddress (or Smtp:Username) is not configured.");
         message.From.Add(new MailboxAddress(fromName, fromAddress));
         message.To.Add(new MailboxAddress(toName, toEmail));
-        message.Subject = "Your Rhythaalaya Log sign-in code";
+        message.Subject = "Your Batchly sign-in code";
         message.Body = new BodyBuilder
         {
             HtmlBody = BuildHtmlBody(toName, code),
@@ -61,10 +61,14 @@ public sealed class SmtpEmailSender(IConfiguration configuration, IHostEnvironme
 
     // toName comes from a user-editable FullName field, so it's HTML-encoded before going into
     // the template — the code itself is always 6 digits (GenerateCode), never user input.
+    //
+    // The code is rendered as a single unspaced run of digits ("648232", not "6 4 8 2 3 2") —
+    // the visual gap between digits comes entirely from CSS letter-spacing. An earlier version
+    // joined the digits with literal space characters, which looked identical but meant
+    // selecting/copying the code copied the spaces too, and most OTP inputs reject that.
     private static string BuildHtmlBody(string toName, string code)
     {
         var name = WebUtility.HtmlEncode(toName);
-        var spacedCode = string.Join(" ", code.ToCharArray());
         return $$"""
             <!DOCTYPE html>
             <html>
@@ -76,16 +80,19 @@ public sealed class SmtpEmailSender(IConfiguration configuration, IHostEnvironme
                       <div style="font-size:22px;font-weight:700;color:#f1f1f6;margin:0 0 16px;">Your login code</div>
                       <div style="font-size:14px;line-height:22px;color:#c7c9d9;margin:0 0 24px;">
                         Hi {{name}}, use this code to complete your
-                        <strong style="color:#e3e4ef;">Rhythaalaya Log</strong> sign-in.
+                        <strong style="color:#e3e4ef;">Batchly</strong> sign-in.
                         It expires in <strong style="color:#e3e4ef;">5 minutes</strong>.
                       </div>
                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
                         style="border:1px solid #52546b;border-radius:12px;background-color:#232330;">
                         <tr><td align="center" style="padding:22px 12px;">
-                          <span style="font-size:30px;font-weight:800;letter-spacing:4px;color:#8b8bf5;font-family:'Courier New',monospace;">{{spacedCode}}</span>
+                          <span style="-webkit-user-select:all;user-select:all;font-size:32px;font-weight:800;letter-spacing:8px;color:#8b8bf5;font-family:'Courier New',monospace;">{{code}}</span>
                         </td></tr>
                       </table>
-                      <div style="font-size:12px;line-height:18px;color:#8b8d9e;margin-top:20px;">
+                      <div style="font-size:12px;line-height:18px;color:#8b8d9e;margin-top:14px;">
+                        Tap the code to select it, then copy.
+                      </div>
+                      <div style="font-size:12px;line-height:18px;color:#8b8d9e;margin-top:16px;">
                         If you did not request this, you can safely ignore this email.
                       </div>
                     </td></tr>
@@ -100,7 +107,7 @@ public sealed class SmtpEmailSender(IConfiguration configuration, IHostEnvironme
         $"""
         Your login code
 
-        Hi {toName}, use this code to complete your Rhythaalaya Log sign-in. It expires in 5 minutes.
+        Hi {toName}, use this code to complete your Batchly sign-in. It expires in 5 minutes.
 
         {code}
 

@@ -79,6 +79,9 @@ public sealed class UserAccount
     // flag (see AuthService.BeginLoginAsync), so it's never surfaced as a toggle for that role.
     public bool OtpEnabled { get; set; } = true;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    // Stamped by AuthService the moment a session is actually granted — both the direct
+    // (SuperAdmin/OtpEnabled=false) and OTP-verified paths. Null until the first sign-in.
+    public DateTimeOffset? LastLoginAt { get; set; }
 }
 
 /// <summary>

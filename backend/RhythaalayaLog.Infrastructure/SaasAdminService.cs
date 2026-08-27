@@ -116,7 +116,7 @@ public sealed class SaasAdminService(AppDbContext db, PasswordHasher<UserAccount
     public async Task<IReadOnlyList<TenantUserDto>> GetTenantUsersAsync(Guid tenantId, CancellationToken ct) =>
         await db.Users.IgnoreQueryFilters().AsNoTracking().Where(x => x.TenantId == tenantId)
             .OrderBy(x => x.FullName).Select(x => new TenantUserDto(x.Id, x.TenantId, x.Email,
-                x.FullName, x.Role, x.IsActive, x.OtpEnabled)).ToListAsync(ct);
+                x.FullName, x.Role, x.IsActive, x.OtpEnabled, x.LastLoginAt)).ToListAsync(ct);
 
     public async Task<TenantUserDto> CreateTenantUserAsync(Guid tenantId,
         CreateTenantUserRequest request, CancellationToken ct)
@@ -174,11 +174,11 @@ public sealed class SaasAdminService(AppDbContext db, PasswordHasher<UserAccount
             .FirstOrDefault();
         return new TenantDto(tenant.Id, tenant.Name, tenant.Slug, tenant.IsActive,
             tenant.Users.Count(x => x.IsActive), studentCount,
-            subscription is null ? null : MapSubscription(subscription));
+            subscription is null ? null : MapSubscription(subscription), tenant.CreatedAt);
     }
 
     private static TenantUserDto MapUser(UserAccount user) => new(user.Id, user.TenantId,
-        user.Email, user.FullName, user.Role, user.IsActive, user.OtpEnabled);
+        user.Email, user.FullName, user.Role, user.IsActive, user.OtpEnabled, user.LastLoginAt);
 
     public async Task<TenantUserDto> SetUserOtpEnabledAsync(Guid tenantId, Guid userId, bool otpEnabled,
         bool restrictToStaff, CancellationToken ct)

@@ -31,7 +31,15 @@ public sealed class AuthService(AppDbContext db, PasswordHasher<UserAccount> has
         // SuperAdmin always skips OTP (hardcoded, not a stored toggle); everyone else can have it
         // switched off per-account via OtpEnabled.
         if (user.Role == UserRole.SuperAdmin || !user.OtpEnabled)
+        {
+            // A session is granted right here (the controller issues the JWT unconditionally
+            // for a non-null User), so this is the real moment of sign-in — not the earlier
+            // BuildAuthUserAsync call above, which also runs on the fail-fast check before an
+            // OTP-required login has actually completed.
+            user.LastLoginAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(ct);
             return new LoginStartResult(authUser, null);
+        }
 
         // Only one live OTP per user at a time; also clears out the consumed row from any prior
         // successful login so this table doesn't grow unboundedly.
@@ -65,6 +73,7 @@ public sealed class AuthService(AppDbContext db, PasswordHasher<UserAccount> has
         }
 
         otp.ConsumedAt = now;
+        otp.User.LastLoginAt = now;
         await db.SaveChangesAsync(ct);
         return await BuildAuthUserAsync(otp.User, ct);
     }

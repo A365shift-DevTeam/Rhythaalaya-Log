@@ -30,9 +30,9 @@ public sealed record PlanDto(Guid Id, string Name, string Code, decimal MonthlyP
 public sealed record SubscriptionDto(Guid Id, Guid PlanId, string PlanName, SubscriptionStatus Status,
     DateTimeOffset StartsAt, DateTimeOffset EndsAt);
 public sealed record TenantDto(Guid Id, string Name, string Slug, bool IsActive, int UserCount,
-    int StudentCount, SubscriptionDto? Subscription);
+    int StudentCount, SubscriptionDto? Subscription, DateTimeOffset CreatedAt);
 public sealed record TenantUserDto(Guid Id, Guid? TenantId, string Email, string FullName,
-    UserRole Role, bool IsActive, bool OtpEnabled);
+    UserRole Role, bool IsActive, bool OtpEnabled, DateTimeOffset? LastLoginAt);
 
 public sealed record CreatePlanRequest(string Name, string Code, decimal MonthlyPrice,
     int MaxUsers, int MaxStudents);

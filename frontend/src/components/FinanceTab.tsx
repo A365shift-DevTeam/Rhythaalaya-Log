@@ -265,16 +265,6 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                 <h3 className="font-heading text-base sm:text-lg font-bold text-[#212121] dark:text-white">Financial Logs</h3>
                 <p className="text-xs text-[#808080] dark:text-[#94a3b8]">Recent cash inflows and expenses</p>
               </div>
-              {canManage && (
-                <Button
-                  type="button"
-                  onClick={onOpenAddTransaction}
-                  className="btn-brand min-h-9 sm:min-h-10 rounded-2xl px-3.5 font-sans text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1 active:scale-95"
-                >
-                  <JisIcon className="text-[16px]">add</JisIcon>
-                  <span>Entry</span>
-                </Button>
-              )}
             </div>
 
             <div className="space-y-2.5">
@@ -439,15 +429,8 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-[#dbdbdb]/60 dark:border-[#243244] flex flex-col items-start justify-between gap-2 text-xs text-[#808080] sm:flex-row sm:items-center">
-            <span>Dues are generated automatically from fee structures</span>
-            <Button
-              type="button"
-              onClick={() => onOpenRecordFee()}
-              className="min-h-9 rounded-2xl px-2 text-[#3fc073] dark:text-[#b3e6c7] font-bold hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 transition-colors"
-            >
-              Manual Collect &rarr;
-            </Button>
+          <div className="mt-4 pt-3 border-t border-[#dbdbdb]/60 dark:border-[#243244] text-xs text-[#808080]">
+            <span>Dues are generated automatically from fee structures — use Collect Fee above to record a manual payment</span>
           </div>
         </div>
       </div>

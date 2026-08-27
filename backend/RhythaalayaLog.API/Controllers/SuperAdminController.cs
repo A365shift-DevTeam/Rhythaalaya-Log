@@ -58,4 +58,14 @@ public sealed class SuperAdminController(ISaasAdminService service) : Controller
     public async Task<ActionResult<TenantUserDto>> SetUserOtp(Guid tenantId, Guid userId,
         UpdateUserOtpRequest request, CancellationToken ct) =>
         Ok(await service.SetUserOtpEnabledAsync(tenantId, userId, request.OtpEnabled, restrictToStaff: false, ct));
+
+    [HttpPut("tenants/{tenantId:guid}/users/{userId:guid}")]
+    public async Task<ActionResult<TenantUserDto>> UpdateUser(Guid tenantId, Guid userId,
+        UpdateTenantUserRequest request, CancellationToken ct) =>
+        Ok(await service.UpdateTenantUserAsync(tenantId, userId, request, restrictToStaff: false, ct));
+
+    [HttpPatch("tenants/{tenantId:guid}/users/{userId:guid}/status")]
+    public async Task<ActionResult<TenantUserDto>> SetUserStatus(Guid tenantId, Guid userId,
+        UpdateTenantUserStatusRequest request, CancellationToken ct) =>
+        Ok(await service.SetTenantUserActiveAsync(tenantId, userId, request.IsActive, restrictToStaff: false, ct));
 }

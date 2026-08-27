@@ -20,8 +20,10 @@ import {
 } from './data/mockData';
 import { ApiError, api, authStore, Session } from './api';
 import { todayIsoDate } from './lib/schedule';
+import { applyDarkMode, readStoredDarkMode } from './lib/darkMode';
 import { LoginPage } from './components/LoginPage';
 import { SuperAdminPage } from './components/SuperAdminPage';
+import { DarkModeToggle } from './components/DarkModeToggle';
 
 import { Navigation } from './components/Navigation';
 import { StudentsTab } from './components/StudentsTab';
@@ -53,25 +55,23 @@ export default function App() {
   const login = (value: Session) => { authStore.set(value); setSession(value); };
   const logout = () => { authStore.clear(); setSession(null); };
 
+  // Lifted above the role branch (not inside TenantApplication) so it's applied consistently
+  // regardless of which view renders — see lib/darkMode.ts for why that split used to matter.
+  const [darkMode, setDarkMode] = useState<boolean>(readStoredDarkMode);
+  useEffect(() => { applyDarkMode(darkMode); }, [darkMode]);
+  const toggleDarkMode = () => setDarkMode((current) => !current);
+
   if (!session) return <LoginPage onLogin={login} />;
   if (session.user.role === 'SuperAdmin')
-    return <SuperAdminPage session={session} onLogout={logout} />;
-  return <TenantApplication session={session} onLogout={logout} />;
+    return <SuperAdminPage session={session} onLogout={logout} darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />;
+  return <TenantApplication session={session} onLogout={logout} darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />;
 }
 
-// Dark mode is a per-viewer preference (localStorage), not the shared org setting — the backend
-// only lets a TenantAdmin write org settings (PUT /api/settings is TenantAdmin-only), so wiring
-// this to settings.darkMode would 403 for Staff. Kept independent of OrgSettings.darkMode
-// entirely so every role can flip it for themselves without touching anything shared.
-const DARK_MODE_KEY = 'rhythaalaya_dark_mode';
-function readStoredDarkMode(): boolean {
-  try { return localStorage.getItem(DARK_MODE_KEY) === 'true'; } catch { return false; }
-}
-
-function TenantApplication({ session, onLogout }: { session: Session; onLogout: () => void }) {
+function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
+  session: Session; onLogout: () => void; darkMode: boolean; onToggleDarkMode: () => void;
+}) {
   const isAdmin = session.user.role === 'TenantAdmin';
   const [currentTab, setCurrentTab] = useState<AppTab>('home');
-  const [darkMode, setDarkMode] = useState<boolean>(readStoredDarkMode);
   const [students, setStudents] = useState<Student[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -112,11 +112,6 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
     finally { if (showLoader) setLoading(false); }
   };
   useEffect(() => { void reload(true); }, [session.token]);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-    try { localStorage.setItem(DARK_MODE_KEY, String(darkMode)); } catch { /* private browsing etc. */ }
-  }, [darkMode]);
 
   // Modals state
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
@@ -395,11 +390,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             <p className="truncate text-xs sm:text-xs text-[#808080] dark:text-[#94a3b8]">Signed in as {session.user.fullName}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <Button type="button" onClick={() => setDarkMode((current) => !current)}
-              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-              className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl border border-[#dbdbdb] bg-white text-[#575757] transition-all hover:border-[#3fc073]/40 hover:text-[#212121] dark:border-[#243244] dark:bg-[#111c2b] dark:text-[#cbd5e1] dark:hover:text-white active:scale-95">
-              <JisIcon className="text-[18px]">{darkMode ? 'light_mode' : 'dark_mode'}</JisIcon>
-            </Button>
+            <DarkModeToggle darkMode={darkMode} onToggle={onToggleDarkMode} />
             <NotificationCenter tenantKey={session.user.tenantId || session.user.email} preferences={settings.notifications}
               students={students} transactions={transactions} onNavigate={handleTabChange} />
             <Button type="button" onClick={onLogout} aria-label="Sign out" className="min-h-9 sm:min-h-11 shrink-0 rounded-2xl border border-[#dbdbdb] px-2.5 sm:px-3.5 text-xs font-semibold bg-white text-[#212121] transition-all hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-[#243244] dark:bg-[#111c2b] dark:text-[#e2e8f0] dark:hover:bg-rose-950/40 flex items-center gap-1 active:scale-95">
@@ -427,7 +418,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
               batches={batches}
               transactions={transactions}
               outstandingDues={outstandingDues}
-              darkMode={settings.darkMode}
+              darkMode={darkMode}
               setCurrentTab={handleTabChange}
               onOpenAddStudent={openAddStudent}
               onOpenAddBatch={() => { setEditingBatch(null); setIsAddBatchOpen(true); }}
@@ -481,7 +472,7 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             transactions={transactions}
             outstandingDues={outstandingDues}
             canManage={isAdmin}
-            darkMode={settings.darkMode}
+            darkMode={darkMode}
             onOpenRecordFee={openRecordFee}
             onOpenWhatsAppAll={() => openWhatsApp(undefined)}
             onOpenAddTransaction={openAddTransaction}
