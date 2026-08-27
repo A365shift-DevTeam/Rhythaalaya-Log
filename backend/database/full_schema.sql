@@ -631,5 +631,232 @@ BEGIN
     VALUES ('20260824072747_AddStudentAchievements', '9.0.1');
     END IF;
 END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    ALTER TABLE "OrganizationSettings" ADD "FeeDueLeadDays" integer NOT NULL DEFAULT 7;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    ALTER TABLE "OrganizationSettings" ADD "LastBillingRunDate" date;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    ALTER TABLE "OrganizationSettings" ADD "LateEnrollmentBillingPolicy" character varying(16) NOT NULL DEFAULT 'Skip';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    ALTER TABLE "FeePayments" ADD "IdempotencyKey" character varying(64);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    ALTER TABLE "FeePayments" ADD "RequestHash" character varying(64);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    ALTER TABLE "FeeDues" ALTER COLUMN "FeeStructureId" DROP NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    ALTER TABLE "FeeDues" ADD "CancelReason" character varying(500);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    ALTER TABLE "FeeDues" ADD "CancelledAt" timestamp with time zone;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    ALTER TABLE "FeeDues" ADD "CancelledByUserId" uuid;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    ALTER TABLE "FeeDues" ADD "Title" character varying(160);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    CREATE TABLE "FeeAdjustments" (
+        "Id" uuid NOT NULL,
+        "TenantId" uuid NOT NULL,
+        "FeeDueId" uuid NOT NULL,
+        "Type" character varying(16) NOT NULL,
+        "Amount" numeric(12,2) NOT NULL,
+        "Reason" character varying(500) NOT NULL,
+        "PerformedByUserId" uuid,
+        "CreatedAt" timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_FeeAdjustments" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_FeeAdjustments_FeeDues_FeeDueId" FOREIGN KEY ("FeeDueId") REFERENCES "FeeDues" ("Id") ON DELETE RESTRICT,
+        CONSTRAINT "FK_FeeAdjustments_Tenants_TenantId" FOREIGN KEY ("TenantId") REFERENCES "Tenants" ("Id") ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    CREATE UNIQUE INDEX "IX_FeePayments_TenantId_IdempotencyKey" ON "FeePayments" ("TenantId", "IdempotencyKey") WHERE "IdempotencyKey" IS NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    CREATE INDEX "IX_FeeAdjustments_FeeDueId" ON "FeeAdjustments" ("FeeDueId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    CREATE INDEX "IX_FeeAdjustments_TenantId_FeeDueId" ON "FeeAdjustments" ("TenantId", "FeeDueId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825055854_FeeManagementCompletion') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260825055854_FeeManagementCompletion', '9.0.1');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825111342_StudentConcession') THEN
+    ALTER TABLE "Students" ADD "ConcessionPercent" numeric(5,2) NOT NULL DEFAULT 0.0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825111342_StudentConcession') THEN
+    ALTER TABLE "Students" ADD "ConcessionReason" character varying(200);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260825111342_StudentConcession') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260825111342_StudentConcession', '9.0.1');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260826120000_WhatsappTemplate') THEN
+    ALTER TABLE "OrganizationSettings" ADD "WhatsappTemplate" text;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260826120000_WhatsappTemplate') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260826120000_WhatsappTemplate', '9.0.1');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260827051527_LoginOtp') THEN
+    CREATE TABLE "LoginOtps" (
+        "Id" uuid NOT NULL,
+        "UserId" uuid NOT NULL,
+        "PendingToken" character varying(64) NOT NULL,
+        "CodeHash" character varying(128) NOT NULL,
+        "ExpiresAt" timestamp with time zone NOT NULL,
+        "Attempts" integer NOT NULL,
+        "SendCount" integer NOT NULL,
+        "LastSentAt" timestamp with time zone NOT NULL,
+        "CreatedAt" timestamp with time zone NOT NULL,
+        "ConsumedAt" timestamp with time zone,
+        CONSTRAINT "PK_LoginOtps" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_LoginOtps_Users_UserId" FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260827051527_LoginOtp') THEN
+    CREATE UNIQUE INDEX "IX_LoginOtps_PendingToken" ON "LoginOtps" ("PendingToken");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260827051527_LoginOtp') THEN
+    CREATE INDEX "IX_LoginOtps_UserId" ON "LoginOtps" ("UserId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260827051527_LoginOtp') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260827051527_LoginOtp', '9.0.1');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260827054728_UserOtpEnabled') THEN
+    ALTER TABLE "Users" ADD "OtpEnabled" boolean NOT NULL DEFAULT TRUE;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260827054728_UserOtpEnabled') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260827054728_UserOtpEnabled', '9.0.1');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260827075215_UserLastLoginAt') THEN
+    ALTER TABLE "Users" ADD "LastLoginAt" timestamp with time zone;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260827075215_UserLastLoginAt') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260827075215_UserLastLoginAt', '9.0.1');
+    END IF;
+END $EF$;
 COMMIT;
 
