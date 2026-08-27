@@ -35,16 +35,16 @@ public sealed class SmtpEmailSender(IConfiguration configuration, IHostEnvironme
         }
 
         var message = new MimeMessage();
-        var fromName = configuration["Smtp:FromName"] ?? "Batchly";
+        var fromName = configuration["Smtp:FromName"] ?? "A365 CRM";
         var fromAddress = configuration["Smtp:FromAddress"] ?? configuration["Smtp:Username"]
             ?? throw new InvalidOperationException("Smtp:FromAddress (or Smtp:Username) is not configured.");
         message.From.Add(new MailboxAddress(fromName, fromAddress));
         message.To.Add(new MailboxAddress(toName, toEmail));
-        message.Subject = "Your Batchly sign-in code";
+        message.Subject = $"Your {fromName} sign-in code";
         message.Body = new BodyBuilder
         {
-            HtmlBody = BuildHtmlBody(toName, code),
-            TextBody = BuildTextBody(toName, code)
+            HtmlBody = BuildHtmlBody(toName, code, fromName),
+            TextBody = BuildTextBody(toName, code, fromName)
         }.ToMessageBody();
 
         var port = int.TryParse(configuration["Smtp:Port"], out var configuredPort) ? configuredPort : 587;
@@ -66,48 +66,35 @@ public sealed class SmtpEmailSender(IConfiguration configuration, IHostEnvironme
     // the visual gap between digits comes entirely from CSS letter-spacing. An earlier version
     // joined the digits with literal space characters, which looked identical but meant
     // selecting/copying the code copied the spaces too, and most OTP inputs reject that.
-    private static string BuildHtmlBody(string toName, string code)
+    private static string BuildHtmlBody(string displayName, string code, string appName = "A365 CRM", int expiryMinutes = 5)
     {
-        var name = WebUtility.HtmlEncode(toName);
+        var name = WebUtility.HtmlEncode(displayName);
+        var app = WebUtility.HtmlEncode(appName);
         return $$"""
             <!DOCTYPE html>
             <html>
-              <body style="margin:0;padding:24px;background-color:#1a1a1a;font-family:'Segoe UI',Arial,sans-serif;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-                  <table role="presentation" width="480" cellpadding="0" cellspacing="0"
-                    style="max-width:480px;width:100%;background-color:#2b2b2e;border-radius:16px;">
-                    <tr><td style="padding:32px;">
-                      <div style="font-size:22px;font-weight:700;color:#f1f1f6;margin:0 0 16px;">Your login code</div>
-                      <div style="font-size:14px;line-height:22px;color:#c7c9d9;margin:0 0 24px;">
-                        Hi {{name}}, use this code to complete your
-                        <strong style="color:#e3e4ef;">Batchly</strong> sign-in.
-                        It expires in <strong style="color:#e3e4ef;">5 minutes</strong>.
-                      </div>
-                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                        style="border:1px solid #52546b;border-radius:12px;background-color:#232330;">
-                        <tr><td align="center" style="padding:22px 12px;">
-                          <span style="-webkit-user-select:all;user-select:all;font-size:32px;font-weight:800;letter-spacing:8px;color:#8b8bf5;font-family:'Courier New',monospace;">{{code}}</span>
-                        </td></tr>
-                      </table>
-                      <div style="font-size:12px;line-height:18px;color:#8b8d9e;margin-top:14px;">
-                        Tap the code to select it, then copy.
-                      </div>
-                      <div style="font-size:12px;line-height:18px;color:#8b8d9e;margin-top:16px;">
-                        If you did not request this, you can safely ignore this email.
-                      </div>
-                    </td></tr>
-                  </table>
-                </td></tr></table>
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Your login code</title>
+              </head>
+              <body style="margin:0;padding:24px 0;background-color:#f1f5f9;font-family:'DM Sans',Arial,sans-serif;">
+                <div style="font-family:'DM Sans',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:16px;">
+                  <h2 style="color:#1e293b;margin-top:0;margin-bottom:8px;font-size:24px;font-weight:700;">Your login code</h2>
+                  <p style="color:#64748b;margin-bottom:24px;font-size:15px;line-height:22px;">Hi {{name}}, use this code to complete your {{app}} sign-in. It expires in <strong style="color:#1e293b;">{{expiryMinutes}} minutes</strong>.</p>
+                  <div style="font-size:36px;font-weight:800;letter-spacing:10px;color:#4361EE;text-align:center;padding:20px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:24px;-webkit-user-select:all;user-select:all;">{{code}}</div>
+                  <p style="color:#94a3b8;font-size:12px;line-height:18px;margin:0;">If you did not request this, you can safely ignore this email.</p>
+                </div>
               </body>
             </html>
             """;
     }
 
-    private static string BuildTextBody(string toName, string code) =>
+    private static string BuildTextBody(string displayName, string code, string appName = "A365 CRM", int expiryMinutes = 5) =>
         $"""
         Your login code
 
-        Hi {toName}, use this code to complete your Batchly sign-in. It expires in 5 minutes.
+        Hi {displayName}, use this code to complete your {appName} sign-in. It expires in {expiryMinutes} minutes.
 
         {code}
 
