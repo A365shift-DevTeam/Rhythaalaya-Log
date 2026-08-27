@@ -16,6 +16,15 @@ export interface AuthUser {
   subscriptionEndsAt?: string;
 }
 export interface Session { token: string; expiresAt: string; user: AuthUser }
+export interface OtpChallenge { pendingToken: string; expiresAt: string }
+// POST /auth/login always returns this one shape: otpRequired tells you which of the other two
+// fields is populated, so there's never a need to guess from which keys are present.
+export interface LoginStart {
+  otpRequired: boolean;
+  pendingToken?: string;
+  otpExpiresAt?: string;
+  session?: Session;
+}
 export interface Plan {
   id: string; name: string; code: string; monthlyPrice: number;
   maxUsers: number; maxStudents: number; isActive: boolean;
@@ -35,6 +44,7 @@ export interface TenantUser {
   fullName: string;
   role: 'TenantAdmin' | 'Staff';
   isActive: boolean;
+  otpEnabled: boolean;
 }
 
 export class ApiError extends Error {
@@ -100,8 +110,16 @@ const isoStartOfYear = () => new Date(new Date().getFullYear(), 0, 1).toISOStrin
 const isoNextYear = () => new Date(new Date().getFullYear() + 1, 0, 1).toISOString();
 
 export const api = {
+  // Step 1: email + password. Usually the server emails a one-time code and this returns
+  // otpRequired:true with a pendingToken — step 2 (verifyOtp) exchanges it for the real session.
+  // For a SuperAdmin, or a user with OTP switched off, otpRequired is false and session is the
+  // real session already — no code screen needed.
   login: (email: string, password: string) =>
-    request<Session>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+    request<LoginStart>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  verifyOtp: (pendingToken: string, code: string) =>
+    request<Session>('/auth/verify-otp', { method: 'POST', body: JSON.stringify({ pendingToken, code }) }),
+  resendOtp: (pendingToken: string) =>
+    request<OtpChallenge>('/auth/resend-otp', { method: 'POST', body: JSON.stringify({ pendingToken }) }),
 
   // Courses
   courses: (token: string) => request<any[]>('/courses', {}, token).then(rows => rows.map(mapCourse)),
@@ -296,7 +314,17 @@ export const api = {
     fullName: string; email: string; password: string; role: 'TenantAdmin' | 'Staff';
   }) => request<TenantUser>('/superadmin/tenants/' + tenantId + '/users', {
     method: 'POST', body: JSON.stringify(body)
-  }, token)
+  }, token),
+  setTenantUserOtp: (token: string, tenantId: string, userId: string, otpEnabled: boolean) =>
+    request<TenantUser>(`/superadmin/tenants/${tenantId}/users/${userId}/otp`,
+      { method: 'PATCH', body: JSON.stringify({ otpEnabled }) }, token),
+
+  // A TenantAdmin managing their own Staff (as opposed to a SuperAdmin managing any tenant's
+  // users via the two methods above).
+  myTeam: (token: string) => request<TenantUser[]>('/tenant/users', {}, token),
+  setMyTeamMemberOtp: (token: string, userId: string, otpEnabled: boolean) =>
+    request<TenantUser>(`/tenant/users/${userId}/otp`,
+      { method: 'PATCH', body: JSON.stringify({ otpEnabled }) }, token)
 };
 
 function mapCourse(x: any): Course {

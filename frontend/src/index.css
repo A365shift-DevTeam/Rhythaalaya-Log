@@ -1,6 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+
+/* Beta Badge Styling */
+.beta-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(82, 166, 94, 0.35);
+  background: linear-gradient(135deg, #4fa1a7 0%, #5aae53 100%);
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(79, 161, 167, 0.24);
+}
+
+.beta-label-hero {
+  margin-left: 12px;
+  vertical-align: middle;
+  transform: translateY(-8px);
+}
+
+@media (max-width: 640px) {
+  .beta-label-hero {
+    margin-left: 8px;
+    transform: translateY(-4px);
+  }
+}
+
 
 @custom-variant dark (&:is(.dark *));
 

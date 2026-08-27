@@ -27,7 +27,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Paste the JWT returned by POST /api/auth/login."
+        Description = "Paste the JWT returned by POST /api/auth/verify-otp (after POST /api/auth/login)."
     });
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {

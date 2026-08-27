@@ -75,7 +75,29 @@ public sealed class UserAccount
     public required string FullName { get; set; }
     public UserRole Role { get; set; }
     public bool IsActive { get; set; } = true;
+    // Only meaningful for TenantAdmin/Staff — SuperAdmin always skips OTP regardless of this
+    // flag (see AuthService.BeginLoginAsync), so it's never surfaced as a toggle for that role.
+    public bool OtpEnabled { get; set; } = true;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+}
+
+/// <summary>
+/// A pending email-OTP login step. Not tenant-owned: the user is unauthenticated (no tenant
+/// context) while this row is live, so it deliberately has no TenantId and no query filter.
+/// </summary>
+public sealed class LoginOtp
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid UserId { get; set; }
+    public UserAccount User { get; set; } = null!;
+    public required string PendingToken { get; set; }
+    public required string CodeHash { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+    public int Attempts { get; set; }
+    public int SendCount { get; set; } = 1;
+    public DateTimeOffset LastSentAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? ConsumedAt { get; set; }
 }
 
 public sealed class Course : ITenantOwned

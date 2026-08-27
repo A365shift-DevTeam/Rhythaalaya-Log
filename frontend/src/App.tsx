@@ -497,6 +497,8 @@ function TenantApplication({ session, onLogout }: { session: Session; onLogout: 
             settings={settings}
             setSettings={handleSettings}
             onExportData={handleExportData}
+            session={session}
+            isAdmin={isAdmin}
           />
         )}
         </div>

@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<IFinanceService, FinanceService>();
         services.AddScoped<PasswordHasher<UserAccount>>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddSingleton<IEmailSender, SmtpEmailSender>();
         services.AddScoped<ISaasAdminService, SaasAdminService>();
         services.AddScoped<DatabaseInitializer>();
         services.AddHostedService<FeeBillingDailyService>();

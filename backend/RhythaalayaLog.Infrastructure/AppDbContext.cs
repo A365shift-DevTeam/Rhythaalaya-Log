@@ -8,6 +8,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
 {
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<UserAccount> Users => Set<UserAccount>();
+    public DbSet<LoginOtp> LoginOtps => Set<LoginOtp>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
     public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
     public DbSet<Course> Courses => Set<Course>();
@@ -52,7 +53,16 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         user.Property(x => x.FullName).HasMaxLength(160);
         user.Property(x => x.PasswordHash).HasMaxLength(500);
         user.Property(x => x.Role).HasConversion<string>().HasMaxLength(32);
+        user.Property(x => x.OtpEnabled).HasDefaultValue(true);
         user.HasOne(x => x.Tenant).WithMany(x => x.Users).HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
+
+        // Not tenant-owned: users are unauthenticated (no tenant context) while a login OTP is
+        // live, so this table is deliberately excluded from ApplyTenantFilters below.
+        var loginOtp = modelBuilder.Entity<LoginOtp>();
+        loginOtp.HasIndex(x => x.PendingToken).IsUnique();
+        loginOtp.Property(x => x.PendingToken).HasMaxLength(64);
+        loginOtp.Property(x => x.CodeHash).HasMaxLength(128);
+        loginOtp.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
 
         var plan = modelBuilder.Entity<SubscriptionPlan>();
         plan.HasIndex(x => x.Code).IsUnique();

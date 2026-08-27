@@ -1,15 +1,19 @@
 import { Button } from './ui/button';
 import { Switch } from './ui/switch';
 import { JisIcon } from './JisIcon';
+import { Spinner } from './ui/spinner';
 import React, { useEffect, useRef, useState } from 'react';
 import { OrgSettings } from '../types';
 import { FinancialSettings } from './FinancialSettings';
 import { DEFAULT_WHATSAPP_TEMPLATE, WHATSAPP_TEMPLATE_VARIABLES } from '../whatsappTemplate';
+import { ApiError, api, Session, TenantUser } from '../api';
 
 interface MenuTabProps {
   settings: OrgSettings;
   setSettings: React.Dispatch<React.SetStateAction<OrgSettings>>;
   onExportData: () => void;
+  session: Session;
+  isAdmin: boolean;
 }
 
 const MAX_LOGO_DIMENSION = 320;
@@ -43,7 +47,9 @@ function resizeLogoFile(file: File): Promise<string> {
 export const MenuTab: React.FC<MenuTabProps> = ({
   settings,
   setSettings,
-  onExportData
+  onExportData,
+  session,
+  isAdmin
 }) => {
   const [isEditingOrg, setIsEditingOrg] = useState(false);
   const [orgName, setOrgName] = useState(settings.name);
@@ -53,6 +59,37 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   const [logoError, setLogoError] = useState('');
   const [templateDraft, setTemplateDraft] = useState(settings.whatsappTemplate);
   const templateRef = useRef<HTMLTextAreaElement>(null);
+
+  const [team, setTeam] = useState<TenantUser[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [teamError, setTeamError] = useState('');
+  const [togglingOtpId, setTogglingOtpId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    setTeamLoading(true);
+    api.myTeam(session.token)
+      .then((users) => { if (!cancelled) setTeam(users); })
+      .catch((requestError) => {
+        if (!cancelled) setTeamError(requestError instanceof ApiError ? requestError.message : 'Unable to load your team.');
+      })
+      .finally(() => { if (!cancelled) setTeamLoading(false); });
+    return () => { cancelled = true; };
+  }, [isAdmin, session.token]);
+
+  async function toggleTeamMemberOtp(userId: string, enabled: boolean) {
+    setTeamError('');
+    setTogglingOtpId(userId);
+    try {
+      const updated = await api.setMyTeamMemberOtp(session.token, userId, enabled);
+      setTeam((current) => current.map((user) => user.id === userId ? updated : user));
+    } catch (requestError) {
+      setTeamError(requestError instanceof ApiError ? requestError.message : 'Unable to update OTP setting.');
+    } finally {
+      setTogglingOtpId(null);
+    }
+  }
 
   useEffect(() => {
     setTemplateDraft(settings.whatsappTemplate);
@@ -298,6 +335,47 @@ export const MenuTab: React.FC<MenuTabProps> = ({
           </div>
         </div>
       </section>
+
+      {/* Team Section — TenantAdmin only; lets them require/skip a login code per Staff member */}
+      {isAdmin && (
+        <section className="space-y-3">
+          <h3 className="font-heading text-xs font-bold text-[#808080] dark:text-[#94a3b8] uppercase tracking-wider px-1">
+            Team & Sign-in
+          </h3>
+          <div className="premium-card divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
+            {teamError && (
+              <div className="p-4 sm:px-6 text-xs font-semibold text-[#ef4444]">{teamError}</div>
+            )}
+            {teamLoading ? (
+              <div className="p-4 sm:px-6"><Spinner size="sm" inline text="Loading your team…" /></div>
+            ) : team.length === 0 ? (
+              <div className="p-4 sm:px-6 text-xs text-[#808080] dark:text-[#94a3b8]">No staff accounts yet.</div>
+            ) : team.map((user) => (
+              <div key={user.id} className="p-4 sm:px-6 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#3fc073] font-bold text-xs flex items-center justify-center shrink-0">
+                    {user.fullName.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-sans text-sm font-bold text-[#212121] dark:text-white truncate">
+                      {user.fullName}{user.role === 'TenantAdmin' ? ' (Admin)' : ''}
+                    </div>
+                    <div className="font-sans text-xs text-[#808080] dark:text-[#94a3b8] truncate">{user.email}</div>
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 shrink-0"
+                  title={user.role !== 'Staff' ? 'Only Staff accounts can be managed here' : 'Require a login code emailed to this user'}>
+                  <span className="text-xs font-semibold text-[#808080] dark:text-[#94a3b8]">Require OTP</span>
+                  <Switch size="default" aria-label={`Toggle OTP for ${user.fullName}`}
+                    checked={user.otpEnabled} disabled={user.role !== 'Staff' || togglingOtpId === user.id}
+                    onCheckedChange={(checked) => toggleTeamMemberOtp(user.id, checked)}
+                    className="data-checked:bg-[#64a85a] data-unchecked:bg-[#dbdbdb] dark:data-unchecked:bg-[#243244]" />
+                </label>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <FinancialSettings settings={settings} setSettings={setSettings} />
 

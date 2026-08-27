@@ -24,6 +24,11 @@ public sealed class TenantUsersController(ISaasAdminService service, ITenantCont
         return Created($"/api/tenant/users/{result.Id}", result);
     }
 
+    [HttpPatch("{userId:guid}/otp")]
+    public async Task<ActionResult<TenantUserDto>> SetUserOtp(Guid userId, UpdateUserOtpRequest request,
+        CancellationToken ct) =>
+        Ok(await service.SetUserOtpEnabledAsync(RequireTenant(), userId, request.OtpEnabled, restrictToStaff: true, ct));
+
     private Guid RequireTenant() => tenantContext.TenantId
         ?? throw new AppValidationException("A tenant context is required.");
 }

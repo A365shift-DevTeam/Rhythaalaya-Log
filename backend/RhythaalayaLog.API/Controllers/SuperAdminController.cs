@@ -53,4 +53,9 @@ public sealed class SuperAdminController(ISaasAdminService service) : Controller
         var result = await service.CreateTenantUserAsync(tenantId, request, ct);
         return Created($"/api/superadmin/tenants/{tenantId}/users/{result.Id}", result);
     }
+
+    [HttpPatch("tenants/{tenantId:guid}/users/{userId:guid}/otp")]
+    public async Task<ActionResult<TenantUserDto>> SetUserOtp(Guid tenantId, Guid userId,
+        UpdateUserOtpRequest request, CancellationToken ct) =>
+        Ok(await service.SetUserOtpEnabledAsync(tenantId, userId, request.OtpEnabled, restrictToStaff: false, ct));
 }

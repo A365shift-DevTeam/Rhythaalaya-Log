@@ -1,6 +1,7 @@
 import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
 import { Spinner } from './ui/spinner';
+import { Switch } from './ui/switch';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ApiError, api, Plan, Session, Tenant, TenantUser } from '../api';
 import { toIsoDate } from '../lib/schedule';
@@ -31,6 +32,7 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
   const [managingUsers, setManagingUsers] = useState<string | null>(null);
   const [tenantUsers, setTenantUsers] = useState<Record<string, TenantUser[]>>({});
   const [usersLoading, setUsersLoading] = useState(false);
+  const [togglingOtpId, setTogglingOtpId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Suspended'>('All');
 
@@ -182,6 +184,22 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
       setError(requestError instanceof ApiError ? requestError.message : 'Unable to create tenant user.');
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function toggleUserOtp(tenantId: string, userId: string, otpEnabled: boolean) {
+    clearMessages();
+    setTogglingOtpId(userId);
+    try {
+      const updated = await api.setTenantUserOtp(session.token, tenantId, userId, otpEnabled);
+      setTenantUsers((current) => ({
+        ...current,
+        [tenantId]: (current[tenantId] || []).map((user) => user.id === userId ? updated : user)
+      }));
+    } catch (requestError) {
+      setError(requestError instanceof ApiError ? requestError.message : 'Unable to update OTP setting.');
+    } finally {
+      setTogglingOtpId(null);
     }
   }
 
@@ -344,6 +362,8 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
                           users={tenantUsers[tenant.id] || []}
                           loading={usersLoading} busy={busyId === 'user-' + tenant.id}
                           onSubmit={(event) => createTenantUser(event, tenant.id)}
+                          onToggleOtp={(userId, enabled) => toggleUserOtp(tenant.id, userId, enabled)}
+                          togglingOtpId={togglingOtpId}
                           onClose={() => setManagingUsers(null)} />
                       </td></tr>}
                     </React.Fragment>
@@ -379,6 +399,8 @@ export function SuperAdminPage({ session, onLogout }: { session: Session; onLogo
                       users={tenantUsers[tenant.id] || []}
                       loading={usersLoading} busy={busyId === 'user-' + tenant.id}
                       onSubmit={(event) => createTenantUser(event, tenant.id)}
+                      onToggleOtp={(userId, enabled) => toggleUserOtp(tenant.id, userId, enabled)}
+                      togglingOtpId={togglingOtpId}
                       onClose={() => setManagingUsers(null)} compact />
                   </div>}
                 </article>
@@ -507,9 +529,11 @@ function TenantActions({ tenant, renewing, managingUsers, busyId, setRenewing, o
   </div>;
 }
 
-function TenantUsersPanel({ tenant, plan, users, loading, busy, onSubmit, onClose, compact = false }: {
+function TenantUsersPanel({ tenant, plan, users, loading, busy, onSubmit, onToggleOtp, togglingOtpId,
+  onClose, compact = false }: {
   tenant: Tenant; plan?: Plan; users: TenantUser[]; loading: boolean; busy: boolean;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onToggleOtp: (userId: string, enabled: boolean) => void; togglingOtpId: string | null;
   onClose: () => void; compact?: boolean;
 }) {
   const atLimit = plan ? tenant.userCount >= plan.maxUsers : false;
@@ -556,6 +580,12 @@ function TenantUsersPanel({ tenant, plan, users, loading, busy, onSubmit, onClos
             (user.role === 'TenantAdmin' ? 'bg-purple-50 text-purple-700' : 'bg-[#f0f0f0] text-[#808080]')}>
             {user.role === 'TenantAdmin' ? 'Admin' : 'Staff'}
           </span>
+          <label className="flex items-center gap-1.5 shrink-0" title="Require a login code emailed to this user">
+            <span className="text-xs font-semibold text-[#808080]">OTP</span>
+            <Switch size="sm" aria-label={`Toggle OTP for ${user.fullName}`}
+              checked={user.otpEnabled} disabled={togglingOtpId === user.id}
+              onCheckedChange={(checked) => onToggleOtp(user.id, checked)} />
+          </label>
         </div>)}
     </div>
 

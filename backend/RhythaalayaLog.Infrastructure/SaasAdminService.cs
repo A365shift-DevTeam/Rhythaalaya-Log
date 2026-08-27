@@ -116,7 +116,7 @@ public sealed class SaasAdminService(AppDbContext db, PasswordHasher<UserAccount
     public async Task<IReadOnlyList<TenantUserDto>> GetTenantUsersAsync(Guid tenantId, CancellationToken ct) =>
         await db.Users.IgnoreQueryFilters().AsNoTracking().Where(x => x.TenantId == tenantId)
             .OrderBy(x => x.FullName).Select(x => new TenantUserDto(x.Id, x.TenantId, x.Email,
-                x.FullName, x.Role, x.IsActive)).ToListAsync(ct);
+                x.FullName, x.Role, x.IsActive, x.OtpEnabled)).ToListAsync(ct);
 
     public async Task<TenantUserDto> CreateTenantUserAsync(Guid tenantId,
         CreateTenantUserRequest request, CancellationToken ct)
@@ -178,7 +178,22 @@ public sealed class SaasAdminService(AppDbContext db, PasswordHasher<UserAccount
     }
 
     private static TenantUserDto MapUser(UserAccount user) => new(user.Id, user.TenantId,
-        user.Email, user.FullName, user.Role, user.IsActive);
+        user.Email, user.FullName, user.Role, user.IsActive, user.OtpEnabled);
+
+    public async Task<TenantUserDto> SetUserOtpEnabledAsync(Guid tenantId, Guid userId, bool otpEnabled,
+        bool restrictToStaff, CancellationToken ct)
+    {
+        var user = await db.Users.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId, ct)
+            ?? throw new NotFoundException("Tenant user not found.");
+        if (user.Role == UserRole.SuperAdmin)
+            throw new AppValidationException("Super Admin accounts always skip OTP.");
+        if (restrictToStaff && user.Role != UserRole.Staff)
+            throw new AppValidationException("Tenant administrators can manage Staff users only.");
+        user.OtpEnabled = otpEnabled;
+        await db.SaveChangesAsync(ct);
+        return MapUser(user);
+    }
 
     private static void ValidateTenant(CreateTenantRequest request)
     {
