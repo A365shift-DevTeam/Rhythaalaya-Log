@@ -1,5 +1,6 @@
 import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
+import { MobileSpeedDial } from './MobileSpeedDial';
 import React, { useMemo, useState } from 'react';
 import { Batch, Course, Staff, WEEKDAY_SHORT } from '../types';
 
@@ -101,7 +102,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
               <Button
                 type="button"
                 onClick={onOpenAddCourse}
-                className="btn-brand min-h-10 rounded-2xl px-3.5 text-xs font-semibold flex items-center gap-1 active:scale-95"
+                className="btn-brand min-h-10 rounded-2xl px-3.5 text-xs font-semibold hidden md:flex items-center gap-1 active:scale-95"
               >
                 <JisIcon className="text-[16px]">add</JisIcon>
                 <span>Add course</span>
@@ -150,7 +151,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
               <Button
                 type="button"
                 onClick={onOpenAddStaff}
-                className="btn-brand min-h-10 rounded-2xl px-3.5 text-xs font-semibold flex items-center gap-1 active:scale-95"
+                className="btn-brand min-h-10 rounded-2xl px-3.5 text-xs font-semibold hidden md:flex items-center gap-1 active:scale-95"
               >
                 <JisIcon className="text-[16px]">add</JisIcon>
                 <span>Add staff</span>
@@ -203,7 +204,7 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
                 <Button
                   type="button"
                   onClick={onOpenAddBatch}
-                  className="btn-brand min-h-11 rounded-2xl px-4 text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 active:scale-95"
+                  className="btn-brand min-h-11 rounded-2xl px-4 text-xs font-bold hidden md:flex items-center justify-center gap-1.5 shrink-0 active:scale-95"
                 >
                   <JisIcon className="text-[17px]">add</JisIcon>
                   <span>Add batch</span>
@@ -340,6 +341,18 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
             </div>
           )}
         </section>
+      )}
+
+      {/* Mobile quick-add: the three add actions live behind one floating button */}
+      {canManage && (
+        <MobileSpeedDial
+          openLabel="Add batch, course or staff"
+          actions={[
+            { label: 'Add staff', icon: 'person_add', tone: 'from-[#4fb3dc] to-[#379fc8] shadow-[#379fc8]/35', onClick: onOpenAddStaff },
+            { label: 'Add course', icon: 'menu_book', tone: 'from-[#f5b041] to-[#f59e0b] shadow-[#f59e0b]/35', onClick: onOpenAddCourse },
+            { label: 'Add batch', icon: 'calendar_add_on', tone: 'from-[#3fc073] to-[#35a160] shadow-[#3fc073]/35', onClick: onOpenAddBatch },
+          ]}
+        />
       )}
     </div>
   );

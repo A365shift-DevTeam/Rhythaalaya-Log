@@ -1,5 +1,6 @@
 import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
+import { MobileSpeedDial } from './MobileSpeedDial';
 import React, { useState } from 'react';
 import { Student } from '../types';
 
@@ -98,7 +99,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
         <Button
           type="button"
           onClick={onOpenAddStudent}
-          className="btn-brand w-full sm:w-auto min-h-11 px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-wider rounded-2xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+          className="btn-brand w-full sm:w-auto min-h-11 px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-wider rounded-2xl hidden md:flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
         >
           <JisIcon className="text-[18px]">person_add</JisIcon>
           <span>Add Student</span>
@@ -536,6 +537,14 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
           </div>
         </div>
       )}
+
+      {/* Mobile quick-add: single action, so the button opens Add Student directly */}
+      <MobileSpeedDial
+        openLabel="Add student"
+        actions={[
+          { label: 'Add student', icon: 'person_add', tone: 'from-[#3fc073] to-[#35a160] shadow-[#3fc073]/35', onClick: onOpenAddStudent },
+        ]}
+      />
     </div>
   );
 };

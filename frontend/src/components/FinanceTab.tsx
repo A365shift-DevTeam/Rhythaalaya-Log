@@ -1,5 +1,6 @@
 import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
+import { MobileSpeedDial } from './MobileSpeedDial';
 import React from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { FeeDue, Student, Transaction } from '../types';
@@ -114,7 +115,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
             <Button
               type="button"
               onClick={onOpenAddTransaction}
-              className="btn-brand flex-1 sm:flex-initial min-h-11 px-4 py-2 rounded-2xl font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95"
+              className="btn-brand flex-1 sm:flex-initial min-h-11 px-4 py-2 rounded-2xl font-sans text-xs font-bold uppercase tracking-wider hidden md:flex items-center justify-center gap-1.5 active:scale-95"
             >
               <JisIcon className="text-[18px]">add</JisIcon>
               <span>Record entry</span>
@@ -123,7 +124,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           <Button
             type="button"
             onClick={() => onOpenRecordFee()}
-            className="min-h-11 flex-1 sm:flex-initial bg-white dark:bg-[#0b1422] text-[#3fc073] dark:text-[#b3e6c7] border border-[#dbdbdb] dark:border-[#243244] px-4 py-2 rounded-2xl font-sans text-xs font-bold uppercase tracking-wider hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 transition-colors flex items-center justify-center gap-1.5 active:scale-95"
+            className="min-h-11 flex-1 sm:flex-initial bg-white dark:bg-[#0b1422] text-[#3fc073] dark:text-[#b3e6c7] border border-[#dbdbdb] dark:border-[#243244] px-4 py-2 rounded-2xl font-sans text-xs font-bold uppercase tracking-wider hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 transition-colors hidden md:flex items-center justify-center gap-1.5 active:scale-95"
           >
             <JisIcon className="text-[18px]">payments</JisIcon>
             <span>Collect Fee</span>
@@ -336,7 +337,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                   type="button"
                   onClick={onOpenAddCharge}
                   title="Add a one-off charge like a costume or exam fee"
-                  className="min-h-9 sm:min-h-10 shrink-0 rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] px-3.5 font-sans text-xs font-bold uppercase tracking-wider text-[#3fc073] dark:text-[#b3e6c7] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 transition-colors inline-flex items-center gap-1 active:scale-95"
+                  className="min-h-9 sm:min-h-10 shrink-0 rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] px-3.5 font-sans text-xs font-bold uppercase tracking-wider text-[#3fc073] dark:text-[#b3e6c7] hover:bg-[#e9f7ee] dark:hover:bg-[#3fc073]/20 transition-colors hidden md:inline-flex items-center gap-1 active:scale-95"
                 >
                   <JisIcon className="text-[16px]">post_add</JisIcon>
                   <span>Charge</span>
@@ -434,6 +435,18 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Mobile quick actions: header + charge buttons live behind one floating button */}
+      <MobileSpeedDial
+        openLabel="Collect fee, record entry or add charge"
+        actions={[
+          ...(canManage ? [
+            { label: 'Add charge', icon: 'post_add', tone: 'from-[#f5b041] to-[#f59e0b] shadow-[#f59e0b]/35', onClick: onOpenAddCharge },
+            { label: 'Record entry', icon: 'receipt_long', tone: 'from-[#4fb3dc] to-[#379fc8] shadow-[#379fc8]/35', onClick: onOpenAddTransaction },
+          ] : []),
+          { label: 'Collect fee', icon: 'payments', tone: 'from-[#3fc073] to-[#35a160] shadow-[#3fc073]/35', onClick: () => onOpenRecordFee() },
+        ]}
+      />
     </div>
   );
 };

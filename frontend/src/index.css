@@ -357,6 +357,28 @@
   pointer-events: none;
 }
 
+/* Mobile speed-dial: options pop in from the FAB, staggered bottom-up */
+@keyframes fab-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.fab-dial-item {
+  animation: fab-item-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab-dial-item {
+    animation: none;
+  }
+}
+
 /* Ambot365 glass and card surfaces */
 .glass-panel {
   background: rgba(255, 255, 255, 0.85);
