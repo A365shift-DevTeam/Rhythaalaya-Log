@@ -54,13 +54,11 @@ export const Navigation: React.FC<NavigationProps> = ({
           onClick={() => navigate('home')}
           aria-label="Go to dashboard"
         >
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-white flex items-center justify-center font-bold text-base overflow-hidden shrink-0 border border-white/20 shadow-sm shadow-[#3fc073]/25 group-hover:scale-105 transition-transform">
-            {settings.logoUrl ? (
+          {settings.logoUrl && (
+            <div className="w-11 h-11 rounded-2xl overflow-hidden shrink-0 border border-white/20 shadow-sm group-hover:scale-105 transition-transform">
               <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover" />
-            ) : (
-              settings.name.charAt(0) || 'R'
-            )}
-          </div>
+            </div>
+          )}
           <div className="overflow-hidden flex-1 min-w-0">
             <p className="font-heading text-sm font-bold text-[#212121] dark:text-[#e2e8f0] truncate">
               {settings.name}
