@@ -267,11 +267,20 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
             </p>
           </div>
         ) : (
-          <div className="p-3.5 sm:p-5 md:p-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
-            {filteredBatches.map((batch) => (
-              <BatchCard key={batch.id} batch={batch} canManage={canManage} onEdit={onEditBatch} />
-            ))}
-          </div>
+          <>
+            {/* Mobile: compact list — tap a row to edit */}
+            <div className="sm:hidden border-t border-[#dbdbdb]/60 dark:border-[#243244] divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
+              {filteredBatches.map((batch) => (
+                <BatchRow key={batch.id} batch={batch} canManage={canManage} onEdit={onEditBatch} />
+              ))}
+            </div>
+            {/* Desktop / tablet: full cards */}
+            <div className="hidden sm:grid p-3.5 sm:p-5 md:p-6 sm:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
+              {filteredBatches.map((batch) => (
+                <BatchCard key={batch.id} batch={batch} canManage={canManage} onEdit={onEditBatch} />
+              ))}
+            </div>
+          </>
         )}
       </section>
 
@@ -419,6 +428,50 @@ function BatchCard({ batch, canManage, onEdit }: { batch: Batch; canManage: bool
       </div>
     </article>
   );
+}
+
+function BatchRow({ batch, canManage, onEdit }: { batch: Batch; canManage: boolean; onEdit: (batch: Batch) => void; key?: React.Key }) {
+  const schedule = `${formatDays(batch.days)} · ${formatTime(batch.startTime)}–${formatTime(batch.endTime)}`;
+  const body = (
+    <>
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#e9f7ee] text-[#3fc073] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]">
+        <JisIcon className="text-[18px]">calendar_view_week</JisIcon>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <h4 className="truncate font-heading text-sm font-bold text-[#212121] dark:text-white">{batch.name}</h4>
+          <span
+            className={`inline-flex shrink-0 items-center gap-1 text-xs font-bold ${
+              batch.isActive ? 'text-[#22c55e] dark:text-emerald-300' : 'text-[#808080]'
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${batch.isActive ? 'bg-[#22c55e]' : 'bg-[#9e9e9e]'}`} />
+            {batch.isActive ? 'Active' : 'Inactive'}
+          </span>
+        </div>
+        <p className="mt-0.5 truncate font-sans text-xs text-[#808080] dark:text-[#94a3b8]">
+          <span className="font-semibold text-[#3fc073]">{batch.courseName}</span>
+          {' · '}{schedule}
+          {' · '}{batch.enrolledCount} student{batch.enrolledCount === 1 ? '' : 's'}
+        </p>
+      </div>
+    </>
+  );
+
+  if (canManage) {
+    return (
+      <button
+        type="button"
+        onClick={() => onEdit(batch)}
+        aria-label={`Edit ${batch.name}`}
+        className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-opacity active:opacity-60"
+      >
+        {body}
+        <JisIcon className="shrink-0 text-[18px] text-[#c2c2c2] dark:text-[#64748b]">chevron_right</JisIcon>
+      </button>
+    );
+  }
+  return <div className="flex items-center gap-3 px-3.5 py-2.5">{body}</div>;
 }
 
 function BatchInfo({ icon, label, value }: { icon: string; label: string; value: string }) {

@@ -86,86 +86,117 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({ students, batches, cours
         </div>
       </div>
 
-      {/* Toolbar */}
+      {/* Toolbar: search + compact filter pills (pills scroll horizontally on mobile) */}
       <div className="premium-card p-3.5 sm:p-4 space-y-3">
-        <div className="flex flex-col lg:flex-row gap-2.5">
-          <div className="relative flex-1">
-            <label htmlFor="report-search" className="sr-only">Search students</label>
-            <JisIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9e9e9e] pointer-events-none text-[18px]">
-              search
-            </JisIcon>
-            <input
-              id="report-search"
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by student name, course, or ID…"
-              className="w-full min-h-11 pl-10 pr-3 py-2.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl font-sans text-xs sm:text-sm font-medium text-[#212121] dark:text-white placeholder:text-[#9e9e9e] focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] transition-all"
-            />
-          </div>
+        <div className="relative">
+          <label htmlFor="report-search" className="sr-only">Search students</label>
+          <JisIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9e9e9e] pointer-events-none text-[18px]">
+            search
+          </JisIcon>
+          <input
+            id="report-search"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by student name, course, or ID…"
+            className="w-full min-h-11 pl-10 pr-3 py-2.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl font-sans text-xs sm:text-sm font-medium text-[#212121] dark:text-white placeholder:text-[#9e9e9e] focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] transition-all"
+          />
+        </div>
 
-          <div className="relative sm:w-56">
-            <label htmlFor="report-batch" className="sr-only">Filter by batch</label>
-            <SimpleSelect
-              id="report-batch"
-              value={batchFilter}
-              onValueChange={setBatchFilter}
-              className="w-full py-2 dark:bg-[#0b1422] text-xs sm:text-sm font-bold focus:ring-4 focus:ring-[#3fc073]/15 truncate transition-all"
-              options={[
-                { value: 'all', label: 'All batches' },
-                ...batches.map((batch) => ({ value: batch.id, label: batch.name })),
-              ]}
-            />
-          </div>
-
-          <div className="relative sm:w-56">
-            <label htmlFor="report-course" className="sr-only">Filter by course</label>
-            <SimpleSelect
-              id="report-course"
-              value={courseFilter}
-              onValueChange={setCourseFilter}
-              className="w-full py-2 dark:bg-[#0b1422] text-xs sm:text-sm font-bold focus:ring-4 focus:ring-[#3fc073]/15 truncate transition-all"
-              options={[
-                { value: 'all', label: 'All courses' },
-                ...courses.map((course) => ({ value: course.id, label: course.name })),
-              ]}
-            />
-          </div>
-
-          <div className="flex bg-[#f0f0f0] dark:bg-[#111c2b] p-1 rounded-2xl shrink-0" role="group" aria-label="Filter by status">
-            {(['Active', 'Inactive', 'All'] as StatusFilter[]).map((option) => (
-              <Button key={option} type="button" onClick={() => setStatusFilter(option)} aria-pressed={statusFilter === option}
-                className={`min-h-9 px-3.5 py-1 text-xs font-bold rounded-xl transition-all ${
-                  statusFilter === option
-                    ? 'bg-white dark:bg-[#0b1422] text-[#212121] dark:text-white shadow-xs'
-                    : 'text-[#6b6b6b] dark:text-[#94a3b8] hover:text-[#212121]'
-                }`}>
-                {option}
-              </Button>
-            ))}
-          </div>
-
-          <div className="relative sm:w-48">
-            <label htmlFor="report-sort" className="sr-only">Sort by</label>
-            <SimpleSelect
-              id="report-sort"
-              value={sortBy}
-              onValueChange={(value) => setSortBy(value as SortKey)}
-              className="w-full py-2 dark:bg-[#0b1422] text-xs sm:text-sm font-bold focus:ring-4 focus:ring-[#3fc073]/15 truncate transition-all"
-              options={[
-                { value: 'name', label: 'Sort: Name' },
-                { value: 'attendance', label: 'Sort: Attendance' },
-                { value: 'outstanding', label: 'Sort: Outstanding' },
-                { value: 'won', label: 'Sort: Won' },
-                { value: 'participated', label: 'Sort: Participated' },
-              ]}
-            />
-          </div>
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mb-1 sm:flex-wrap sm:overflow-visible sm:pb-0 sm:mb-0" role="group" aria-label="Filter and sort report">
+          <FilterPill
+            id="report-batch"
+            label="Filter by batch"
+            icon="groups"
+            active={batchFilter !== 'all'}
+            value={batchFilter}
+            onValueChange={setBatchFilter}
+            options={[{ value: 'all', label: 'All batches' }, ...batches.map((b) => ({ value: b.id, label: b.name }))]}
+          />
+          <FilterPill
+            id="report-course"
+            label="Filter by course"
+            icon="school"
+            active={courseFilter !== 'all'}
+            value={courseFilter}
+            onValueChange={setCourseFilter}
+            options={[{ value: 'all', label: 'All courses' }, ...courses.map((c) => ({ value: c.id, label: c.name }))]}
+          />
+          <FilterPill
+            id="report-status"
+            label="Filter by status"
+            icon="tune"
+            active={statusFilter !== 'Active'}
+            value={statusFilter}
+            onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+            options={[
+              { value: 'Active', label: 'Active' },
+              { value: 'Inactive', label: 'Inactive' },
+              { value: 'All', label: 'All statuses' },
+            ]}
+          />
+          <FilterPill
+            id="report-sort"
+            label="Sort by"
+            icon="sort"
+            active={sortBy !== 'name'}
+            value={sortBy}
+            onValueChange={(v) => setSortBy(v as SortKey)}
+            options={[
+              { value: 'name', label: 'Sort: Name' },
+              { value: 'attendance', label: 'Sort: Attendance' },
+              { value: 'outstanding', label: 'Sort: Outstanding' },
+              { value: 'won', label: 'Sort: Won' },
+              { value: 'participated', label: 'Sort: Participated' },
+            ]}
+          />
         </div>
       </div>
 
-      {/* Table */}
-      <div className="premium-card overflow-hidden">
+      {/* Mobile: compact list — tap a row for the full report */}
+      <div className="md:hidden premium-card overflow-hidden divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
+        {filtered.length === 0 ? (
+          <div className="p-10 text-center text-[#808080] dark:text-[#94a3b8]">
+            <JisIcon className="text-4xl text-[#c2c2c2] dark:text-[#64748b] mb-2">person_search</JisIcon>
+            <p className="text-sm font-bold text-[#212121] dark:text-white">No students match these filters</p>
+          </div>
+        ) : (
+          filtered.map((student) => (
+            <button
+              key={student.id}
+              type="button"
+              onClick={() => onViewStudent(student)}
+              aria-label={`Open report for ${student.name}`}
+              className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-opacity active:opacity-60"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-xs font-bold text-white">
+                {student.name.charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="truncate font-heading text-sm font-bold text-[#212121] dark:text-white">{student.name}</h3>
+                  {student.outstandingBalance > 0 ? (
+                    <span className="shrink-0 text-xs font-bold text-[#ef4444] dark:text-rose-300">
+                      ₹{student.outstandingBalance.toLocaleString('en-IN')}
+                    </span>
+                  ) : (
+                    <span className="shrink-0 text-xs font-bold text-[#22c55e] dark:text-emerald-300">Paid</span>
+                  )}
+                </div>
+                <p className="mt-0.5 truncate font-sans text-xs text-[#808080] dark:text-[#94a3b8]">
+                  {student.overallAttendance}% attendance
+                  <span className="text-[#9e9e9e]"> · </span>
+                  {batchNames(student)}
+                </p>
+              </div>
+              <JisIcon className="shrink-0 text-[18px] text-[#c2c2c2] dark:text-[#64748b]">chevron_right</JisIcon>
+            </button>
+          ))
+        )}
+      </div>
+
+      {/* Desktop / tablet: full table */}
+      <div className="hidden md:block premium-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[760px]">
             <thead>
@@ -241,3 +272,45 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({ students, batches, cours
     </div>
   );
 };
+
+function FilterPill({
+  id,
+  label,
+  icon,
+  active,
+  value,
+  onValueChange,
+  options,
+}: {
+  id: string;
+  label: string;
+  icon: string;
+  active: boolean;
+  value: string;
+  onValueChange: (value: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <div className="relative shrink-0">
+      <label htmlFor={id} className="sr-only">{label}</label>
+      <JisIcon
+        className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[16px] ${
+          active ? 'text-[#35a160] dark:text-[#6bd194]' : 'text-[#9e9e9e]'
+        }`}
+      >
+        {icon}
+      </JisIcon>
+      <SimpleSelect
+        id={id}
+        value={value}
+        onValueChange={onValueChange}
+        options={options}
+        className={`w-auto min-h-10 max-w-44 truncate rounded-full pl-9 py-1.5 text-xs font-bold transition-all focus:ring-4 focus:ring-[#3fc073]/15 ${
+          active
+            ? 'bg-[#e9f7ee] dark:bg-[#3fc073]/20 border-[#3fc073]/40 text-[#35a160] dark:text-[#6bd194]'
+            : 'bg-[#f0f0f0] dark:bg-[#111c2b] border-[#dbdbdb] dark:border-[#243244] text-[#575757] dark:text-[#cbd5e1]'
+        }`}
+      />
+    </div>
+  );
+}
