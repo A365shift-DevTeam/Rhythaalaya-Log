@@ -296,14 +296,85 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
 
       {/* Grid View */}
       {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+        <>
           {filteredStudents.length === 0 && (
-            <div className="col-span-full premium-card p-10 text-center text-[#808080] dark:text-[#94a3b8]">
+            <div className="premium-card p-10 text-center text-[#808080] dark:text-[#94a3b8]">
               <JisIcon className="text-4xl text-[#c2c2c2] dark:text-[#64748b] mb-2">person_search</JisIcon>
               <p className="text-sm font-bold text-[#212121] dark:text-white">No students found</p>
               <p className="text-xs mt-1">Try changing your search query or filter options.</p>
             </div>
           )}
+
+          {/* Mobile: compact list — many students per screen; tap a row for full details */}
+          {filteredStudents.length > 0 && (
+            <div className="md:hidden premium-card overflow-hidden divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
+              {filteredStudents.map((student) => {
+                const initials = student.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+                const isPending = student.outstandingBalance > 0;
+                const enrollments = activeEnrollments(student);
+                const primary = enrollments[0];
+                const extra = enrollments.length - 1;
+
+                return (
+                  <div key={student.id} className="flex items-center gap-2.5 px-3.5 py-2.5">
+                    <button
+                      type="button"
+                      onClick={() => onViewStudent(student)}
+                      aria-label={`Open details for ${student.name}`}
+                      className="flex flex-1 min-w-0 items-center gap-3 text-left transition-opacity active:opacity-60"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-[#3fc073] to-[#35a160] font-heading text-xs font-bold text-white shadow-sm shadow-[#3fc073]/25">
+                        {initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="truncate font-heading text-sm font-bold text-[#212121] dark:text-white">{student.name}</h3>
+                          {isPending ? (
+                            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#ef4444] dark:text-rose-300">
+                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ef4444]" />
+                              ₹{student.outstandingBalance.toLocaleString('en-IN')}
+                            </span>
+                          ) : (
+                            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#22c55e] dark:text-emerald-300">
+                              <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+                              Paid
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 truncate font-sans text-xs text-[#808080] dark:text-[#94a3b8]">
+                          {primary ? (
+                            <>
+                              <span className="font-semibold text-[#3fc073]">{primary.courseName}</span>
+                              {' · '}{primary.batchName}
+                              {extra > 0 && <span className="text-[#9e9e9e]"> +{extra}</span>}
+                            </>
+                          ) : (
+                            <span className="font-semibold text-[#3fc073]">Not enrolled</span>
+                          )}
+                          {' · '}{student.overallAttendance}% present
+                        </p>
+                      </div>
+                    </button>
+
+                    {isPending && (
+                      <Button
+                        type="button"
+                        onClick={() => onOpenRecordFee(student)}
+                        aria-label={`Record fee payment for ${student.name}`}
+                        className="min-h-8 shrink-0 rounded-xl bg-[#e9f7ee] px-3 text-xs font-bold text-[#35a160] transition-all hover:bg-[#cbecd8] active:scale-95 dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]"
+                      >
+                        Pay
+                      </Button>
+                    )}
+                    <JisIcon className="shrink-0 text-[18px] text-[#c2c2c2] dark:text-[#64748b]">chevron_right</JisIcon>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Desktop / tablet: full cards */}
+          <div className="hidden md:grid md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
 
           {filteredStudents.map((student) => {
             const initials = student.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
@@ -408,7 +479,8 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
               </div>
             );
           })}
-        </div>
+          </div>
+        </>
       ) : (
         <div className="premium-card overflow-hidden">
           <div className="overflow-x-auto">
