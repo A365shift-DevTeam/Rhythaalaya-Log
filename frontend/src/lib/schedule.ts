@@ -41,21 +41,18 @@ export const nextMonthlyDueDate = (day: number, from: Date = new Date()): string
 };
 
 /**
- * The most recent date on or before `from` that falls on `day` of the month — the billing anchor
- * for a NEW course's "due on day N every month" plan, so the current period is billable and each
- * student's first due follows their own join/batch start. Days 29–31 clamp to shorter months.
+ * Day `day` of the CURRENT month (clamped to the month's length) — the billing anchor for a
+ * brand-new course's "due on day N every month" plan. It never steps back into a prior month
+ * when `day` is later in the month than today, so a course created this month is never billed
+ * for a period that ended before it existed (which showed this-month joiners as instantly
+ * overdue). Each student's first due still follows their own join/batch start. Days 29–31
+ * clamp to shorter months.
  */
-export const lastMonthlyDueDate = (day: number, from: Date = new Date()): string => {
-  const lastDayOf = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
-  let year = from.getFullYear();
-  let month = from.getMonth();
-  let dueDay = Math.min(day, lastDayOf(year, month));
-  if (dueDay > from.getDate()) {
-    month -= 1;
-    if (month < 0) { month = 11; year -= 1; }
-    dueDay = Math.min(day, lastDayOf(year, month));
-  }
-  return toIsoDate(new Date(year, month, dueDay));
+export const currentMonthlyDueDate = (day: number, from: Date = new Date()): string => {
+  const year = from.getFullYear();
+  const month = from.getMonth();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return toIsoDate(new Date(year, month, Math.min(day, lastDay)));
 };
 
 export const addDaysToIso = (iso: string, delta: number): string => {

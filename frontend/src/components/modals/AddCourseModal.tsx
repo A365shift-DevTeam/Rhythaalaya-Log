@@ -3,7 +3,7 @@ import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { Course, FeeFrequency, FeeStructure, FEE_FREQUENCY_LABELS } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
-import { lastMonthlyDueDate, nextMonthlyDueDate, parseIsoDate, todayIsoDate as todayIso } from '../../lib/schedule';
+import { currentMonthlyDueDate, nextMonthlyDueDate, parseIsoDate, todayIsoDate as todayIso } from '../../lib/schedule';
 import { confirmAction } from '../../lib/confirm';
 import { SimpleSelect } from '../ui/select';
 
@@ -62,13 +62,15 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
 
   const courseFeeStructures = editingCourse ? feeStructures.filter((f) => f.courseId === editingCourse.id) : [];
 
-  // Monthly plans are entered as a day of the month. A course's FIRST plan anchors on the most
-  // recent occurrence of that day so the current period is billable (each student's first due
-  // still follows their own join/batch start). A price change on a course that already bills
-  // anchors on the NEXT occurrence, so an already-billed period is never re-priced.
+  // Monthly plans are entered as a day of the month. A course's FIRST plan anchors on that day
+  // in the CURRENT month (never a prior month, even when the day is still ahead of today), so
+  // billing starts this month and never charges for a period that ended before the course
+  // existed — each student's first due still follows their own join/batch start. A price change
+  // on a course that already bills anchors on the NEXT occurrence, so an already-billed period
+  // is never re-priced.
   const isFirstPlan = !editingCourse || courseFeeStructures.length === 0;
   const resolvedFeeDate = feeFrequency !== 'Monthly' ? feeDueDate
-    : isFirstPlan ? lastMonthlyDueDate(feeDueDay) : nextMonthlyDueDate(feeDueDay);
+    : isFirstPlan ? currentMonthlyDueDate(feeDueDay) : nextMonthlyDueDate(feeDueDay);
   const activePlan = courseFeeStructures.find((f) => f.isActive);
   const pastPlans = [...courseFeeStructures.filter((f) => !f.isActive)]
     .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
