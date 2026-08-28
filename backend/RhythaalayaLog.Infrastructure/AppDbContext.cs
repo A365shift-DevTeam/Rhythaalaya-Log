@@ -15,6 +15,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     public DbSet<Staff> Staff => Set<Staff>();
     public DbSet<Student> Students => Set<Student>();
     public DbSet<Batch> Batches => Set<Batch>();
+    public DbSet<BatchSessionOverride> BatchSessionOverrides => Set<BatchSessionOverride>();
     public DbSet<Enrollment> Enrollments => Set<Enrollment>();
     public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
     public DbSet<FeeStructure> FeeStructures => Set<FeeStructure>();
@@ -100,6 +101,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         entity.HasOne(x => x.Course).WithMany(x => x.Batches).HasForeignKey(x => x.CourseId).OnDelete(DeleteBehavior.Restrict);
         entity.HasOne(x => x.Staff).WithMany(x => x.Batches).HasForeignKey(x => x.StaffId).OnDelete(DeleteBehavior.Restrict);
         entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
+
+        var sessionOverride = modelBuilder.Entity<BatchSessionOverride>();
+        sessionOverride.HasIndex(x => new { x.TenantId, x.BatchId, x.OriginalDate }).IsUnique();
+        sessionOverride.Property(x => x.Reason).HasMaxLength(200);
+        sessionOverride.HasOne(x => x.Batch).WithMany(x => x.SessionOverrides).HasForeignKey(x => x.BatchId).OnDelete(DeleteBehavior.Cascade);
+        sessionOverride.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
     }
 
     private static void ConfigureStudentsAndEnrollments(ModelBuilder modelBuilder)
@@ -237,6 +244,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         modelBuilder.Entity<Course>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<Staff>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<Batch>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
+        modelBuilder.Entity<BatchSessionOverride>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<Student>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<Enrollment>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<AttendanceRecord>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);

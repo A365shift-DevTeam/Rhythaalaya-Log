@@ -1,4 +1,7 @@
-import { Batch, WEEKDAY_LABELS } from '../types';
+import { Batch, SessionOverride, WEEKDAY_LABELS } from '../types';
+
+/** The batch fields the schedule helpers below actually read. */
+type ScheduleBatch = Pick<Batch, 'days' | 'startDate' | 'endDate'> & { sessionOverrides?: SessionOverride[] };
 
 /**
  * Batch schedules are stored as weekday names ("Tuesday") plus a run window.
@@ -61,8 +64,12 @@ export const addDaysToIso = (iso: string, delta: number): string => {
   return toIsoDate(date);
 };
 
-/** True when the batch meets on this date: right weekday, and inside its run window. */
-export const isBatchScheduledOn = (batch: Pick<Batch, 'days' | 'startDate' | 'endDate'>, iso: string): boolean => {
+/**
+ * True when the batch's *recurring pattern* covers this date: right weekday, inside its run
+ * window. Ignores one-off reschedules — use `isBatchScheduledOn` for "does a class actually
+ * happen this day".
+ */
+export const matchesBatchPattern = (batch: Pick<Batch, 'days' | 'startDate' | 'endDate'>, iso: string): boolean => {
   const day = iso.slice(0, 10);
   // A batch with no weekdays recorded has no schedule to contradict, so never hide it.
   if (batch.days?.length && !batch.days.includes(weekdayLabelFor(day))) return false;
@@ -71,9 +78,28 @@ export const isBatchScheduledOn = (batch: Pick<Batch, 'days' | 'startDate' | 'en
   return true;
 };
 
+/**
+ * True when a class actually meets on this date: the recurring pattern, minus any session moved
+ * away from this date (or cancelled), plus any session moved onto it.
+ */
+export const isBatchScheduledOn = (batch: ScheduleBatch, iso: string): boolean => {
+  const day = iso.slice(0, 10);
+  const overrides = batch.sessionOverrides ?? [];
+  // A class moved onto this date meets here even if the weekday pattern doesn't cover it.
+  if (overrides.some((o) => o.newDate?.slice(0, 10) === day)) return true;
+  // A class moved away from this date (newDate set elsewhere) or cancelled (newDate absent) no
+  // longer meets here.
+  if (overrides.some((o) => o.originalDate.slice(0, 10) === day)) return false;
+  return matchesBatchPattern(batch, iso);
+};
+
+/** The session override, if any, that moved a class onto `iso` for this batch. */
+export const sessionMovedOnto = (batch: ScheduleBatch, iso: string): SessionOverride | undefined =>
+  (batch.sessionOverrides ?? []).find((o) => o.newDate?.slice(0, 10) === iso.slice(0, 10));
+
 /** The nearest date on or after `iso` that the batch meets, within `limit` days. */
 export const nextSessionDate = (
-  batch: Pick<Batch, 'days' | 'startDate' | 'endDate'>, iso: string, limit = 14
+  batch: ScheduleBatch, iso: string, limit = 14
 ): string | null => {
   for (let i = 0; i <= limit; i++) {
     const candidate = addDaysToIso(iso, i);

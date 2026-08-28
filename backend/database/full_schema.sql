@@ -873,5 +873,45 @@ BEGIN
     VALUES ('20260828065034_EnrollmentLateBillingPolicy', '9.0.1');
     END IF;
 END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260828114756_BatchSessionOverrides') THEN
+    CREATE TABLE "BatchSessionOverrides" (
+        "Id" uuid NOT NULL,
+        "TenantId" uuid NOT NULL,
+        "BatchId" uuid NOT NULL,
+        "OriginalDate" date NOT NULL,
+        "NewDate" date,
+        "Reason" character varying(200),
+        "CreatedAt" timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_BatchSessionOverrides" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_BatchSessionOverrides_Batches_BatchId" FOREIGN KEY ("BatchId") REFERENCES "Batches" ("Id") ON DELETE CASCADE,
+        CONSTRAINT "FK_BatchSessionOverrides_Tenants_TenantId" FOREIGN KEY ("TenantId") REFERENCES "Tenants" ("Id") ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260828114756_BatchSessionOverrides') THEN
+    CREATE INDEX "IX_BatchSessionOverrides_BatchId" ON "BatchSessionOverrides" ("BatchId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260828114756_BatchSessionOverrides') THEN
+    CREATE UNIQUE INDEX "IX_BatchSessionOverrides_TenantId_BatchId_OriginalDate" ON "BatchSessionOverrides" ("TenantId", "BatchId", "OriginalDate");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260828114756_BatchSessionOverrides') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260828114756_BatchSessionOverrides', '9.0.1');
+    END IF;
+END $EF$;
 COMMIT;
 

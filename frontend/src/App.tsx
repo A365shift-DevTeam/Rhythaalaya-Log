@@ -256,6 +256,22 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
     setBatches((prev) => prev.map((b) => b.id === batchId ? { ...b, isActive: false } : b));
   };
 
+  // Note: these deliberately don't touch `editingBatch` — the modal reads the returned batch's
+  // overrides into its own state, and re-seeding the prop mid-edit would reset the open form.
+  const handleAddBatchSessionOverride = async (batchId: string, body: {
+    originalDate: string; newDate: string | null; reason: string | null;
+  }) => {
+    const updated = await api.addBatchSessionOverride(session.token, batchId, body);
+    setBatches((prev) => prev.map((b) => b.id === updated.id ? updated : b));
+    return updated;
+  };
+
+  const handleRemoveBatchSessionOverride = async (batchId: string, overrideId: string) => {
+    const updated = await api.removeBatchSessionOverride(session.token, batchId, overrideId);
+    setBatches((prev) => prev.map((b) => b.id === updated.id ? updated : b));
+    return updated;
+  };
+
   const handleSaveCourse = async (name: string, description: string, isActive: boolean, fee: NewCourseFee | null) => {
     if (editingCourse) {
       const updated = await api.updateCourse(session.token, editingCourse.id, { name, description, isActive });
@@ -510,6 +526,9 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
             batches={batches}
             token={session.token}
             onOpenAddStudent={openAddStudent}
+            isAdmin={isAdmin}
+            onAddSessionOverride={handleAddBatchSessionOverride}
+            onRemoveSessionOverride={handleRemoveBatchSessionOverride}
           />
         )}
 

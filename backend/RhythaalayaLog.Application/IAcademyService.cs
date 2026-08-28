@@ -16,6 +16,8 @@ public interface IAcademyService
     Task<BatchDto> CreateBatchAsync(CreateBatchRequest request, CancellationToken ct);
     Task<BatchDto> UpdateBatchAsync(Guid id, UpdateBatchRequest request, CancellationToken ct);
     Task ArchiveBatchAsync(Guid id, CancellationToken ct);
+    Task<BatchDto> AddBatchSessionOverrideAsync(Guid batchId, CreateBatchSessionOverrideRequest request, CancellationToken ct);
+    Task<BatchDto> RemoveBatchSessionOverrideAsync(Guid batchId, Guid overrideId, CancellationToken ct);
 
     Task<IReadOnlyList<StudentDto>> GetStudentsAsync(string? search, Guid? batchId, bool includeInactive, CancellationToken ct);
     Task<StudentDto> GetStudentAsync(Guid id, CancellationToken ct);

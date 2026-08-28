@@ -114,6 +114,75 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         return await GetBatchAsync(id, ct);
     }
 
+    public async Task<BatchDto> AddBatchSessionOverrideAsync(Guid batchId, CreateBatchSessionOverrideRequest request, CancellationToken ct)
+    {
+        var batch = await db.Batches.Include(x => x.SessionOverrides)
+            .SingleOrDefaultAsync(x => x.Id == batchId, ct) ?? throw new NotFoundException(nameof(Batch));
+
+        if (!MeetsPattern(batch, request.OriginalDate))
+            throw new AppValidationException(
+                $"This batch doesn't normally hold a class on {request.OriginalDate:dd MMM yyyy}.");
+        if (batch.SessionOverrides.Any(o => o.NewDate == request.OriginalDate))
+            throw new AppValidationException(
+                $"{request.OriginalDate:dd MMM yyyy} is itself a rescheduled class — remove that reschedule first.");
+
+        if (request.NewDate is { } newDate)
+        {
+            if (newDate == request.OriginalDate)
+                throw new AppValidationException("The new date must be different from the original date.");
+            if (MeetsPattern(batch, newDate))
+                throw new AppValidationException(
+                    $"This batch already holds a class on {newDate:dd MMM yyyy} — attendance is one roll per day, so pick a date it doesn't normally meet.");
+            if (batch.SessionOverrides.Any(o => o.OriginalDate != request.OriginalDate
+                    && (o.NewDate == newDate || o.OriginalDate == newDate)))
+                throw new AppValidationException(
+                    $"Another rescheduled class already lands on {newDate:dd MMM yyyy}.");
+        }
+
+        var existing = batch.SessionOverrides.SingleOrDefault(o => o.OriginalDate == request.OriginalDate);
+        if (existing is null)
+        {
+            db.BatchSessionOverrides.Add(new BatchSessionOverride
+            {
+                TenantId = RequireTenant(), BatchId = batchId,
+                OriginalDate = request.OriginalDate, NewDate = request.NewDate, Reason = Clean(request.Reason)
+            });
+        }
+        else
+        {
+            existing.NewDate = request.NewDate;
+            existing.Reason = Clean(request.Reason);
+        }
+        await db.SaveChangesAsync(ct);
+        return await GetBatchAsync(batchId, ct);
+    }
+
+    public async Task<BatchDto> RemoveBatchSessionOverrideAsync(Guid batchId, Guid overrideId, CancellationToken ct)
+    {
+        var row = await db.BatchSessionOverrides.SingleOrDefaultAsync(x => x.Id == overrideId && x.BatchId == batchId, ct)
+            ?? throw new NotFoundException(nameof(BatchSessionOverride));
+        db.BatchSessionOverrides.Remove(row);
+        await db.SaveChangesAsync(ct);
+        return await GetBatchAsync(batchId, ct);
+    }
+
+    // The batch's recurring pattern covers this date: right weekday, inside the run window.
+    // Ignores one-off overrides — those are layered on top by the attendance log.
+    private static bool MeetsPattern(Batch batch, DateOnly date)
+    {
+        var weekday = date.DayOfWeek switch
+        {
+            DayOfWeek.Monday => BatchDays.Monday, DayOfWeek.Tuesday => BatchDays.Tuesday,
+            DayOfWeek.Wednesday => BatchDays.Wednesday, DayOfWeek.Thursday => BatchDays.Thursday,
+            DayOfWeek.Friday => BatchDays.Friday, DayOfWeek.Saturday => BatchDays.Saturday,
+            _ => BatchDays.Sunday
+        };
+        if (batch.Days != BatchDays.None && !batch.Days.HasFlag(weekday)) return false;
+        if (date < batch.StartDate) return false;
+        if (batch.EndDate is { } end && date > end) return false;
+        return true;
+    }
+
     public async Task ArchiveBatchAsync(Guid id, CancellationToken ct)
     {
         var batch = await db.Batches.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Batch));
@@ -422,13 +491,16 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     }
 
     private IQueryable<Batch> BatchQuery() => db.Batches.AsNoTracking()
-        .Include(x => x.Course).Include(x => x.Staff).Include(x => x.Enrollments).ThenInclude(e => e.Student);
+        .Include(x => x.Course).Include(x => x.Staff).Include(x => x.SessionOverrides)
+        .Include(x => x.Enrollments).ThenInclude(e => e.Student);
 
     // Archived students are excluded even if their enrollment row was never closed (data from
     // before archiving started withdrawing enrollments).
     private static BatchDto MapBatch(Batch x) => new(x.Id, x.Name, x.CourseId, x.Course.Name, x.StaffId, x.Staff.Name,
         FromBatchDays(x.Days), x.StartTime, x.EndTime, x.StartDate, x.EndDate, x.IsActive,
-        x.Enrollments.Count(e => e.Status == EnrollmentStatus.Active && e.Student.IsActive));
+        x.Enrollments.Count(e => e.Status == EnrollmentStatus.Active && e.Student.IsActive),
+        x.SessionOverrides.OrderBy(o => o.OriginalDate)
+            .Select(o => new BatchSessionOverrideDto(o.Id, o.OriginalDate, o.NewDate, o.Reason)).ToList());
 
     private static IReadOnlyList<DayOfWeek> FromBatchDays(BatchDays days)
     {

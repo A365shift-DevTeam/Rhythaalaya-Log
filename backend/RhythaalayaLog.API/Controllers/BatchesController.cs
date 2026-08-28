@@ -33,4 +33,16 @@ public sealed class BatchesController(IAcademyService service) : ControllerBase
         await service.ArchiveBatchAsync(id, ct);
         return NoContent();
     }
+
+    [HttpPost("{id:guid}/session-overrides")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<ActionResult<BatchDto>> AddSessionOverride(
+        Guid id, CreateBatchSessionOverrideRequest request, CancellationToken ct) =>
+        Ok(await service.AddBatchSessionOverrideAsync(id, request, ct));
+
+    [HttpDelete("{id:guid}/session-overrides/{overrideId:guid}")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<ActionResult<BatchDto>> RemoveSessionOverride(
+        Guid id, Guid overrideId, CancellationToken ct) =>
+        Ok(await service.RemoveBatchSessionOverrideAsync(id, overrideId, ct));
 }

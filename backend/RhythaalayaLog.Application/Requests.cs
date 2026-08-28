@@ -13,6 +13,9 @@ public sealed record CreateBatchRequest(string Name, Guid CourseId, Guid StaffId
 public sealed record UpdateBatchRequest(string Name, Guid CourseId, Guid StaffId, IReadOnlyList<DayOfWeek> Days,
     TimeOnly StartTime, TimeOnly EndTime, DateOnly StartDate, DateOnly? EndDate, bool IsActive);
 
+// A one-off schedule change for a single batch. NewDate null = the class is cancelled outright.
+public sealed record CreateBatchSessionOverrideRequest(DateOnly OriginalDate, DateOnly? NewDate, string? Reason);
+
 // BatchIds lets the student and their enrollments be written in one transaction. Creating the
 // student first and then enrolling in a loop meant a failure halfway left a half-saved student,
 // and retrying the save created a duplicate.

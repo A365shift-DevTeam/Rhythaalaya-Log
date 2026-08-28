@@ -1,12 +1,14 @@
 import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { RescheduleClassModal } from './modals/RescheduleClassModal';
 import { toast } from '../lib/toast';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Student, Batch, AttendanceStatus } from '../types';
 import { api } from '../api';
 import {
-  addDaysToIso, isBatchScheduledOn, nextSessionDate, todayIsoDate, weekdayLabelFor,
+  addDaysToIso, isBatchScheduledOn, matchesBatchPattern, nextSessionDate, sessionMovedOnto,
+  todayIsoDate, weekdayLabelFor,
 } from '../lib/schedule';
 
 interface LogTabProps {
@@ -14,6 +16,11 @@ interface LogTabProps {
   batches: Batch[];
   token: string;
   onOpenAddStudent: () => void;
+  isAdmin: boolean;
+  onAddSessionOverride: (batchId: string, body: {
+    originalDate: string; newDate: string | null; reason: string | null;
+  }) => Promise<Batch>;
+  onRemoveSessionOverride: (batchId: string, overrideId: string) => Promise<Batch>;
 }
 
 interface RosterEntry {
@@ -29,7 +36,9 @@ interface RosterEntry {
 
 type RollCallStatus = Extract<AttendanceStatus, 'P' | 'A'>;
 
-export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent }) => {
+export const LogTab: React.FC<LogTabProps> = ({
+  batches, token, onOpenAddStudent, isAdmin, onAddSessionOverride, onRemoveSessionOverride,
+}) => {
   const [selectedDate, setSelectedDate] = useState<string>(todayIsoDate());
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [roster, setRoster] = useState<RosterEntry[]>([]);
@@ -38,6 +47,10 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'P' | 'A'>('ALL');
+
+  // Reschedule-this-session controls (admin only).
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [undoBusy, setUndoBusy] = useState(false);
 
   // Only batches that actually hold a class on the selected date can be rolled.
   const scheduledBatches = useMemo(
@@ -108,6 +121,54 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
   }, [roster, searchQuery, filterStatus, attendance]);
 
   const todayIso = todayIsoDate();
+
+  // When the selected class landed on this date via a reschedule, surface where it came from.
+  const movedOnto = useMemo(() => {
+    const batch = scheduledBatches.find((b) => b.id === selectedBatchId);
+    return batch ? sessionMovedOnto(batch, selectedDate) : undefined;
+  }, [scheduledBatches, selectedBatchId, selectedDate]);
+
+  // Classes that would normally meet on this date but were postponed or cancelled — shown on the
+  // otherwise-empty day so an admin who just rescheduled sees it took effect.
+  const movedAway = useMemo(() =>
+    batches
+      .filter((b) => b.isActive && matchesBatchPattern(b, selectedDate))
+      .map((b) => ({
+        batch: b,
+        override: (b.sessionOverrides ?? []).find((o) => o.originalDate.slice(0, 10) === selectedDate.slice(0, 10)),
+      }))
+      .filter((x): x is { batch: typeof x.batch; override: NonNullable<typeof x.override> } => Boolean(x.override)),
+    [batches, selectedDate]);
+
+  const selectedBatch = useMemo(
+    () => batches.find((b) => b.id === selectedBatchId), [batches, selectedBatchId]);
+
+  // A genuine recurring session for this batch on this date (not itself a transplant) — the only
+  // thing it makes sense to move. Cancelled/postponed dates fall out of `scheduledBatches` first.
+  const canReschedule = Boolean(
+    isAdmin && selectedBatch && !movedOnto && matchesBatchPattern(selectedBatch, selectedDate));
+
+  // Don't leave the dialog open over a session that changed out from under it.
+  useEffect(() => { setRescheduleOpen(false); }, [selectedDate, selectedBatchId]);
+
+  const handleReschedule = async ({ newDate, reason }: { newDate: string | null; reason: string | null }) => {
+    if (!selectedBatch) return;
+    await onAddSessionOverride(selectedBatch.id, { originalDate: selectedDate, newDate, reason });
+    toast.success(newDate ? 'Class rescheduled.' : 'Class cancelled for this date.');
+  };
+
+  const handleUndoReschedule = async () => {
+    if (!selectedBatch || !movedOnto || undoBusy) return;
+    setUndoBusy(true);
+    try {
+      await onRemoveSessionOverride(selectedBatch.id, movedOnto.id);
+      toast.success('Reschedule undone — the class is back on its original date.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not undo the reschedule.');
+    } finally {
+      setUndoBusy(false);
+    }
+  };
 
   // Soonest day any batch runs, used to get out of an empty day in one click.
   const nextClassDate = useMemo(() => {
@@ -269,8 +330,38 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
               <JisIcon className="text-[16px]">close</JisIcon>
               <span>All Absent</span>
             </Button>
+            {canReschedule && (
+              <Button
+                type="button"
+                onClick={() => setRescheduleOpen(true)}
+                className="flex-1 lg:flex-initial min-h-11 px-3.5 py-2 bg-amber-50 dark:bg-amber-950/50 text-[#b45309] dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/70 font-sans text-xs font-bold rounded-2xl border border-amber-200/70 dark:border-amber-900/50 transition-all flex items-center justify-center gap-1.5 shrink-0 active:scale-95"
+              >
+                <JisIcon className="text-[16px]">event_repeat</JisIcon>
+                <span>Reschedule</span>
+              </Button>
+            )}
           </div>
         </div>
+
+        {movedOnto && (
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-amber-200/70 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-xs font-semibold text-[#b45309] dark:text-amber-300">
+            <JisIcon className="text-[16px] shrink-0">event_repeat</JisIcon>
+            <span className="flex-1 min-w-0">
+              Rescheduled from {formatDisplayDate(movedOnto.originalDate)}
+              {movedOnto.reason ? ` — ${movedOnto.reason}` : ''}
+            </span>
+            {isAdmin && (
+              <Button
+                type="button"
+                onClick={handleUndoReschedule}
+                disabled={undoBusy}
+                className="shrink-0 rounded-xl bg-white dark:bg-[#0b1422] px-2.5 py-1 text-xs font-bold text-[#b45309] dark:text-amber-300 border border-amber-200/70 dark:border-amber-900/50 hover:bg-amber-100 dark:hover:bg-amber-950/60 transition-colors disabled:opacity-50"
+              >
+                {undoBusy ? 'Undoing…' : 'Undo'}
+              </Button>
+            )}
+          </div>
+        )}
 
       </div>
 
@@ -285,13 +376,45 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
         </div>
       ) : scheduledBatches.length === 0 ? (
         <div className="premium-card text-center py-12 px-4">
-          <JisIcon className="text-4xl text-[#9e9e9e]">event_busy</JisIcon>
+          <JisIcon className="text-4xl text-[#9e9e9e]">{movedAway.length ? 'event_repeat' : 'event_busy'}</JisIcon>
           <p className="font-heading text-lg font-bold text-[#212121] dark:text-white mt-2">
             No class on {weekdayLabelFor(selectedDate)}
           </p>
           <p className="font-sans text-xs text-[#808080] mt-1 max-w-sm mx-auto">
             None of your batches meet on {formatDisplayDate(selectedDate)}. Pick a day a class runs to take the roll.
           </p>
+
+          {movedAway.length > 0 && (
+            <div className="mx-auto mt-4 max-w-sm space-y-2 text-left">
+              {movedAway.map(({ batch, override }) => (
+                <div
+                  key={batch.id}
+                  className="flex flex-col gap-1.5 rounded-2xl border border-amber-200/70 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/40 px-3 py-2.5"
+                >
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#b45309] dark:text-amber-300">
+                    <JisIcon className="text-[16px] shrink-0">event_repeat</JisIcon>
+                    <span className="truncate">{batch.name}</span>
+                  </div>
+                  <p className="font-sans text-xs text-[#92400e] dark:text-amber-200/80">
+                    {override.newDate
+                      ? `Moved to ${formatDisplayDate(override.newDate)}`
+                      : 'Cancelled — no class this day'}
+                    {override.reason ? ` · ${override.reason}` : ''}
+                  </p>
+                  {override.newDate && (
+                    <Button
+                      type="button"
+                      onClick={() => setSelectedDate(override.newDate!)}
+                      className="mt-0.5 self-start rounded-xl bg-white dark:bg-[#0b1422] px-3 py-1.5 text-xs font-bold text-[#b45309] dark:text-amber-300 border border-amber-200/70 dark:border-amber-900/50 hover:bg-amber-100 dark:hover:bg-amber-950/60 transition-colors active:scale-95"
+                    >
+                      Go to {formatDisplayDate(override.newDate)}
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {nextClassDate && (
             <Button
               type="button"
@@ -555,6 +678,16 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
             </div>
           )}
         </>
+      )}
+
+      {selectedBatch && (
+        <RescheduleClassModal
+          isOpen={rescheduleOpen}
+          onClose={() => setRescheduleOpen(false)}
+          batchName={selectedBatch.name}
+          sessionLabel={formatDisplayDate(selectedDate).replace(/^Today · /, '')}
+          onSubmit={handleReschedule}
+        />
       )}
     </div>
   );

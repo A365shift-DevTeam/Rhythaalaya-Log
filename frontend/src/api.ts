@@ -150,6 +150,13 @@ export const api = {
     startTime: string; endTime: string; startDate: string; endDate?: string | null; isActive: boolean;
   }) => request<any>('/batches/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapBatch),
   archiveBatch: (token: string, id: string) => request<void>('/batches/' + id, { method: 'DELETE' }, token),
+  // Reschedule (or cancel) a single class in a batch's recurring pattern. Both calls return the
+  // updated batch with its full sessionOverrides list.
+  addBatchSessionOverride: (token: string, batchId: string, body: {
+    originalDate: string; newDate?: string | null; reason?: string | null;
+  }) => request<any>(`/batches/${batchId}/session-overrides`, { method: 'POST', body: JSON.stringify(body) }, token).then(mapBatch),
+  removeBatchSessionOverride: (token: string, batchId: string, overrideId: string) =>
+    request<any>(`/batches/${batchId}/session-overrides/${overrideId}`, { method: 'DELETE' }, token).then(mapBatch),
 
   // Students & enrollment
   students: (token: string) => request<any[]>('/students', {}, token).then(rows => rows.map(mapStudent)),
@@ -354,7 +361,10 @@ function mapBatch(x: any): Batch {
   return {
     id: x.id, name: x.name, courseId: x.courseId, courseName: x.courseName, staffId: x.staffId, staffName: x.staffName,
     days: x.days || [], startTime: x.startTime, endTime: x.endTime, startDate: x.startDate, endDate: x.endDate || undefined,
-    isActive: x.isActive, enrolledCount: x.enrolledCount
+    isActive: x.isActive, enrolledCount: x.enrolledCount,
+    sessionOverrides: (x.sessionOverrides || []).map((o: any) => ({
+      id: o.id, originalDate: o.originalDate, newDate: o.newDate || undefined, reason: o.reason || undefined
+    }))
   };
 }
 function mapAchievement(x: any): Achievement {

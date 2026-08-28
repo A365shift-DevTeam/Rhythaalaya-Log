@@ -6,7 +6,9 @@ public sealed record CourseDto(Guid Id, string Name, string? Description, bool I
 public sealed record StaffDto(Guid Id, string Name, string? Phone, string? Email, bool IsActive, int BatchCount);
 public sealed record BatchDto(Guid Id, string Name, Guid CourseId, string CourseName, Guid StaffId, string StaffName,
     IReadOnlyList<DayOfWeek> Days, TimeOnly StartTime, TimeOnly EndTime, DateOnly StartDate, DateOnly? EndDate,
-    bool IsActive, int EnrolledCount);
+    bool IsActive, int EnrolledCount, IReadOnlyList<BatchSessionOverrideDto> SessionOverrides);
+
+public sealed record BatchSessionOverrideDto(Guid Id, DateOnly OriginalDate, DateOnly? NewDate, string? Reason);
 
 public sealed record EnrollmentSummaryDto(Guid Id, Guid BatchId, string BatchName, Guid CourseId, string CourseName,
     DateOnly EnrolledOn, DateOnly? EndedOn, EnrollmentStatus Status, decimal OutstandingBalance);

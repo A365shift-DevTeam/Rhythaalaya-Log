@@ -144,6 +144,27 @@ public sealed class Batch : ITenantOwned
     public bool IsActive { get; set; } = true;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<Enrollment> Enrollments { get; set; } = [];
+    public ICollection<BatchSessionOverride> SessionOverrides { get; set; } = [];
+}
+
+/// <summary>
+/// A one-off change to a batch's recurring schedule: the class normally held on
+/// <see cref="OriginalDate"/> is moved to <see cref="NewDate"/>, or cancelled outright when
+/// NewDate is null (a holiday). The attendance log reads these so the moved-to date can be
+/// rolled and the original date no longer shows as a class.
+/// </summary>
+public sealed class BatchSessionOverride : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid BatchId { get; set; }
+    public Batch Batch { get; set; } = null!;
+    /// <summary>A date the batch's recurring pattern normally meets, being moved or cancelled.</summary>
+    public DateOnly OriginalDate { get; set; }
+    /// <summary>Where the class moves to; null means it is cancelled with no replacement.</summary>
+    public DateOnly? NewDate { get; set; }
+    public string? Reason { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
 public sealed class Student : ITenantOwned

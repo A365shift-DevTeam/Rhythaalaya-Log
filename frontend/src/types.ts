@@ -35,6 +35,17 @@ export interface Staff {
   batchCount: number;
 }
 
+/**
+ * A one-off change to a batch's recurring schedule. The class normally held on `originalDate`
+ * is moved to `newDate`, or cancelled outright when `newDate` is absent (a holiday).
+ */
+export interface SessionOverride {
+  id: string;
+  originalDate: string; // yyyy-MM-dd -- a date the recurring pattern normally meets
+  newDate?: string;     // yyyy-MM-dd -- where it moved to; absent = cancelled, no class
+  reason?: string;
+}
+
 export interface Batch {
   id: string;
   name: string;
@@ -49,6 +60,7 @@ export interface Batch {
   endDate?: string;
   isActive: boolean;
   enrolledCount: number;
+  sessionOverrides?: SessionOverride[];
 }
 
 export interface EnrollmentSummary {
