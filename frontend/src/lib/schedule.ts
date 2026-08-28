@@ -23,6 +23,23 @@ export const todayIsoDate = (): string => toIsoDate(new Date());
 /** The weekday name for a date, in the same vocabulary as Batch.days. */
 export const weekdayLabelFor = (iso: string): string => WEEKDAY_LABELS[parseIsoDate(iso).getDay()];
 
+/**
+ * The next date on or after `from` that falls on `day` of the month — the billing anchor for a
+ * "due on day N every month" fee plan. Days 29–31 clamp to the last day of shorter months.
+ */
+export const nextMonthlyDueDate = (day: number, from: Date = new Date()): string => {
+  const lastDayOf = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  let year = from.getFullYear();
+  let month = from.getMonth();
+  let dueDay = Math.min(day, lastDayOf(year, month));
+  if (dueDay < from.getDate()) {
+    month += 1;
+    if (month > 11) { month = 0; year += 1; }
+    dueDay = Math.min(day, lastDayOf(year, month));
+  }
+  return toIsoDate(new Date(year, month, dueDay));
+};
+
 export const addDaysToIso = (iso: string, delta: number): string => {
   const date = parseIsoDate(iso);
   date.setDate(date.getDate() + delta);

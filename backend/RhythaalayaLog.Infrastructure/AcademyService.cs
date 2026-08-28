@@ -214,8 +214,17 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 
     public async Task ArchiveStudentAsync(Guid id, CancellationToken ct)
     {
-        var student = await db.Students.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Student));
+        var student = await db.Students.Include(x => x.Enrollments)
+            .SingleOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException(nameof(Student));
         student.IsActive = false;
+        // Archiving must also close the student's enrollments — batch enrolled counts and the
+        // fee-due generator both key off EnrollmentStatus.Active, not Student.IsActive.
+        var endedOn = DateOnly.FromDateTime(DateTime.UtcNow);
+        foreach (var enrollment in student.Enrollments.Where(x => x.Status == EnrollmentStatus.Active))
+        {
+            enrollment.Status = EnrollmentStatus.Withdrawn;
+            enrollment.EndedOn = endedOn;
+        }
         await db.SaveChangesAsync(ct);
     }
 
@@ -413,11 +422,13 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     }
 
     private IQueryable<Batch> BatchQuery() => db.Batches.AsNoTracking()
-        .Include(x => x.Course).Include(x => x.Staff).Include(x => x.Enrollments);
+        .Include(x => x.Course).Include(x => x.Staff).Include(x => x.Enrollments).ThenInclude(e => e.Student);
 
+    // Archived students are excluded even if their enrollment row was never closed (data from
+    // before archiving started withdrawing enrollments).
     private static BatchDto MapBatch(Batch x) => new(x.Id, x.Name, x.CourseId, x.Course.Name, x.StaffId, x.Staff.Name,
         FromBatchDays(x.Days), x.StartTime, x.EndTime, x.StartDate, x.EndDate, x.IsActive,
-        x.Enrollments.Count(e => e.Status == EnrollmentStatus.Active));
+        x.Enrollments.Count(e => e.Status == EnrollmentStatus.Active && e.Student.IsActive));
 
     private static IReadOnlyList<DayOfWeek> FromBatchDays(BatchDays days)
     {

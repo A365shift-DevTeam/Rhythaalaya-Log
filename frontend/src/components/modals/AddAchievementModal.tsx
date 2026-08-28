@@ -85,19 +85,18 @@ export const AddAchievementModal: React.FC<AddAchievementModalProps> = ({
 
   return (
     <div
-      ref={dialogRef}
-      tabIndex={-1}
       className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-md animate-fadeIn"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="add-achievement-title"
-      onKeyDown={(event) => {
-        // This dialog nests inside StudentDetailsModal, which also listens for Escape at the
-        // document level. Stop the key from bubbling there so Escape closes only this dialog.
-        if (event.key === 'Escape') { event.stopPropagation(); onClose(); }
-      }}
+      onClick={onClose}
     >
-      <div className="bg-white dark:bg-[#0b1422] rounded-3xl max-w-lg w-full max-h-[92dvh] overflow-hidden shadow-2xl border border-[#dbdbdb] dark:border-[#243244]">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-achievement-title"
+        className="bg-white dark:bg-[#0b1422] rounded-3xl max-w-lg w-full max-h-[92dvh] overflow-hidden shadow-2xl border border-[#dbdbdb] dark:border-[#243244]"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex justify-between items-start gap-4 px-5 sm:px-7 py-5 border-b border-[#dbdbdb]/60 dark:border-[#243244]">
           <div className="pr-10">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#3fc073]">
