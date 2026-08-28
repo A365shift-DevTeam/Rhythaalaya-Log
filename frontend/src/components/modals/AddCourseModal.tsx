@@ -3,7 +3,7 @@ import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { Course, FeeFrequency, FeeStructure, FEE_FREQUENCY_LABELS } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
-import { nextMonthlyDueDate, parseIsoDate, todayIsoDate as todayIso } from '../../lib/schedule';
+import { lastMonthlyDueDate, nextMonthlyDueDate, parseIsoDate, todayIsoDate as todayIso } from '../../lib/schedule';
 import { confirmAction } from '../../lib/confirm';
 import { SimpleSelect } from '../ui/select';
 
@@ -60,11 +60,15 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   const [editPlanEffectiveTo, setEditPlanEffectiveTo] = useState('');
   const [editPlanIsActive, setEditPlanIsActive] = useState(true);
 
-  // Monthly plans are entered as a day of the month; the anchor date sent to the server is the
-  // next occurrence of that day. Other frequencies still take a full start date.
-  const resolvedFeeDate = feeFrequency === 'Monthly' ? nextMonthlyDueDate(feeDueDay) : feeDueDate;
-
   const courseFeeStructures = editingCourse ? feeStructures.filter((f) => f.courseId === editingCourse.id) : [];
+
+  // Monthly plans are entered as a day of the month. A course's FIRST plan anchors on the most
+  // recent occurrence of that day so the current period is billable (each student's first due
+  // still follows their own join/batch start). A price change on a course that already bills
+  // anchors on the NEXT occurrence, so an already-billed period is never re-priced.
+  const isFirstPlan = !editingCourse || courseFeeStructures.length === 0;
+  const resolvedFeeDate = feeFrequency !== 'Monthly' ? feeDueDate
+    : isFirstPlan ? lastMonthlyDueDate(feeDueDay) : nextMonthlyDueDate(feeDueDay);
   const activePlan = courseFeeStructures.find((f) => f.isActive);
   const pastPlans = [...courseFeeStructures.filter((f) => !f.isActive)]
     .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
@@ -259,7 +263,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                         options={DAYS_OF_MONTH.map((d) => ({ value: String(d), label: ordinal(d) }))}
                       />
                       <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8]">
-                        Due on the {ordinal(feeDueDay)} of every month · first bill {parseIsoDate(resolvedFeeDate).toLocaleDateString('en-IN')}.
+                        Due on the {ordinal(feeDueDay)} of every month · each student's first bill follows their joining date.
                       </p>
                     </div>
                   ) : (
@@ -366,7 +370,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                         options={DAYS_OF_MONTH.map((d) => ({ value: String(d), label: `Due on the ${ordinal(d)} of every month` }))}
                       />
                       <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8]">
-                        New price starts {parseIsoDate(resolvedFeeDate).toLocaleDateString('en-IN')}.
+                        {isFirstPlan ? 'Billing starts' : 'New price starts'} {parseIsoDate(resolvedFeeDate).toLocaleDateString('en-IN')}.
                       </p>
                     </div>
                   ) : (

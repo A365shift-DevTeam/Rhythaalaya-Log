@@ -1,5 +1,6 @@
 import { Achievement, AchievementCategory, Batch, Course, FeeAdjustment, FeeAdjustmentType, FeeDue, FeeDueStatus,
-  FeeFrequency, FeePayment, FeeStructure, OrgSettings, PaymentMethod, Receipt, Staff, Student, Transaction } from './types';
+  FeeFrequency, FeePayment, FeeStructure, LateEnrollmentBillingPolicy, OrgSettings, PaymentMethod, Receipt, Staff,
+  Student, Transaction } from './types';
 import { DEFAULT_WHATSAPP_TEMPLATE } from './whatsappTemplate';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5101/api').replace(/\/$/, '');
@@ -159,6 +160,7 @@ export const api = {
     name: string; dateOfBirth?: string | null; parentName?: string; phone?: string; email?: string;
     address?: string; joinDate?: string | null; batchIds?: string[];
     concessionPercent?: number; concessionReason?: string;
+    lateBillingPolicy?: LateEnrollmentBillingPolicy | null;
   }) => request<any>('/students', { method: 'POST', body: JSON.stringify(body) }, token).then(mapStudent),
   updateStudent: (token: string, id: string, body: {
     name: string; dateOfBirth?: string | null; parentName?: string; phone?: string; email?: string;
@@ -368,6 +370,7 @@ function mapStudent(x: any): Student {
     id: x.id, studentNumber: x.studentNumber, name: x.name, dateOfBirth: x.dateOfBirth || undefined,
     parentName: x.parentName || undefined, address: x.address || undefined, phone: x.phone || undefined,
     email: x.email || undefined, joinDate: x.joinDate, isActive: x.isActive, outstandingBalance: x.outstandingBalance,
+    hasBillableDues: x.hasBillableDues ?? false,
     overallAttendance: x.attendancePercentage, wonCount: x.wonCount ?? 0, participatedCount: x.participatedCount ?? 0,
     concessionPercent: x.concessionPercent ?? 0, concessionReason: x.concessionReason || undefined,
     enrollments: (x.enrollments || []).map((e: any) => ({

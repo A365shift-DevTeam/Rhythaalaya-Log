@@ -38,6 +38,11 @@ public sealed class FeeDueGenerator(AppDbContext db)
     public async Task EnsureForEnrollmentAsync(Guid enrollmentId, CancellationToken ct)
     {
         var enrollment = await db.Enrollments.AsNoTracking().SingleAsync(x => x.Id == enrollmentId, ct);
+        // Billing can never start before classes do: a pre-registered student (enrolled before
+        // the batch's start date) is billed from the batch start, not the enrollment date.
+        var batchStart = await db.Batches.AsNoTracking().Where(x => x.Id == enrollment.BatchId)
+            .Select(x => x.StartDate).SingleAsync(ct);
+        var billingStart = enrollment.EnrolledOn > batchStart ? enrollment.EnrolledOn : batchStart;
         if (_concession?.StudentId != enrollment.StudentId)
         {
             var concession = await db.Students.AsNoTracking().Where(x => x.Id == enrollment.StudentId)
@@ -68,17 +73,18 @@ public sealed class FeeDueGenerator(AppDbContext db)
         DateOnly chainAnchor;
         if (latest is null)
         {
-            var first = ComputeFirstDue(structures, enrollment.EnrolledOn, settings.LateEnrollmentBillingPolicy);
+            var first = ComputeFirstDue(structures, billingStart,
+                enrollment.LateBillingPolicy ?? settings.LateEnrollmentBillingPolicy);
             if (first is null) return;
             chainAnchor = first.ChainAnchor;
             if (first.PartialPeriodStart is DateOnly partialStart)
             {
                 // Off-anchor partial first period (Full or Prorated policy): due dated on the
-                // enrollment day; the chain then resumes on the plan's anchor cadence.
+                // billing start day; the chain then resumes on the plan's anchor cadence.
                 if (first.DueDate > horizon) return;
                 var structure = BillingSchedule.ResolveStructure(structures, first.DueDate)!;
                 await CreateDueAsync(enrollment, structure, first.DueDate, today,
-                    first.Prorate ? partialStart : null, first.Prorate ? enrollment.EnrolledOn : null, ct);
+                    first.Prorate ? partialStart : null, first.Prorate ? billingStart : null, ct);
                 nextDueDate = BillingSchedule.FirstOnOrAfter(chainAnchor, first.DueDate.AddDays(1), structure.Frequency);
             }
             else

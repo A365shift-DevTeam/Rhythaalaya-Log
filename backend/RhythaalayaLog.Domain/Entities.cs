@@ -179,6 +179,8 @@ public sealed class Enrollment : ITenantOwned
     public Course Course { get; set; } = null!;
     public DateOnly EnrolledOn { get; set; }
     public DateOnly? EndedOn { get; set; }
+    /// <summary>Per-enrollment late-enrollment billing choice; null follows the org-wide setting.</summary>
+    public LateEnrollmentBillingPolicy? LateBillingPolicy { get; set; }
     public EnrollmentStatus Status { get; set; } = EnrollmentStatus.Active;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<AttendanceRecord> AttendanceRecords { get; set; } = [];

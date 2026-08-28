@@ -858,5 +858,20 @@ BEGIN
     VALUES ('20260827075215_UserLastLoginAt', '9.0.1');
     END IF;
 END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260828065034_EnrollmentLateBillingPolicy') THEN
+    ALTER TABLE "Enrollments" ADD "LateBillingPolicy" character varying(16);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260828065034_EnrollmentLateBillingPolicy') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260828065034_EnrollmentLateBillingPolicy', '9.0.1');
+    END IF;
+END $EF$;
 COMMIT;
 

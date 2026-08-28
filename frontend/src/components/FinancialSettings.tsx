@@ -114,7 +114,7 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
   );
 }
 
-const POLICY_OPTIONS: { value: LateEnrollmentBillingPolicy; label: string; description: string }[] = [
+export const POLICY_OPTIONS: { value: LateEnrollmentBillingPolicy; label: string; description: string }[] = [
   { value: 'Skip', label: 'Skip partial period', description: 'A mid-cycle joiner starts paying from the next full billing cycle.' },
   { value: 'Full', label: 'Charge full period', description: 'The first partial period is billed at the full amount.' },
   { value: 'Prorated', label: 'Prorate by days', description: 'The first partial period is billed only for the days enrolled.' },

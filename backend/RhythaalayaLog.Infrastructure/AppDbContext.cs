@@ -119,6 +119,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         var enrollment = modelBuilder.Entity<Enrollment>();
         enrollment.HasIndex(x => new { x.TenantId, x.StudentId, x.BatchId, x.Status });
         enrollment.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+        enrollment.Property(x => x.LateBillingPolicy).HasConversion<string>().HasMaxLength(16);
         enrollment.HasOne(x => x.Student).WithMany(x => x.Enrollments).HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
         enrollment.HasOne(x => x.Batch).WithMany(x => x.Enrollments).HasForeignKey(x => x.BatchId).OnDelete(DeleteBehavior.Restrict);
         enrollment.HasOne(x => x.Course).WithMany().HasForeignKey(x => x.CourseId).OnDelete(DeleteBehavior.Restrict);

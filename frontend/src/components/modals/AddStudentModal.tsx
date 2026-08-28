@@ -1,7 +1,8 @@
 import { Button } from '../ui/button';
 import { JisIcon } from '../JisIcon';
 import React, { useEffect, useRef, useState } from 'react';
-import { Batch, Student } from '../../types';
+import { Batch, LateEnrollmentBillingPolicy, Student } from '../../types';
+import { POLICY_OPTIONS } from '../FinancialSettings';
 import { useDialogLifecycle } from './useDialogLifecycle';
 import { todayIsoDate as todayIso } from '../../lib/schedule';
 
@@ -15,6 +16,8 @@ interface AddStudentModalProps {
   onUpdateStudent: (studentId: string, studentData: any, batchIds: string[]) => Promise<void>;
   editingStudent?: Student | null;
   batches: Batch[];
+  /** Org-wide late-enrollment billing setting; the wizard pre-selects it. */
+  defaultBillingPolicy: LateEnrollmentBillingPolicy;
 }
 
 export const AddStudentModal: React.FC<AddStudentModalProps> = ({
@@ -24,6 +27,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   onUpdateStudent,
   editingStudent,
   batches,
+  defaultBillingPolicy,
 }) => {
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -33,6 +37,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [concessionPercent, setConcessionPercent] = useState('');
+  const [billingPolicy, setBillingPolicy] = useState<LateEnrollmentBillingPolicy>(defaultBillingPolicy);
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   const [batchMenuOpen, setBatchMenuOpen] = useState(false);
   const [step, setStep] = useState(0);
@@ -101,6 +106,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       setConcessionPercent('');
       setSelectedBatchIds([]);
     }
+    setBillingPolicy(defaultBillingPolicy);
     setStep(0);
     hasNavigatedRef.current = false;
     setError('');
@@ -141,7 +147,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       if (editingStudent) {
         await onUpdateStudent(editingStudent.id, payload, selectedBatchIds);
       } else {
-        await onAddStudent(payload, selectedBatchIds);
+        await onAddStudent({ ...payload, lateBillingPolicy: billingPolicy }, selectedBatchIds);
       }
       onClose();
     } catch (requestError) {
@@ -298,6 +304,31 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     </div>
   );
 
+  // Per-student late-enrollment billing choice, pre-selected to the org-wide setting. Only for
+  // new students: enrollments made from the edit form keep following the org default.
+  const billingPolicyPicker = (
+    <fieldset className="mt-5">
+      <legend className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Late enrollment billing</legend>
+      <p className="mb-2.5 text-xs text-[#808080] dark:text-[#94a3b8]">How the first month is billed when the student joins mid-cycle.</p>
+      <div className="space-y-2">
+        {POLICY_OPTIONS.map((option) => (
+          <label key={option.value} className={`flex min-h-12 cursor-pointer items-start gap-2.5 rounded-2xl border px-3.5 py-2.5 transition-all ${billingPolicy === option.value
+            ? 'border-[#3fc073] bg-[#e9f7ee] dark:border-[#3fc073] dark:bg-[#3fc073]/15'
+            : 'border-[#dbdbdb] dark:border-[#243244] bg-[#f0f0f0] dark:bg-[#0b1422]'}`}>
+            <input type="radio" name="student-billing-policy" checked={billingPolicy === option.value}
+              onChange={() => setBillingPolicy(option.value)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#3fc073]" />
+            <span className="min-w-0">
+              <span className="block text-xs font-bold text-[#212121] dark:text-white">
+                {option.label}{option.value === defaultBillingPolicy ? ' · academy default' : ''}
+              </span>
+              <span className="block text-xs text-[#808080] dark:text-[#94a3b8]">{option.description}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+
   const errorBanner = error
     ? <div role="alert" className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-[#ef4444] text-xs font-bold">{error}</div>
     : null;
@@ -370,6 +401,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                 <section>
                   <StepHeading headingRef={panelHeadingRef} title="Enroll in batches" hint="Select every batch this student should attend. Optional." />
                   {batchPicker}
+                  {billingPolicyPicker}
                 </section>
               )}
 
@@ -395,6 +427,10 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                         label={selectedBatches.length === 1 ? 'Batch' : 'Batches'}
                         value={selectedBatches.map((batch) => batch.name).join(', ')}
                         emptyText="None selected"
+                      />
+                      <ReviewRow
+                        label="Late enrollment billing"
+                        value={POLICY_OPTIONS.find((option) => option.value === billingPolicy)?.label || billingPolicy}
                       />
                     </ReviewGroup>
                   </div>

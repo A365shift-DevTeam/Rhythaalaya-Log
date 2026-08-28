@@ -116,8 +116,10 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                   <span className="inline-flex shrink-0 items-center whitespace-nowrap text-xs bg-rose-100 text-[#ef4444] font-semibold px-2.5 py-0.5 rounded-full dark:bg-rose-950/80 dark:text-rose-300">
                     ₹{student.outstandingBalance.toLocaleString('en-IN')} outstanding
                   </span>
-                ) : (
+                ) : student.hasBillableDues ? (
                   <span className="text-xs bg-emerald-100 text-[#22c55e] font-semibold px-2.5 py-0.5 rounded-full dark:bg-emerald-950/80 dark:text-emerald-300">Fully paid</span>
+                ) : (
+                  <span className="text-xs bg-[#f0f0f0] text-[#808080] font-semibold px-2.5 py-0.5 rounded-full dark:bg-[#172435] dark:text-[#94a3b8]">No dues yet</span>
                 )}
               </div>
             </div>
