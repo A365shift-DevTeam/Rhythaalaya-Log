@@ -391,6 +391,12 @@ input[type="number"] {
   }
 }
 
+/* Hide the mobile speed-dial FAB whenever a modal dialog is open, so it never
+   floats over a bottom-sheet. Every modal renders exactly one [role="dialog"]. */
+body:has([role="dialog"]) .mobile-speed-dial {
+  display: none;
+}
+
 /* Ambot365 glass and card surfaces */
 .glass-panel {
   background: rgba(255, 255, 255, 0.85);

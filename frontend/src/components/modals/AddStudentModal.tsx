@@ -337,13 +337,13 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     <div
       ref={dialogRef}
       tabIndex={-1}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-end justify-center p-0 bg-black/50 backdrop-blur-md animate-fadeIn sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-student-title"
       onClick={onClose}
     >
-      <div className="flex h-[90dvh] max-h-[680px] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl border border-[#dbdbdb] dark:border-[#243244] dark:bg-[#0b1422]" onClick={(e) => e.stopPropagation()}>
+      <div className="flex h-[90dvh] max-h-[680px] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl border border-[#dbdbdb] dark:border-[#243244] dark:bg-[#0b1422] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex shrink-0 justify-between items-start gap-4 px-5 sm:px-7 py-5 border-b border-[#dbdbdb]/60 dark:border-[#243244]">
           <div className="pr-10">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#3fc073]">

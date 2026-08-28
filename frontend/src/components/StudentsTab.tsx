@@ -373,7 +373,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                         aria-label={`Record fee payment for ${student.name}`}
                         className="min-h-8 shrink-0 rounded-xl bg-[#e9f7ee] px-3 text-xs font-bold text-[#35a160] transition-all hover:bg-[#cbecd8] active:scale-95 dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]"
                       >
-                        Pay
+                        Fee
                       </Button>
                     )}
                     <JisIcon className="shrink-0 text-[18px] text-[#c2c2c2] dark:text-[#64748b]">chevron_right</JisIcon>

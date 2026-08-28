@@ -190,8 +190,8 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-md sm:p-5">
-      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="add-course-title" className="max-h-[92dvh] w-full max-w-2xl overflow-hidden rounded-3xl border border-[#dbdbdb] bg-white shadow-2xl dark:border-[#243244] dark:bg-[#0b1422]">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-md sm:items-center sm:p-4">
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="add-course-title" className="max-h-[92dvh] w-full max-w-2xl overflow-hidden rounded-t-3xl border border-[#dbdbdb] bg-white shadow-2xl dark:border-[#243244] dark:bg-[#0b1422] sm:rounded-3xl">
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#dbdbdb]/60 px-5 py-5 dark:border-[#243244] sm:px-7">
           <h3 id="add-course-title" className="font-heading text-xl font-bold text-[#212121] dark:text-white">
             {editingCourse ? 'Edit course' : 'New course'}

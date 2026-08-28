@@ -35,7 +35,7 @@ export function MobileSpeedDial({ actions, openLabel }: { actions: SpeedDialActi
   };
 
   return (
-    <div className="md:hidden">
+    <div className="mobile-speed-dial md:hidden">
       {open && (
         <div
           className="fixed inset-0 z-[55] bg-black/40 backdrop-blur-xs"
