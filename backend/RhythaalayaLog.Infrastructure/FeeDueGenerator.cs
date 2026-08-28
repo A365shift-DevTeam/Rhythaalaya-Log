@@ -73,7 +73,8 @@ public sealed class FeeDueGenerator(AppDbContext db)
         DateOnly chainAnchor;
         if (latest is null)
         {
-            var first = ComputeFirstDue(structures, billingStart, settings.LateEnrollmentBillingPolicy);
+            var first = ComputeFirstDue(structures, billingStart,
+                enrollment.LateBillingPolicy ?? settings.LateEnrollmentBillingPolicy);
             if (first is null) return;
             chainAnchor = first.ChainAnchor;
             if (first.PartialPeriodStart is DateOnly partialStart)

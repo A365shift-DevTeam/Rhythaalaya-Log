@@ -76,6 +76,8 @@ export interface Student {
   joinDate: string;
   isActive: boolean;
   outstandingBalance: number;
+  /** False when nothing has ever been billed — the UI shows "No dues" instead of "Paid". */
+  hasBillableDues: boolean;
   overallAttendance: number;
   wonCount: number;
   participatedCount: number;

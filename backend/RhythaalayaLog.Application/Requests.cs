@@ -18,7 +18,9 @@ public sealed record UpdateBatchRequest(string Name, Guid CourseId, Guid StaffId
 // and retrying the save created a duplicate.
 public sealed record CreateStudentRequest(string Name, DateOnly? DateOfBirth, string? ParentName, string? Phone,
     string? Email, string? Address, DateOnly? JoinDate, IReadOnlyList<Guid>? BatchIds = null,
-    decimal ConcessionPercent = 0, string? ConcessionReason = null);
+    decimal ConcessionPercent = 0, string? ConcessionReason = null,
+    // Per-student late-enrollment billing choice for the created enrollments; null = org default.
+    LateEnrollmentBillingPolicy? LateBillingPolicy = null);
 public sealed record UpdateStudentRequest(string Name, DateOnly? DateOfBirth, string? ParentName, string? Phone,
     string? Email, string? Address, DateOnly? JoinDate, bool IsActive,
     decimal ConcessionPercent = 0, string? ConcessionReason = null);

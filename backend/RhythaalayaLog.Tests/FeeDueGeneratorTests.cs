@@ -270,6 +270,24 @@ public sealed class FeeDueGeneratorTests
     }
 
     [Fact]
+    public async Task EnrollmentPolicyOverride_BeatsOrgDefault()
+    {
+        using var h = new TestHarness(LateEnrollmentBillingPolicy.Skip);
+        h.AddStructure(1000m, FeeFrequency.Monthly, Anchor);
+        var enrolledOn = Anchor.AddDays(10);
+        var enrollment = h.Enroll(enrolledOn);
+        enrollment.LateBillingPolicy = LateEnrollmentBillingPolicy.Prorated;
+        h.Db.SaveChanges();
+
+        await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
+
+        // The per-enrollment Prorated override wins over the org-wide Skip default.
+        var first = h.DuesFor(enrollment.Id)[0];
+        Assert.Equal(enrolledOn, first.DueDate);
+        Assert.Equal(1000m - BillingSchedule.ProrationReduction(1000m, Anchor, enrolledOn, FeeFrequency.Monthly), first.NetAmount);
+    }
+
+    [Fact]
     public async Task PreBatchEnrollment_BillsFromBatchStart_NotEnrollmentDate()
     {
         using var h = new TestHarness();

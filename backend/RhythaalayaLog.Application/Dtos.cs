@@ -15,7 +15,10 @@ public sealed record StudentDto(Guid Id, string StudentNumber, string Name, Date
     string? ParentName, string? Address, string? Phone, string? Email, DateOnly JoinDate, bool IsActive,
     decimal OutstandingBalance, decimal AttendancePercentage, int WonCount, int ParticipatedCount,
     IReadOnlyList<EnrollmentSummaryDto> Enrollments,
-    decimal ConcessionPercent = 0, string? ConcessionReason = null);
+    decimal ConcessionPercent = 0, string? ConcessionReason = null,
+    // True when at least one non-cancelled, non-upcoming due exists: lets the UI say
+    // "No dues" (never billed) instead of "Paid" for a zero balance.
+    bool HasBillableDues = false);
 
 public sealed record StudentAchievementDto(Guid Id, Guid StudentId, string Title, AchievementCategory Category,
     string? Level, DateOnly EventDate, string? Note, string FileName, string ContentType, int FileSizeBytes,

@@ -180,7 +180,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         var enrollments = batches.Select(batch => new Enrollment
         {
             TenantId = tenantId, StudentId = student.Id, BatchId = batch.Id, CourseId = batch.CourseId,
-            EnrolledOn = joinDate
+            EnrolledOn = joinDate, LateBillingPolicy = request.LateBillingPolicy
         }).ToList();
         db.Enrollments.AddRange(enrollments);
         // One SaveChanges, so EF wraps the student and every enrollment in a single transaction.
@@ -454,6 +454,11 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         var studentBalances = await balances.ByStudentAsync(studentIds, ct);
         var enrollmentBalances = await balances.ByEnrollmentAsync(enrollmentIds, ct);
         var achievementCounts = await AchievementCountsAsync(studentIds, ct);
+        // Same "billable" definition as the balance math: cancelled and not-yet-due don't count.
+        var billedStudentIds = (await db.FeeDues.AsNoTracking()
+            .Where(x => studentIds.Contains(x.StudentId)
+                && x.Status != FeeDueStatus.Cancelled && x.Status != FeeDueStatus.Upcoming)
+            .Select(x => x.StudentId).Distinct().ToListAsync(ct)).ToHashSet();
         return students.Select(student =>
         {
             var records = student.Enrollments.SelectMany(x => x.AttendanceRecords).ToList();
@@ -468,7 +473,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             return new StudentDto(student.Id, student.StudentNumber, student.Name, student.DateOfBirth,
                 student.ParentName, student.Address, student.Phone, student.Email, student.JoinDate, student.IsActive,
                 studentBalances.GetValueOrDefault(student.Id), attendancePercentage, wonCount, participatedCount, enrollments,
-                student.ConcessionPercent, student.ConcessionReason);
+                student.ConcessionPercent, student.ConcessionReason, billedStudentIds.Contains(student.Id));
         }).ToList();
     }
 
