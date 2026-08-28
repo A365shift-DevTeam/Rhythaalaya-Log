@@ -7,8 +7,13 @@ build/
 .vite/
 **/.vite/
 *.log
+# Ignore every .env* by default (secrets, machine-local overrides like .env.local),
+# but keep the non-secret, shared build-mode files in version control.
 .env*
 !.env.example
+!frontend/.env.example
+!frontend/.env.development
+!frontend/.env.production
 
 # .NET / Backend
 bin/
