@@ -7,6 +7,7 @@ import { OrgSettings } from '../types';
 import { FinancialSettings } from './FinancialSettings';
 import { DEFAULT_WHATSAPP_TEMPLATE, WHATSAPP_TEMPLATE_VARIABLES } from '../whatsappTemplate';
 import { ApiError, api, Session, TenantUser } from '../api';
+import { confirmAction } from '../lib/confirm';
 
 // Gathers everything a TenantAdmin manages for their academy: their team's accounts/sign-in, org
 // profile, financial settings, the WhatsApp template, and data backup — each its own tab. Only
@@ -178,7 +179,12 @@ function UserManagementSection({ session }: { session: Session }) {
   }
 
   async function toggleActive(user: TenantUser) {
-    if (user.isActive && !confirm(`Deactivate ${user.fullName}? They won't be able to sign in until reactivated.`)) return;
+    if (user.isActive && !(await confirmAction({
+      title: `Deactivate ${user.fullName}?`,
+      text: "They won't be able to sign in until reactivated.",
+      confirmText: 'Deactivate',
+      tone: 'destructive',
+    }))) return;
     setTeamError('');
     setStatusChangingId(user.id);
     try {

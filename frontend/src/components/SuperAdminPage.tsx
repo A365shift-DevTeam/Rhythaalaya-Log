@@ -10,6 +10,7 @@ import { RenewSubscriptionModal } from './modals/RenewSubscriptionModal';
 import { CreatePlanModal } from './modals/CreatePlanModal';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ApiError, api, Plan, Session, Tenant, TenantUser } from '../api';
+import { SimpleSelect } from './ui/select';
 
 type TenantStatus = 'Active' | 'Trial' | 'Suspended';
 
@@ -466,10 +467,17 @@ function AcademiesModule({ tenants, pagedTenants, filteredCount, loading, busyId
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 sm:px-6 py-4 border-t border-[#dbdbdb]/60 dark:border-[#243244]">
               <div className="flex items-center gap-2 text-xs text-[#808080] dark:text-[#94a3b8]">
-                <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}
-                  className="rounded-2xl bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] text-[#212121] dark:text-white px-2.5 py-1.5 text-xs font-semibold outline-none focus:border-[#3fc073]">
-                  <option value={10}>10 per page</option><option value={25}>25 per page</option><option value={50}>50 per page</option>
-                </select>
+                <SimpleSelect
+                  aria-label="Rows per page"
+                  value={String(pageSize)}
+                  onValueChange={(value) => setPageSize(Number(value))}
+                  className="w-auto min-h-0 px-2.5 py-1.5 text-xs font-semibold"
+                  options={[
+                    { value: '10', label: '10 per page' },
+                    { value: '25', label: '25 per page' },
+                    { value: '50', label: '50 per page' },
+                  ]}
+                />
                 <span>Showing {rangeStart} to {rangeEnd} of {filteredCount} academies</span>
               </div>
               <div className="flex items-center gap-1.5">

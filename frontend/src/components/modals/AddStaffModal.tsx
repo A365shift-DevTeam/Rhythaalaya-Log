@@ -3,6 +3,7 @@ import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { Staff } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
+import { confirmAction } from '../../lib/confirm';
 
 interface AddStaffModalProps {
   isOpen: boolean;
@@ -35,7 +36,12 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({ isOpen, onClose, e
 
   const handleArchive = async () => {
     if (!editingStaff || !onArchive) return;
-    if (!confirm(`Archive "${editingStaff.name}"? They'll be hidden from new batch assignments, but existing batches and history are kept.`)) return;
+    if (!(await confirmAction({
+      title: `Archive "${editingStaff.name}"?`,
+      text: "They'll be hidden from new batch assignments, but existing batches and history are kept.",
+      confirmText: 'Archive',
+      tone: 'destructive',
+    }))) return;
     setArchiving(true);
     setError('');
     try {

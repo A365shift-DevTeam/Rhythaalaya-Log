@@ -2,6 +2,7 @@ import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
 import React, { useMemo, useState } from 'react';
 import { Batch, Course, Student } from '../types';
+import { SimpleSelect } from './ui/select';
 
 interface ReportsTabProps {
   students: Student[];
@@ -105,34 +106,30 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({ students, batches, cours
 
           <div className="relative sm:w-56">
             <label htmlFor="report-batch" className="sr-only">Filter by batch</label>
-            <select
+            <SimpleSelect
               id="report-batch"
               value={batchFilter}
-              onChange={(e) => setBatchFilter(e.target.value)}
-              className="w-full min-h-11 pl-3.5 pr-9 py-2 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-xs sm:text-sm font-bold text-[#212121] dark:text-white focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] outline-none appearance-none cursor-pointer truncate transition-all"
-            >
-              <option value="all">All batches</option>
-              {batches.map((batch) => <option key={batch.id} value={batch.id}>{batch.name}</option>)}
-            </select>
-            <JisIcon className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] pointer-events-none text-[18px]">
-              expand_more
-            </JisIcon>
+              onValueChange={setBatchFilter}
+              className="w-full py-2 dark:bg-[#0b1422] text-xs sm:text-sm font-bold focus:ring-4 focus:ring-[#3fc073]/15 truncate transition-all"
+              options={[
+                { value: 'all', label: 'All batches' },
+                ...batches.map((batch) => ({ value: batch.id, label: batch.name })),
+              ]}
+            />
           </div>
 
           <div className="relative sm:w-56">
             <label htmlFor="report-course" className="sr-only">Filter by course</label>
-            <select
+            <SimpleSelect
               id="report-course"
               value={courseFilter}
-              onChange={(e) => setCourseFilter(e.target.value)}
-              className="w-full min-h-11 pl-3.5 pr-9 py-2 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-xs sm:text-sm font-bold text-[#212121] dark:text-white focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] outline-none appearance-none cursor-pointer truncate transition-all"
-            >
-              <option value="all">All courses</option>
-              {courses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}
-            </select>
-            <JisIcon className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] pointer-events-none text-[18px]">
-              expand_more
-            </JisIcon>
+              onValueChange={setCourseFilter}
+              className="w-full py-2 dark:bg-[#0b1422] text-xs sm:text-sm font-bold focus:ring-4 focus:ring-[#3fc073]/15 truncate transition-all"
+              options={[
+                { value: 'all', label: 'All courses' },
+                ...courses.map((course) => ({ value: course.id, label: course.name })),
+              ]}
+            />
           </div>
 
           <div className="flex bg-[#f0f0f0] dark:bg-[#111c2b] p-1 rounded-2xl shrink-0" role="group" aria-label="Filter by status">
@@ -150,21 +147,19 @@ export const ReportsTab: React.FC<ReportsTabProps> = ({ students, batches, cours
 
           <div className="relative sm:w-48">
             <label htmlFor="report-sort" className="sr-only">Sort by</label>
-            <select
+            <SimpleSelect
               id="report-sort"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortKey)}
-              className="w-full min-h-11 pl-3.5 pr-9 py-2 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-xs sm:text-sm font-bold text-[#212121] dark:text-white focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] outline-none appearance-none cursor-pointer truncate transition-all"
-            >
-              <option value="name">Sort: Name</option>
-              <option value="attendance">Sort: Attendance</option>
-              <option value="outstanding">Sort: Outstanding</option>
-              <option value="won">Sort: Won</option>
-              <option value="participated">Sort: Participated</option>
-            </select>
-            <JisIcon className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] pointer-events-none text-[18px]">
-              expand_more
-            </JisIcon>
+              onValueChange={(value) => setSortBy(value as SortKey)}
+              className="w-full py-2 dark:bg-[#0b1422] text-xs sm:text-sm font-bold focus:ring-4 focus:ring-[#3fc073]/15 truncate transition-all"
+              options={[
+                { value: 'name', label: 'Sort: Name' },
+                { value: 'attendance', label: 'Sort: Attendance' },
+                { value: 'outstanding', label: 'Sort: Outstanding' },
+                { value: 'won', label: 'Sort: Won' },
+                { value: 'participated', label: 'Sort: Participated' },
+              ]}
+            />
           </div>
         </div>
       </div>

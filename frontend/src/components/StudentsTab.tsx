@@ -3,6 +3,7 @@ import { JisIcon } from './JisIcon';
 import { MobileSpeedDial } from './MobileSpeedDial';
 import React, { useState } from 'react';
 import { Student } from '../types';
+import { SimpleSelect } from './ui/select';
 
 interface StudentsTabProps {
   students: Student[];
@@ -191,29 +192,23 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
             >
               payments
             </JisIcon>
-            <select
+            <SimpleSelect
               id="student-filter-fee"
               value={filterFeeStatus}
-              onChange={(e) => setFilterFeeStatus(e.target.value as 'All' | 'Paid' | 'Pending')}
-              className={`appearance-none min-h-10 pl-9 pr-8 py-1.5 rounded-full font-sans text-xs font-bold border transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-[#3fc073]/15 ${
+              onValueChange={(value) => setFilterFeeStatus(value as 'All' | 'Paid' | 'Pending')}
+              className={`w-auto min-h-10 pl-9 py-1.5 rounded-full font-sans text-xs font-bold transition-all focus:ring-4 focus:ring-[#3fc073]/15 ${
                 filterFeeStatus === 'Paid'
                   ? 'bg-[#22c55e] border-[#22c55e] text-white'
                   : filterFeeStatus === 'Pending'
                     ? 'bg-[#ef4444] border-[#ef4444] text-white'
                     : 'bg-[#f0f0f0] dark:bg-[#111c2b] border-[#dbdbdb] dark:border-[#243244] text-[#575757] dark:text-[#cbd5e1]'
               }`}
-            >
-              <option value="All">All fees</option>
-              <option value="Paid">Paid</option>
-              <option value="Pending">Pending</option>
-            </select>
-            <JisIcon
-              className={`absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] ${
-                filterFeeStatus !== 'All' ? 'text-white' : 'text-[#9e9e9e]'
-              }`}
-            >
-              expand_more
-            </JisIcon>
+              options={[
+                { value: 'All', label: 'All fees' },
+                { value: 'Paid', label: 'Paid' },
+                { value: 'Pending', label: 'Pending' },
+              ]}
+            />
           </div>
 
           <div className="relative shrink-0">
@@ -225,31 +220,23 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
             >
               school
             </JisIcon>
-            <select
+            <SimpleSelect
               id="student-filter-course"
               value={filterCourse}
-              onChange={(e) => {
-                setFilterCourse(e.target.value);
+              onValueChange={(value) => {
+                setFilterCourse(value);
                 setFilterBatch('All');
               }}
-              className={`appearance-none min-h-10 pl-9 pr-8 py-1.5 rounded-full font-sans text-xs font-bold border transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-[#3fc073]/15 max-w-44 truncate ${
+              className={`w-auto min-h-10 pl-9 py-1.5 rounded-full font-sans text-xs font-bold transition-all focus:ring-4 focus:ring-[#3fc073]/15 max-w-44 truncate ${
                 filterCourse !== 'All'
                   ? 'bg-[#e9f7ee] dark:bg-[#3fc073]/20 border-[#3fc073]/40 text-[#35a160] dark:text-[#6bd194]'
                   : 'bg-[#f0f0f0] dark:bg-[#111c2b] border-[#dbdbdb] dark:border-[#243244] text-[#575757] dark:text-[#cbd5e1]'
               }`}
-            >
-              <option value="All">All courses</option>
-              {courseOptions.map((course) => (
-                <option key={course} value={course}>{course}</option>
-              ))}
-            </select>
-            <JisIcon
-              className={`absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] ${
-                filterCourse !== 'All' ? 'text-[#35a160] dark:text-[#6bd194]' : 'text-[#9e9e9e]'
-              }`}
-            >
-              expand_more
-            </JisIcon>
+              options={[
+                { value: 'All', label: 'All courses' },
+                ...courseOptions.map((course) => ({ value: course, label: course })),
+              ]}
+            />
           </div>
 
           <div className="relative shrink-0">
@@ -261,28 +248,20 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
             >
               groups
             </JisIcon>
-            <select
+            <SimpleSelect
               id="student-filter-batch"
               value={filterBatch}
-              onChange={(e) => setFilterBatch(e.target.value)}
-              className={`appearance-none min-h-10 pl-9 pr-8 py-1.5 rounded-full font-sans text-xs font-bold border transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-[#3fc073]/15 max-w-44 truncate ${
+              onValueChange={setFilterBatch}
+              className={`w-auto min-h-10 pl-9 py-1.5 rounded-full font-sans text-xs font-bold transition-all focus:ring-4 focus:ring-[#3fc073]/15 max-w-44 truncate ${
                 filterBatch !== 'All'
                   ? 'bg-[#e9f7ee] dark:bg-[#3fc073]/20 border-[#3fc073]/40 text-[#35a160] dark:text-[#6bd194]'
                   : 'bg-[#f0f0f0] dark:bg-[#111c2b] border-[#dbdbdb] dark:border-[#243244] text-[#575757] dark:text-[#cbd5e1]'
               }`}
-            >
-              <option value="All">All batches</option>
-              {batchOptions.map((batch) => (
-                <option key={batch} value={batch}>{batch}</option>
-              ))}
-            </select>
-            <JisIcon
-              className={`absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] ${
-                filterBatch !== 'All' ? 'text-[#35a160] dark:text-[#6bd194]' : 'text-[#9e9e9e]'
-              }`}
-            >
-              expand_more
-            </JisIcon>
+              options={[
+                { value: 'All', label: 'All batches' },
+                ...batchOptions.map((batch) => ({ value: batch, label: batch })),
+              ]}
+            />
           </div>
 
           <div className="relative shrink-0">
@@ -290,18 +269,16 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
             <JisIcon className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] text-[#9e9e9e]">
               sort
             </JisIcon>
-            <select
+            <SimpleSelect
               id="student-sort"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'name' | 'attendance')}
-              className="appearance-none min-h-10 pl-9 pr-8 py-1.5 rounded-full font-sans text-xs font-bold border bg-[#f0f0f0] dark:bg-[#111c2b] border-[#dbdbdb] dark:border-[#243244] text-[#575757] dark:text-[#cbd5e1] transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-[#3fc073]/15"
-            >
-              <option value="name">By name</option>
-              <option value="attendance">By attendance</option>
-            </select>
-            <JisIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] text-[#9e9e9e]">
-              expand_more
-            </JisIcon>
+              onValueChange={(value) => setSortBy(value as 'name' | 'attendance')}
+              className="w-auto min-h-10 pl-9 py-1.5 rounded-full font-sans text-xs font-bold bg-[#f0f0f0] dark:bg-[#111c2b] border-[#dbdbdb] dark:border-[#243244] text-[#575757] dark:text-[#cbd5e1] transition-all focus:ring-4 focus:ring-[#3fc073]/15"
+              options={[
+                { value: 'name', label: 'By name' },
+                { value: 'attendance', label: 'By attendance' },
+              ]}
+            />
           </div>
 
           {activeFilterCount > 0 && (

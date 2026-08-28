@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { Course, FeeFrequency, FeeStructure, FEE_FREQUENCY_LABELS } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
 import { nextMonthlyDueDate, parseIsoDate, todayIsoDate as todayIso } from '../../lib/schedule';
+import { confirmAction } from '../../lib/confirm';
+import { SimpleSelect } from '../ui/select';
 
 const DAYS_OF_MONTH = Array.from({ length: 31 }, (_, i) => i + 1);
 
@@ -89,7 +91,12 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
 
   const handleArchive = async () => {
     if (!editingCourse || !onArchive) return;
-    if (!confirm(`Archive "${editingCourse.name}"? It will be marked inactive and hidden from new batch/enrollment options, but existing history is kept.`)) return;
+    if (!(await confirmAction({
+      title: `Archive "${editingCourse.name}"?`,
+      text: 'It will be marked inactive and hidden from new batch/enrollment options, but existing history is kept.',
+      confirmText: 'Archive',
+      tone: 'destructive',
+    }))) return;
     setArchiving(true);
     setError('');
     try {
@@ -234,19 +241,23 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                     </div>
                     <div>
                       <label htmlFor="course-fee-frequency" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">Frequency</label>
-                      <select id="course-fee-frequency" value={feeFrequency} onChange={(event) => setFeeFrequency(event.target.value as FeeFrequency)}
-                        className="w-full min-h-11 px-3.5 bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm font-semibold text-[#212121] dark:text-white outline-none focus:border-[#3fc073]">
-                        {(Object.keys(FEE_FREQUENCY_LABELS) as FeeFrequency[]).map((f) => <option key={f} value={f}>{FEE_FREQUENCY_LABELS[f]}</option>)}
-                      </select>
+                      <SimpleSelect
+                        id="course-fee-frequency"
+                        value={feeFrequency}
+                        onValueChange={(value) => setFeeFrequency(value as FeeFrequency)}
+                        options={(Object.keys(FEE_FREQUENCY_LABELS) as FeeFrequency[]).map((f) => ({ value: f, label: FEE_FREQUENCY_LABELS[f] }))}
+                      />
                     </div>
                   </div>
                   {feeFrequency === 'Monthly' ? (
                     <div>
                       <label htmlFor="course-fee-due-day" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">Due day of month</label>
-                      <select id="course-fee-due-day" value={feeDueDay} onChange={(event) => setFeeDueDay(Number(event.target.value))}
-                        className="w-full min-h-11 px-3.5 bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm font-semibold text-[#212121] dark:text-white outline-none focus:border-[#3fc073]">
-                        {DAYS_OF_MONTH.map((d) => <option key={d} value={d}>{ordinal(d)}</option>)}
-                      </select>
+                      <SimpleSelect
+                        id="course-fee-due-day"
+                        value={String(feeDueDay)}
+                        onValueChange={(value) => setFeeDueDay(Number(value))}
+                        options={DAYS_OF_MONTH.map((d) => ({ value: String(d), label: ordinal(d) }))}
+                      />
                       <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8]">
                         Due on the {ordinal(feeDueDay)} of every month · first bill {parseIsoDate(resolvedFeeDate).toLocaleDateString('en-IN')}.
                       </p>
@@ -337,17 +348,23 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                   <div className="grid grid-cols-2 gap-2">
                     <input type="number" min="1" step="1" value={feeAmount} onChange={(event) => setFeeAmount(event.target.value)} placeholder="Amount ₹"
                       className="min-h-9 px-2 rounded-xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] text-xs text-[#212121] dark:text-white" />
-                    <select value={feeFrequency} onChange={(event) => setFeeFrequency(event.target.value as FeeFrequency)}
-                      className="min-h-9 px-2 rounded-xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] text-xs text-[#212121] dark:text-white">
-                      {(Object.keys(FEE_FREQUENCY_LABELS) as FeeFrequency[]).map((f) => <option key={f} value={f}>{FEE_FREQUENCY_LABELS[f]}</option>)}
-                    </select>
+                    <SimpleSelect
+                      aria-label="Fee frequency"
+                      value={feeFrequency}
+                      onValueChange={(value) => setFeeFrequency(value as FeeFrequency)}
+                      className="min-h-9 px-2 rounded-xl bg-white dark:bg-[#0b1422] text-xs"
+                      options={(Object.keys(FEE_FREQUENCY_LABELS) as FeeFrequency[]).map((f) => ({ value: f, label: FEE_FREQUENCY_LABELS[f] }))}
+                    />
                   </div>
                   {feeFrequency === 'Monthly' ? (
                     <div>
-                      <select value={feeDueDay} onChange={(event) => setFeeDueDay(Number(event.target.value))} aria-label="Due day of month"
-                        className="w-full min-h-9 px-2 rounded-xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] text-xs text-[#212121] dark:text-white">
-                        {DAYS_OF_MONTH.map((d) => <option key={d} value={d}>Due on the {ordinal(d)} of every month</option>)}
-                      </select>
+                      <SimpleSelect
+                        aria-label="Due day of month"
+                        value={String(feeDueDay)}
+                        onValueChange={(value) => setFeeDueDay(Number(value))}
+                        className="min-h-9 px-2 rounded-xl bg-white dark:bg-[#0b1422] text-xs"
+                        options={DAYS_OF_MONTH.map((d) => ({ value: String(d), label: `Due on the ${ordinal(d)} of every month` }))}
+                      />
                       <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8]">
                         New price starts {parseIsoDate(resolvedFeeDate).toLocaleDateString('en-IN')}.
                       </p>

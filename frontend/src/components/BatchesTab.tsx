@@ -3,6 +3,7 @@ import { JisIcon } from './JisIcon';
 import { MobileSpeedDial } from './MobileSpeedDial';
 import React, { useMemo, useState } from 'react';
 import { Batch, Course, Staff, WEEKDAY_SHORT } from '../types';
+import { SimpleSelect } from './ui/select';
 
 interface BatchesTabProps {
   batches: Batch[];
@@ -233,17 +234,16 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
                 )}
               </div>
 
-              <select
+              <SimpleSelect
                 value={courseFilter}
-                onChange={(event) => setCourseFilter(event.target.value)}
+                onValueChange={setCourseFilter}
                 aria-label="Filter by course"
-                className="rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-[#f0f0f0] dark:bg-[#0b1422] px-3.5 py-2.5 min-h-11 text-xs font-semibold text-[#212121] dark:text-[#e2e8f0] outline-none focus:border-[#3fc073] cursor-pointer"
-              >
-                <option value="All">All courses</option>
-                {activeCourses.map((course) => (
-                  <option key={course.id} value={course.name}>{course.name}</option>
-                ))}
-              </select>
+                className="w-auto shrink-0 text-xs dark:bg-[#0b1422]"
+                options={[
+                  { value: 'All', label: 'All courses' },
+                  ...activeCourses.map((course) => ({ value: course.name, label: course.name })),
+                ]}
+              />
             </div>
           </div>
         </div>

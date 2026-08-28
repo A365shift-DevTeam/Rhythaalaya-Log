@@ -2,6 +2,7 @@ import { Button } from '../ui/button';
 import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { useDialogLifecycle } from './useDialogLifecycle';
+import { SimpleSelect } from '../ui/select';
 
 interface AddOrgAdminModalProps {
   isOpen: boolean;
@@ -70,11 +71,15 @@ export const AddOrgAdminModal: React.FC<AddOrgAdminModalProps> = ({ isOpen, onCl
             </div>
             <div>
               <label htmlFor="org-admin-role" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Role</label>
-              <select id="org-admin-role" value={role} onChange={(event) => setRole(event.target.value as 'TenantAdmin' | 'Staff')}
-                className="settings-input">
-                <option value="TenantAdmin">Academy Admin — full control</option>
-                <option value="Staff">Staff — day-to-day work</option>
-              </select>
+              <SimpleSelect
+                id="org-admin-role"
+                value={role}
+                onValueChange={(value) => setRole(value as 'TenantAdmin' | 'Staff')}
+                options={[
+                  { value: 'TenantAdmin', label: 'Academy Admin — full control' },
+                  { value: 'Staff', label: 'Staff — day-to-day work' },
+                ]}
+              />
             </div>
             <div>
               <label htmlFor="org-admin-password" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Temporary password</label>

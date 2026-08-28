@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { Batch, Course, Staff, WEEKDAY_LABELS, WEEKDAY_SHORT } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
 import { todayIsoDate } from '../../lib/schedule';
+import { confirmAction } from '../../lib/confirm';
+import { SimpleSelect } from '../ui/select';
 
 interface AddBatchModalProps {
   isOpen: boolean;
@@ -56,7 +58,12 @@ export const AddBatchModal: React.FC<AddBatchModalProps> = ({ isOpen, onClose, c
 
   const handleArchive = async () => {
     if (!editingBatch || !onArchive) return;
-    if (!confirm(`Archive "${editingBatch.name}"? It will stop appearing for new enrollments and attendance, but existing history is kept.`)) return;
+    if (!(await confirmAction({
+      title: `Archive "${editingBatch.name}"?`,
+      text: 'It will stop appearing for new enrollments and attendance, but existing history is kept.',
+      confirmText: 'Archive',
+      tone: 'destructive',
+    }))) return;
     setArchiving(true);
     setError('');
     try {
@@ -119,17 +126,23 @@ export const AddBatchModal: React.FC<AddBatchModalProps> = ({ isOpen, onClose, c
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="batch-course" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">Course *</label>
-                <select id="batch-course" required value={courseId} onChange={(event) => setCourseId(event.target.value)}
-                  className="w-full min-h-11 px-3.5 bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm font-semibold text-[#212121] dark:text-white outline-none focus:border-[#3fc073]">
-                  {activeCourses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}
-                </select>
+                <SimpleSelect
+                  id="batch-course"
+                  value={courseId}
+                  onValueChange={setCourseId}
+                  placeholder="Select course"
+                  options={activeCourses.map((course) => ({ value: course.id, label: course.name }))}
+                />
               </div>
               <div>
                 <label htmlFor="batch-staff" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">Staff / mentor *</label>
-                <select id="batch-staff" required value={staffId} onChange={(event) => setStaffId(event.target.value)}
-                  className="w-full min-h-11 px-3.5 bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm font-semibold text-[#212121] dark:text-white outline-none focus:border-[#3fc073]">
-                  {activeStaff.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}
-                </select>
+                <SimpleSelect
+                  id="batch-staff"
+                  value={staffId}
+                  onValueChange={setStaffId}
+                  placeholder="Select staff / mentor"
+                  options={activeStaff.map((member) => ({ value: member.id, label: member.name }))}
+                />
               </div>
             </div>
 

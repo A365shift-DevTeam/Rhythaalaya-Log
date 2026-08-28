@@ -3,6 +3,7 @@ import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { Plan, Tenant } from '../../api';
 import { useDialogLifecycle } from './useDialogLifecycle';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 function oneYearFromNow(): string {
   const date = new Date();
@@ -39,6 +40,7 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
+    if (!planId) { setError('Choose a plan.'); return; }
     try {
       await onRenew(planId, new Date(endsAt + 'T23:59:59Z').toISOString());
       onClose();
@@ -66,12 +68,16 @@ export const RenewSubscriptionModal: React.FC<RenewSubscriptionModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4 font-sans text-sm">
           <div>
             <label htmlFor="renew-plan" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Subscription plan</label>
-            <select id="renew-plan" required value={planId} onChange={(event) => setPlanId(event.target.value)} className="settings-input">
-              <option value="" disabled>Choose a plan</option>
-              {plans.map((plan) => (
-                <option key={plan.id} value={plan.id}>{plan.name} — ₹{plan.monthlyPrice}/mo, up to {plan.maxStudents} students</option>
-              ))}
-            </select>
+            <Select value={planId} onValueChange={setPlanId}>
+              <SelectTrigger id="renew-plan">
+                <SelectValue placeholder="Choose a plan" />
+              </SelectTrigger>
+              <SelectContent>
+                {plans.map((plan) => (
+                  <SelectItem key={plan.id} value={plan.id}>{plan.name} — ₹{plan.monthlyPrice}/mo, up to {plan.maxStudents} students</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label htmlFor="renew-ends-at" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">New access valid until</label>

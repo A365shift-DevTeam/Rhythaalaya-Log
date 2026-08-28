@@ -3,6 +3,7 @@ import { JisIcon } from '../JisIcon';
 import React, { useEffect, useRef, useState } from 'react';
 import { Plan } from '../../api';
 import { useDialogLifecycle } from './useDialogLifecycle';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const WIZARD_STEPS = ['Academy', 'Administrator', 'Review'];
 const LAST_STEP = WIZARD_STEPS.length - 1;
@@ -92,6 +93,7 @@ export const CreateAcademyModal: React.FC<CreateAcademyModalProps> = ({ isOpen, 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (step < LAST_STEP) return;
+    if (!planId) { setError('Choose a plan.'); goToStep(0); return; }
     setSubmitting(true);
     setError('');
     try {
@@ -188,15 +190,18 @@ export const CreateAcademyModal: React.FC<CreateAcademyModalProps> = ({ isOpen, 
                     <label htmlFor="academy-plan" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">
                       Subscription plan <span className="text-[#ef4444]" aria-hidden="true">*</span>
                     </label>
-                    <select id="academy-plan" required value={planId} onChange={(event) => setPlanId(event.target.value)}
-                      className="settings-input">
-                      <option value="" disabled>Choose a plan</option>
-                      {plans.map((plan) => (
-                        <option key={plan.id} value={plan.id}>
-                          {plan.name} — ₹{plan.monthlyPrice}/mo, up to {plan.maxStudents} students
-                        </option>
-                      ))}
-                    </select>
+                    <Select value={planId} onValueChange={setPlanId}>
+                      <SelectTrigger id="academy-plan">
+                        <SelectValue placeholder="Choose a plan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plans.map((plan) => (
+                          <SelectItem key={plan.id} value={plan.id}>
+                            {plan.name} — ₹{plan.monthlyPrice}/mo, up to {plan.maxStudents} students
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
                 <div>

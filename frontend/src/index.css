@@ -607,3 +607,117 @@
   --sidebar-border: #243244;
   --sidebar-ring: #4d999d;
 }
+
+/* ------------------------------------------------------------------ */
+/* SweetAlert2 — themed to the Ambot365 design system (see lib/confirm.ts) */
+/* ------------------------------------------------------------------ */
+.swal2-container {
+  z-index: 10000;
+}
+
+.swal2-popup.swal-theme-popup {
+  width: 26rem;
+  max-width: calc(100vw - 2rem);
+  padding: 1.75rem 1.5rem 1.5rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: rgba(0, 0, 0, 0.18) 0 20px 48px -12px, rgba(0, 0, 0, 0.06) 0 4px 12px;
+  font-family: Poppins, ui-sans-serif, system-ui, sans-serif;
+}
+
+.swal2-popup.swal-theme-light {
+  background-color: #ffffff;
+  color: #212121;
+}
+
+.swal2-popup.swal-theme-dark {
+  background-color: #0b1422;
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: rgba(0, 0, 0, 0.5) 0 20px 48px -12px;
+  color: #e2e8f0;
+}
+
+.swal-theme-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  padding: 0;
+  margin: 0.25rem 0 0;
+  color: inherit;
+}
+
+.swal-theme-body {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 0.625rem 0 0;
+  color: #6b6b6b;
+}
+
+.swal-theme-dark .swal-theme-body {
+  color: #94a3b8;
+}
+
+.swal-theme-actions {
+  margin: 1.5rem 0 0;
+  gap: 0.625rem;
+  flex-wrap: nowrap;
+}
+
+.swal-theme-confirm,
+.swal-theme-cancel {
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  border-radius: var(--radius-lg);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: filter 0.15s ease, transform 0.12s ease, background-color 0.15s ease;
+}
+
+.swal-theme-confirm {
+  background-color: #4d999d;
+  background-image: linear-gradient(to right, #4d999d 0%, #64a85a 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px 0 rgba(77, 153, 157, 0.3);
+}
+
+.swal-theme-confirm:hover {
+  filter: brightness(1.06);
+}
+
+.swal-theme-confirm:active {
+  transform: scale(0.98);
+}
+
+.swal-theme-confirm-danger {
+  background-color: #ef4444;
+  background-image: linear-gradient(to right, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.3);
+}
+
+.swal-theme-cancel {
+  background-color: #f0f0f0;
+  color: #212121;
+}
+
+.swal-theme-cancel:hover {
+  background-color: #dbdbdb;
+}
+
+.swal-theme-dark .swal-theme-cancel {
+  background-color: #111c2b;
+  color: #e2e8f0;
+}
+
+.swal-theme-dark .swal-theme-cancel:hover {
+  background-color: #172435;
+}
+
+.swal-theme-confirm:focus-visible,
+.swal-theme-cancel:focus-visible {
+  outline: 3px solid rgba(77, 153, 157, 0.55);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+

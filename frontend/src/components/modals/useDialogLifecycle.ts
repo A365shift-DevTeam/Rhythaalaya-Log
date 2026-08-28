@@ -64,6 +64,15 @@ export function useDialogLifecycle(isOpen: boolean, onClose: () => void) {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        // A transient overlay opened from inside the dialog — a Radix popper (Select
+        // dropdown, popover) or a SweetAlert2 confirm — handles its own Escape to
+        // dismiss just itself. This listener is registered before theirs, so without
+        // this guard the first Escape would tear down the whole dialog instead.
+        if (
+          document.querySelector('[data-radix-popper-content-wrapper], .swal2-container')
+        ) {
+          return;
+        }
         // Only the top-most open dialog handles Escape
         if (activeDialogCloseHandlers[activeDialogCloseHandlers.length - 1] === closeHandler) {
           event.preventDefault();

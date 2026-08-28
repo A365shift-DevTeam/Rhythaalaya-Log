@@ -3,6 +3,8 @@ import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { Transaction } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
+import { confirmAction } from '../../lib/confirm';
+import { SimpleSelect } from '../ui/select';
 
 export interface TransactionFields {
   title: string;
@@ -75,7 +77,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const handleDelete = async () => {
     if (!editingTransaction || !onDelete) return;
-    if (!confirm(`Delete "${editingTransaction.title}"? This can't be undone.`)) return;
+    if (!(await confirmAction({
+      title: `Delete "${editingTransaction.title}"?`,
+      text: "This can't be undone.",
+      confirmText: 'Delete',
+      tone: 'destructive',
+    }))) return;
     setDeleting(true);
     setError('');
     try {
@@ -123,15 +130,15 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               <label htmlFor="transaction-type" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">
                 Entry type
               </label>
-              <select
+              <SimpleSelect
                 id="transaction-type"
                 value={type}
-                onChange={(e) => setType(e.target.value as 'income' | 'expense')}
-                className="w-full min-h-11 px-3.5 bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm font-semibold text-[#212121] dark:text-white outline-none focus:border-[#3fc073]"
-              >
-                <option value="income">Income (+)</option>
-                <option value="expense">Expense (-)</option>
-              </select>
+                onValueChange={(value) => setType(value as 'income' | 'expense')}
+                options={[
+                  { value: 'income', label: 'Income (+)' },
+                  { value: 'expense', label: 'Expense (-)' },
+                ]}
+              />
             </div>
 
             <div>
@@ -156,14 +163,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <label htmlFor="transaction-category" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">
               Category
             </label>
-            <select
+            <SimpleSelect
               id="transaction-category"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full min-h-11 px-3.5 bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm font-semibold text-[#212121] dark:text-white outline-none focus:border-[#3fc073]"
-            >
-              {availableCategories.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
+              onValueChange={setCategory}
+              options={availableCategories.map((item) => ({ value: item, label: item }))}
+            />
           </div>
 
           {error && <div role="alert" className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-[#ef4444] text-xs font-bold">{error}</div>}

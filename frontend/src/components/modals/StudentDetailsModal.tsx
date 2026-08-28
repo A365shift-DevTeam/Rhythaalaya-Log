@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { Achievement, FeeDue, FeePayment, PAYMENT_METHOD_LABELS, Student } from '../../types';
 import { api } from '../../api';
 import { useDialogLifecycle } from './useDialogLifecycle';
+import { confirmAction } from '../../lib/confirm';
 import { AddAchievementModal } from './AddAchievementModal';
 
 const ACHIEVEMENT_ICONS: Record<Achievement['category'], string> = {
@@ -54,7 +55,12 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   };
 
   const handleDeleteCertificate = async (achievement: Achievement) => {
-    if (!student || !confirm(`Remove "${achievement.title}"?`)) return;
+    if (!student) return;
+    if (!(await confirmAction({
+      title: `Remove "${achievement.title}"?`,
+      confirmText: 'Remove',
+      tone: 'destructive',
+    }))) return;
     try {
       await api.deleteAchievement(token, student.id, achievement.id);
       setAchievements((prev) => prev.filter((item) => item.id !== achievement.id));
@@ -225,8 +231,13 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
             className="btn-brand min-h-11 py-2 px-3 text-xs font-bold rounded-2xl flex items-center justify-center gap-1.5">
             <JisIcon className="text-[18px]">receipt_long</JisIcon><span>Record fee payment</span>
           </Button>
-          <Button onClick={() => {
-              if (confirm(`Are you sure you want to remove ${student.name} from the academy?`)) { onDeleteStudent(student.id); onClose(); }
+          <Button onClick={async () => {
+              if (await confirmAction({
+                title: `Remove ${student.name}?`,
+                text: 'This removes the student from the academy.',
+                confirmText: 'Remove',
+                tone: 'destructive',
+              })) { onDeleteStudent(student.id); onClose(); }
             }}
             className="min-h-11 py-2 px-3 text-[#ef4444] hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold rounded-2xl flex items-center justify-center gap-1 sm:col-span-2 transition-colors">
             <JisIcon className="text-[18px]">delete</JisIcon><span>Remove</span>

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Student } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
 import { renderWhatsAppTemplate, whatsAppValuesForStudent } from '../../whatsappTemplate';
+import { toast } from '../../lib/toast';
 
 interface WhatsAppModalProps {
   isOpen: boolean;
@@ -45,7 +46,7 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
     if (!isBulk && student?.phone) {
       window.open(`https://wa.me/${student.phone.replace(/[^0-9]/g, '')}?text=${encodedMsg}`, '_blank');
     } else {
-      alert(`WhatsApp reminder broadcast simulated for ${targetList.length} students!`);
+      toast.success(`WhatsApp reminder broadcast simulated for ${targetList.length} students!`);
     }
     onClose();
   };

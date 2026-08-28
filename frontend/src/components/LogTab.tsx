@@ -1,5 +1,7 @@
 import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { toast } from '../lib/toast';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Student, Batch, AttendanceStatus } from '../types';
 import { api } from '../api';
@@ -30,7 +32,6 @@ type RollCallStatus = Extract<AttendanceStatus, 'P' | 'A'>;
 export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent }) => {
   const [selectedDate, setSelectedDate] = useState<string>(todayIsoDate());
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [attendance, setAttendance] = useState<Record<string, RollCallStatus>>({});
   const [loading, setLoading] = useState(false);
@@ -65,7 +66,7 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
       });
       setRoster(nextRoster);
       setAttendance(nextAttendance);
-    }).catch(error => setToastMessage(error instanceof Error ? error.message : 'Unable to load attendance.'))
+    }).catch(error => toast.error(error instanceof Error ? error.message : 'Unable to load attendance.'))
       .finally(() => setLoading(false));
   }, [token, selectedDate, selectedBatchId]);
 
@@ -80,16 +81,14 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
     const next: Record<string, RollCallStatus> = {};
     activeRoster.forEach((entry) => { next[entry.enrollmentId] = 'P'; });
     setAttendance(next);
-    setToastMessage('Marked all students as Present!');
-    setTimeout(() => setToastMessage(null), 2500);
+    toast.success('Marked all students as Present!');
   };
 
   const markAllAbsent = () => {
     const next: Record<string, RollCallStatus> = {};
     activeRoster.forEach((entry) => { next[entry.enrollmentId] = 'A'; });
     setAttendance(next);
-    setToastMessage('Marked all students as Absent.');
-    setTimeout(() => setToastMessage(null), 2500);
+    toast.success('Marked all students as Absent.');
   };
 
   const presentCount = Object.values(attendance).filter((s) => s === 'P').length;
@@ -143,23 +142,16 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
     const entries = activeRoster.map((entry) => ({ enrollmentId: entry.enrollmentId, status: attendance[entry.enrollmentId] || 'P' }));
     try {
       await api.submitAttendance(token, selectedDate, selectedBatchId, entries);
-      setToastMessage('Attendance saved successfully!');
+      toast.success('Attendance saved successfully!');
     } catch (error) {
-      setToastMessage(error instanceof Error ? error.message : 'Unable to save attendance.');
+      toast.error(error instanceof Error ? error.message : 'Unable to save attendance.');
     } finally {
       setSaving(false);
     }
-    setTimeout(() => setToastMessage(null), 3500);
   };
 
   return (
     <div className="space-y-4 md:space-y-6 pb-24 md:pb-12 relative">
-      {toastMessage && (
-        <div className="fixed top-16 md:top-20 right-3 sm:right-6 md:right-8 z-50 bg-[#212121]/95 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 border border-[#333333] backdrop-blur-xl animate-bounce">
-          <JisIcon className="text-[#22c55e] text-[20px]">check_circle</JisIcon>
-          <span className="font-sans text-xs font-bold">{toastMessage}</span>
-        </div>
-      )}
 
       {/* Top Header Card */}
       <div className="premium-card p-4 sm:p-5 flex flex-col gap-4">
@@ -236,25 +228,25 @@ export const LogTab: React.FC<LogTabProps> = ({ batches, token, onOpenAddStudent
             <JisIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] text-[20px] pointer-events-none">
               groups
             </JisIcon>
-            <select
+            <Select
               value={selectedBatchId}
-              onChange={(e) => setSelectedBatchId(e.target.value)}
-              aria-label="Select attendance batch"
-              className="w-full min-h-11 pl-10 pr-9 py-2 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-xs sm:text-sm font-bold text-[#212121] dark:text-white focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073] outline-none appearance-none cursor-pointer truncate transition-all"
+              onValueChange={setSelectedBatchId}
+              disabled={scheduledBatches.length === 0}
             >
-              {scheduledBatches.length === 0 ? (
-                <option value="">No class on {weekdayLabelFor(selectedDate)}</option>
-              ) : (
-                scheduledBatches.map((b) => (
-                  <option key={b.id} value={b.id}>
+              <SelectTrigger
+                aria-label="Select attendance batch"
+                className="w-full pl-10 py-2 dark:bg-[#0b1422] text-xs sm:text-sm font-bold focus:ring-4 focus:ring-[#3fc073]/15 truncate transition-all"
+              >
+                <SelectValue placeholder={`No class on ${weekdayLabelFor(selectedDate)}`} />
+              </SelectTrigger>
+              <SelectContent>
+                {scheduledBatches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
                     {b.name} ({b.enrolledCount} enrolled)
-                  </option>
-                ))
-              )}
-            </select>
-            <JisIcon className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] pointer-events-none text-[20px]">
-              expand_more
-            </JisIcon>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Quick Action Buttons */}

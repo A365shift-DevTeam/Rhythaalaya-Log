@@ -45,6 +45,7 @@ import { AddStaffModal } from './components/modals/AddStaffModal';
 import { StudentDetailsModal } from './components/modals/StudentDetailsModal';
 import { FeeReceiptModal } from './components/modals/FeeReceiptModal';
 import { NotificationCenter } from './components/NotificationCenter';
+import { Toaster } from './components/ui/toaster';
 
 const HomeTab = React.lazy(() =>
   import('./components/HomeTab').then((module) => ({ default: module.HomeTab }))
@@ -61,10 +62,21 @@ export default function App() {
   useEffect(() => { applyDarkMode(darkMode); }, [darkMode]);
   const toggleDarkMode = () => setDarkMode((current) => !current);
 
-  if (!session) return <LoginPage onLogin={login} />;
-  if (session.user.role === 'SuperAdmin')
-    return <SuperAdminPage session={session} onLogout={logout} darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />;
-  return <TenantApplication session={session} onLogout={logout} darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />;
+  let content: React.ReactNode;
+  if (!session) {
+    content = <LoginPage onLogin={login} />;
+  } else if (session.user.role === 'SuperAdmin') {
+    content = <SuperAdminPage session={session} onLogout={logout} darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />;
+  } else {
+    content = <TenantApplication session={session} onLogout={logout} darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />;
+  }
+
+  return (
+    <>
+      {content}
+      <Toaster />
+    </>
+  );
 }
 
 function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
