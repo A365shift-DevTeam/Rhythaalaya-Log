@@ -270,6 +270,39 @@ public sealed class FeeDueGeneratorTests
     }
 
     [Fact]
+    public async Task PreBatchEnrollment_BillsFromBatchStart_NotEnrollmentDate()
+    {
+        using var h = new TestHarness();
+        h.AddStructure(1000m, FeeFrequency.Monthly, Anchor);
+        var batchStart = BillingSchedule.Step(Anchor, FeeFrequency.Monthly, 1);
+        h.Batch.StartDate = batchStart;
+        h.Db.SaveChanges();
+        var enrollment = h.Enroll(Anchor); // pre-registered a month before the batch begins
+
+        await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
+
+        var dues = h.DuesFor(enrollment.Id);
+        Assert.DoesNotContain(dues, x => x.DueDate == Anchor); // no fee before classes start
+        Assert.Equal(batchStart, dues[0].DueDate);
+    }
+
+    [Fact]
+    public async Task PreBatchEnrollment_MidPeriodBatchStart_FollowsLateEnrollmentPolicy()
+    {
+        using var h = new TestHarness(LateEnrollmentBillingPolicy.Skip);
+        h.AddStructure(1000m, FeeFrequency.Monthly, Anchor);
+        h.Batch.StartDate = Anchor.AddDays(10); // batch begins mid-period
+        h.Db.SaveChanges();
+        var enrollment = h.Enroll(Anchor);
+
+        await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
+
+        var dues = h.DuesFor(enrollment.Id);
+        Assert.DoesNotContain(dues, x => x.DueDate == Anchor);
+        Assert.Equal(BillingSchedule.Step(Anchor, FeeFrequency.Monthly, 1), dues[0].DueDate);
+    }
+
+    [Fact]
     public async Task ArrivedUpcomingDues_FlipToPendingOrOverdue()
     {
         using var h = new TestHarness();

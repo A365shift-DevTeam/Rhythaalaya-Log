@@ -40,6 +40,24 @@ export const nextMonthlyDueDate = (day: number, from: Date = new Date()): string
   return toIsoDate(new Date(year, month, dueDay));
 };
 
+/**
+ * The most recent date on or before `from` that falls on `day` of the month — the billing anchor
+ * for a NEW course's "due on day N every month" plan, so the current period is billable and each
+ * student's first due follows their own join/batch start. Days 29–31 clamp to shorter months.
+ */
+export const lastMonthlyDueDate = (day: number, from: Date = new Date()): string => {
+  const lastDayOf = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  let year = from.getFullYear();
+  let month = from.getMonth();
+  let dueDay = Math.min(day, lastDayOf(year, month));
+  if (dueDay > from.getDate()) {
+    month -= 1;
+    if (month < 0) { month = 11; year -= 1; }
+    dueDay = Math.min(day, lastDayOf(year, month));
+  }
+  return toIsoDate(new Date(year, month, dueDay));
+};
+
 export const addDaysToIso = (iso: string, delta: number): string => {
   const date = parseIsoDate(iso);
   date.setDate(date.getDate() + delta);
