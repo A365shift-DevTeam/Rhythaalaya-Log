@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { Plan, Tenant, TenantUser } from '../../api';
 import { formatRelativeTime } from '../../lib/schedule';
 import { useDialogLifecycle } from './useDialogLifecycle';
+import { PasswordInput } from '../ui/password-input';
 
 interface AcademyUsersModalProps {
   isOpen: boolean;
@@ -121,7 +122,7 @@ export const AcademyUsersModal: React.FC<AcademyUsersModalProps> = ({
                           </div>
                           <div>
                             <label htmlFor={`edit-password-${user.id}`} className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">New password</label>
-                            <input id={`edit-password-${user.id}`} name="newPassword" type="password" minLength={8} placeholder="Leave blank to keep current" className="settings-input" />
+                            <PasswordInput id={`edit-password-${user.id}`} name="newPassword" minLength={8} placeholder="Leave blank to keep current" className="settings-input" />
                           </div>
                         </div>
                         {editError && <div role="alert" className="p-2.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-[#ef4444] text-xs font-bold">{editError}</div>}

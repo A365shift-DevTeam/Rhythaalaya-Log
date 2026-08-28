@@ -9,7 +9,6 @@ import {
   IconShieldCheck as ShieldCheck,
   IconLock as Lock,
   IconSchool as GraduationCap,
-  IconCalendarCheck as CalendarCheck,
   IconArrowLeft as ArrowLeft
 } from '@tabler/icons-react';
 import { ApiError, api, Session } from '../api';
@@ -196,15 +195,13 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     <div className="min-h-screen relative flex bg-[#fbfdfc] overflow-hidden" style={{ fontFamily: 'DM Sans, sans-serif' }}>
       
       {/* Top Left Branding */}
-      <div className="absolute top-8 left-8 z-20 flex items-center gap-2.5">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#152c5b] to-[#1e3f80] flex items-center justify-center text-white font-bold text-lg shadow-md shadow-[#152c5b]/15">
-            B
-          </div>
-          <span className="font-bold text-[#152c5b] text-2xl tracking-tight" style={{ fontFamily: '"Manrope", sans-serif' }}>
-            Batch<span className="text-[#58977c]">ly</span>
-          </span>
+      <div className="absolute top-8 left-8 z-20 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-md shadow-[#152c5b]/10 border border-[#152c5b]/10 p-1 overflow-hidden">
+          <img src="/Batchly%20logo.png" alt="Batchly Logo" className="w-full h-full object-contain" />
         </div>
+        <span className="font-bold text-[#152c5b] text-2xl tracking-tight" style={{ fontFamily: '"Manrope", sans-serif' }}>
+          Batch<span className="text-[#58977c]">ly</span>
+        </span>
       </div>
 
       {/* Left Side Hero & Animation */}
@@ -227,8 +224,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         <h1 className="text-[44px] xl:text-[52px] text-[#152c5b] whitespace-nowrap mb-4 tracking-tight">
           <span className="font-bold" style={{ fontFamily: '"Manrope", sans-serif' }}>
             Batch<span className="text-[#58977c]">ly</span>
-          </span>{' '}
-          <span className="font-normal text-[#152c5b]">Hub</span>
+          </span>
         </h1>
 
         <div className="flex flex-col space-y-2.5 text-[#152c5b] pl-[84px] xl:pl-[94px]">
@@ -298,9 +294,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 200, delay: 0.1 }}
-              className="w-[72px] h-[72px] bg-white rounded-2xl shadow-xl border border-[#58977c]/20 flex items-center justify-center relative z-10 text-[#58977c]"
+              className="w-[72px] h-[72px] bg-white rounded-2xl shadow-xl border border-[#58977c]/20 flex items-center justify-center relative z-10 p-2 overflow-hidden"
             >
-              <CalendarCheck size={32} />
+              <img src="/Batchly%20logo.png" alt="Batchly Logo" className="w-full h-full object-contain" />
             </motion.div>
           </div>
         </div>

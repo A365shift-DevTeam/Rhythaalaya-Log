@@ -50,20 +50,28 @@ function SelectContent({
         data-slot="select-content"
         position={position}
         className={cn(
-          "relative z-[90] max-h-[min(24rem,var(--radix-select-content-available-height))] min-w-[8rem] overflow-hidden rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0f1a28] text-[#212121] dark:text-white shadow-2xl",
+          "relative z-[90] max-h-52 min-w-[8rem] overflow-hidden rounded-2xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0f1a28] text-[#212121] dark:text-white shadow-xl",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           position === "popper" &&
-            "data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1 w-[var(--radix-select-trigger-width)]",
+            "data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1 w-[var(--radix-select-trigger-width)] max-h-52",
           className
         )}
         {...props}
       >
-        <SelectPrimitive.ScrollUpButton className="flex items-center justify-center py-1 text-[#808080]">
-          <JisIcon className="text-[16px]">expand_less</JisIcon>
+        <SelectPrimitive.ScrollUpButton className="flex cursor-default items-center justify-center py-1 text-[#808080] hover:text-[#212121] dark:hover:text-white">
+          <JisIcon className="text-[14px]">expand_less</JisIcon>
         </SelectPrimitive.ScrollUpButton>
-        <SelectPrimitive.Viewport className="p-1.5">{children}</SelectPrimitive.Viewport>
-        <SelectPrimitive.ScrollDownButton className="flex items-center justify-center py-1 text-[#808080]">
-          <JisIcon className="text-[16px]">expand_more</JisIcon>
+        <SelectPrimitive.Viewport
+          className={cn(
+            "p-1",
+            position === "popper" &&
+              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
+          )}
+        >
+          {children}
+        </SelectPrimitive.Viewport>
+        <SelectPrimitive.ScrollDownButton className="flex cursor-default items-center justify-center py-1 text-[#808080] hover:text-[#212121] dark:hover:text-white">
+          <JisIcon className="text-[14px]">expand_more</JisIcon>
         </SelectPrimitive.ScrollDownButton>
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
@@ -92,17 +100,18 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-xl py-2 pl-3 pr-8 text-sm font-semibold outline-none",
-        "focus:bg-[#f0f0f0] dark:focus:bg-[#1a2a3d] data-[state=checked]:text-[#35a160] dark:data-[state=checked]:text-[#6bd194]",
+        "relative flex w-full cursor-pointer select-none items-center rounded-xl py-1.5 pl-3 pr-7 text-xs sm:text-sm font-medium outline-none transition-colors",
+        "focus:bg-[#f0f0f0] dark:focus:bg-[#1a2a3d] focus:text-[#212121] dark:focus:text-white",
+        "data-[state=checked]:bg-[#e9f7ee] dark:data-[state=checked]:bg-[#3fc073]/15 data-[state=checked]:text-[#35a160] dark:data-[state=checked]:text-[#6bd194] data-[state=checked]:font-semibold",
         "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className
       )}
       {...props}
     >
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-      <span className="absolute right-2.5 flex items-center justify-center">
+      <span className="absolute right-2 flex items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <JisIcon className="text-[16px]">check</JisIcon>
+          <JisIcon className="text-[15px] text-[#35a160] dark:text-[#6bd194]">check</JisIcon>
         </SelectPrimitive.ItemIndicator>
       </span>
     </SelectPrimitive.Item>

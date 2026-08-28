@@ -119,8 +119,8 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleSubmit = async (event?: React.FormEvent) => {
+    event?.preventDefault();
     if (isWizard && step < LAST_STEP) return;
     if (!name.trim()) { setError('Student name is required.'); return; }
     const concession = Number(concessionPercent) || 0;
@@ -312,8 +312,8 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       aria-labelledby="add-student-title"
       onClick={onClose}
     >
-      <div className="bg-white dark:bg-[#0b1422] rounded-3xl max-w-2xl w-full max-h-[92dvh] overflow-hidden shadow-2xl border border-[#dbdbdb] dark:border-[#243244]" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-start gap-4 px-5 sm:px-7 py-5 border-b border-[#dbdbdb]/60 dark:border-[#243244]">
+      <div className="flex h-[90dvh] max-h-[680px] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl border border-[#dbdbdb] dark:border-[#243244] dark:bg-[#0b1422]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex shrink-0 justify-between items-start gap-4 px-5 sm:px-7 py-5 border-b border-[#dbdbdb]/60 dark:border-[#243244]">
           <div className="pr-10">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#3fc073]">
               <JisIcon className="text-[16px]">{editingStudent ? 'edit' : 'person_add'}</JisIcon>
@@ -338,7 +338,8 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
 
         {isWizard && <StepIndicator current={step} onStepClick={goToStep} />}
 
-        <form onSubmit={handleSubmit} className={`overflow-y-auto ${isWizard ? 'max-h-[calc(92dvh-186px)]' : 'max-h-[calc(92dvh-118px)]'}`}>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto">
           {isWizard ? (
             <div className="p-5 sm:p-7 space-y-6" role="group" aria-labelledby="student-step-heading">
               {step === 0 && (
@@ -436,7 +437,9 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
             </div>
           )}
 
-          <div className="sticky bottom-0 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 px-5 sm:px-7 py-4 bg-white/95 dark:bg-[#0b1422]/95 backdrop-blur border-t border-[#dbdbdb]/60 dark:border-[#243244]">
+          </div>
+
+          <div className="flex shrink-0 flex-col-reverse gap-2.5 border-t border-[#dbdbdb]/60 px-5 py-4 sm:flex-row sm:justify-end sm:px-7 dark:border-[#243244]">
             <Button type="button" onClick={onClose} disabled={submitting}
               className="min-h-11 px-5 rounded-2xl text-sm font-semibold text-[#575757] dark:text-[#cbd5e1] hover:bg-[#f0f0f0] dark:hover:bg-[#172435]">
               Cancel
@@ -448,17 +451,25 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                 Back
               </Button>
             )}
-            {isWizard && step < LAST_STEP ? (
-              <Button type="button" onClick={() => goToStep(step + 1)} disabled={step === 0 && !canLeaveFirstStep}
-                className="btn-brand min-h-11 px-6 rounded-2xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-45">
-                Next
-                <JisIcon className="text-[18px]">arrow_forward</JisIcon>
-              </Button>
+            {isWizard ? (
+              step < LAST_STEP ? (
+                <Button key="wizard-next" type="button" onClick={() => goToStep(step + 1)} disabled={step === 0 && !canLeaveFirstStep}
+                  className="btn-brand min-h-11 px-6 rounded-2xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-45">
+                  Next
+                  <JisIcon className="text-[18px]">arrow_forward</JisIcon>
+                </Button>
+              ) : (
+                <Button key="wizard-submit" type="button" onClick={() => handleSubmit()} disabled={submitting || !name.trim()}
+                  className="btn-brand min-h-11 px-6 rounded-2xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-45">
+                  <JisIcon className="text-[18px]">check_circle</JisIcon>
+                  {submitting ? 'Saving…' : 'Save student'}
+                </Button>
+              )
             ) : (
-              <Button type="submit" disabled={submitting || !name.trim()}
+              <Button key="edit-submit" type="submit" disabled={submitting || !name.trim()}
                 className="btn-brand min-h-11 px-6 rounded-2xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-45">
                 <JisIcon className="text-[18px]">check_circle</JisIcon>
-                {submitting ? 'Saving…' : editingStudent ? 'Save changes' : 'Save student'}
+                {submitting ? 'Saving…' : 'Save changes'}
               </Button>
             )}
           </div>
@@ -477,7 +488,7 @@ function formatDate(iso: string) {
 
 function StepIndicator({ current, onStepClick }: { current: number; onStepClick: (step: number) => void }) {
   return (
-    <ol className="flex items-center gap-1 px-5 sm:px-7 py-3.5 border-b border-[#dbdbdb]/60 dark:border-[#243244]">
+    <ol className="flex shrink-0 items-center gap-1 px-5 sm:px-7 py-3.5 border-b border-[#dbdbdb]/60 dark:border-[#243244]">
       {WIZARD_STEPS.map((label, index) => {
         const isDone = index < current;
         const isCurrent = index === current;

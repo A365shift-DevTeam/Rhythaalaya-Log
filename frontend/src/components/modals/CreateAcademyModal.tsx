@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Plan } from '../../api';
 import { useDialogLifecycle } from './useDialogLifecycle';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { PasswordInput } from '../ui/password-input';
 
 const WIZARD_STEPS = ['Academy', 'Administrator', 'Review'];
 const LAST_STEP = WIZARD_STEPS.length - 1;
@@ -237,7 +238,7 @@ export const CreateAcademyModal: React.FC<CreateAcademyModalProps> = ({ isOpen, 
                   <label htmlFor="admin-password" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">
                     Temporary password <span className="text-[#ef4444]" aria-hidden="true">*</span>
                   </label>
-                  <input id="admin-password" type="password" required minLength={8} placeholder="At least 8 characters"
+                  <PasswordInput id="admin-password" required minLength={8} placeholder="At least 8 characters"
                     value={adminPassword} onChange={(event) => setAdminPassword(event.target.value)} className="settings-input" />
                   <p className="mt-1.5 text-xs text-[#9e9e9e]">They'll use this email and password to sign in immediately.</p>
                 </div>

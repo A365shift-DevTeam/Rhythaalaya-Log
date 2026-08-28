@@ -8,6 +8,7 @@ import { FinancialSettings } from './FinancialSettings';
 import { DEFAULT_WHATSAPP_TEMPLATE, WHATSAPP_TEMPLATE_VARIABLES } from '../whatsappTemplate';
 import { ApiError, api, Session, TenantUser } from '../api';
 import { confirmAction } from '../lib/confirm';
+import { PasswordInput } from './ui/password-input';
 
 // Gathers everything a TenantAdmin manages for their academy: their team's accounts/sign-in, org
 // profile, financial settings, the WhatsApp template, and data backup — each its own tab. Only
@@ -230,7 +231,7 @@ function UserManagementSection({ session }: { session: Session }) {
           </label>
           <label className="block">
             <span className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Temporary password</span>
-            <input name="password" type="password" required minLength={8} placeholder="Minimum 8 characters"
+            <PasswordInput name="password" required minLength={8} placeholder="Minimum 8 characters"
               className="w-full px-3.5 py-2.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm text-[#212121] dark:text-white outline-none focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073]" />
           </label>
         </div>
@@ -267,7 +268,7 @@ function UserManagementSection({ session }: { session: Session }) {
                     </label>
                     <label className="block">
                       <span className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">New password</span>
-                      <input name="newPassword" type="password" minLength={8} placeholder="Leave blank to keep current"
+                      <PasswordInput name="newPassword" minLength={8} placeholder="Leave blank to keep current"
                         className="w-full px-3.5 py-2.5 bg-[#f0f0f0] dark:bg-[#0b1422] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm text-[#212121] dark:text-white outline-none focus:ring-4 focus:ring-[#3fc073]/15 focus:border-[#3fc073]" />
                     </label>
                   </div>

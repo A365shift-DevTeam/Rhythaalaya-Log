@@ -3,6 +3,7 @@ import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { useDialogLifecycle } from './useDialogLifecycle';
 import { SimpleSelect } from '../ui/select';
+import { PasswordInput } from '../ui/password-input';
 
 interface AddOrgAdminModalProps {
   isOpen: boolean;
@@ -83,7 +84,7 @@ export const AddOrgAdminModal: React.FC<AddOrgAdminModalProps> = ({ isOpen, onCl
             </div>
             <div>
               <label htmlFor="org-admin-password" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Temporary password</label>
-              <input id="org-admin-password" type="password" required minLength={8} placeholder="At least 8 characters" value={password}
+              <PasswordInput id="org-admin-password" required minLength={8} placeholder="At least 8 characters" value={password}
                 onChange={(event) => setPassword(event.target.value)} className="settings-input" />
             </div>
 

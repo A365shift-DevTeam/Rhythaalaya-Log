@@ -35,8 +35,8 @@ export const SuperAdminNavigation: React.FC<SuperAdminNavigationProps> = ({
           onClick={() => setCurrentModule('overview')}
           aria-label="Go to platform overview"
         >
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-white flex items-center justify-center shrink-0 border border-white/20 shadow-sm shadow-[#3fc073]/25 group-hover:scale-105 transition-transform">
-            <JisIcon className="text-[22px]">admin_panel_settings</JisIcon>
+          <div className="w-11 h-11 rounded-2xl bg-white dark:bg-[#111c2b] flex items-center justify-center shrink-0 border border-[#dbdbdb]/70 dark:border-[#243244] shadow-sm shadow-[#3fc073]/15 group-hover:scale-105 transition-transform overflow-hidden p-1">
+            <img src="/Batchly%20logo.png" alt="Batchly Logo" className="w-full h-full object-contain" />
           </div>
           <div className="overflow-hidden flex-1 min-w-0">
             <p className="font-heading text-sm font-bold text-[#212121] dark:text-[#e2e8f0] truncate">Batchly</p>
@@ -96,8 +96,8 @@ export const SuperAdminNavigation: React.FC<SuperAdminNavigationProps> = ({
           onClick={() => setCurrentModule('overview')}
           aria-label="Go to platform overview"
         >
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-[#3fc073] to-[#35a160] text-white flex items-center justify-center shrink-0 border border-white/20 shadow-xs">
-            <JisIcon className="text-[16px]">admin_panel_settings</JisIcon>
+          <div className="w-8 h-8 rounded-xl bg-white dark:bg-[#111c2b] flex items-center justify-center shrink-0 border border-[#dbdbdb]/70 dark:border-[#243244] shadow-xs overflow-hidden p-0.5">
+            <img src="/Batchly%20logo.png" alt="Batchly Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="font-heading text-base font-bold text-[#212121] dark:text-white tracking-tight truncate">
             Batchly Admin
