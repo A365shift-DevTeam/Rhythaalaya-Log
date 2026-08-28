@@ -70,7 +70,8 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   const activeEnrollments = student.enrollments.filter((e) => e.status === 'Active');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-md sm:items-center sm:p-4" onClick={onClose}>
+    <>
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-md sm:items-center sm:p-4" onClick={onClose}>
       <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="student-details-title" className="relative max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-[#dbdbdb] bg-white p-4 shadow-2xl dark:border-[#243244] dark:bg-[#0b1422] sm:rounded-3xl sm:p-6 space-y-5" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex justify-between items-start gap-3 border-b border-[#dbdbdb]/60 dark:border-[#243244] pb-4 pt-1">
@@ -232,15 +233,16 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
           </Button>
         </div>
       </div>
+    </div>
 
-      <AddAchievementModal
+    <AddAchievementModal
         isOpen={isAddAchievementOpen}
         onClose={() => setIsAddAchievementOpen(false)}
         studentId={student.id}
         token={token}
         onCreated={(achievement) => { setAchievements((prev) => [achievement, ...prev]); onAchievementsChanged(); }}
       />
-    </div>
+    </>
   );
 };
 

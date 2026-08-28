@@ -31,6 +31,9 @@ const focusableSelector = [
   '[tabindex]:not([tabindex="-1"])'
 ].join(',');
 
+// Stack of active dialog close handlers so nested dialogs close top-down on Escape.
+const activeDialogCloseHandlers: Array<() => void> = [];
+
 export function useDialogLifecycle(isOpen: boolean, onClose: () => void) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
@@ -47,15 +50,26 @@ export function useDialogLifecycle(isOpen: boolean, onClose: () => void) {
       : null;
     lockBodyScroll();
 
+    const closeHandler = () => closeRef.current();
+    activeDialogCloseHandlers.push(closeHandler);
+
     const frame = window.requestAnimationFrame(() => {
-      const firstField = dialogRef.current?.querySelector<HTMLElement>(focusableSelector);
+      const autoFocusField = dialogRef.current?.querySelector<HTMLElement>('[autofocus], [data-autofocus]');
+      const formField = dialogRef.current?.querySelector<HTMLElement>(
+        'input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled])'
+      );
+      const firstField = autoFocusField ?? formField ?? dialogRef.current?.querySelector<HTMLElement>(focusableSelector);
       (firstField ?? dialogRef.current)?.focus();
     });
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        event.preventDefault();
-        closeRef.current();
+        // Only the top-most open dialog handles Escape
+        if (activeDialogCloseHandlers[activeDialogCloseHandlers.length - 1] === closeHandler) {
+          event.preventDefault();
+          event.stopPropagation();
+          closeRef.current();
+        }
         return;
       }
 
@@ -85,6 +99,10 @@ export function useDialogLifecycle(isOpen: boolean, onClose: () => void) {
     return () => {
       window.cancelAnimationFrame(frame);
       document.removeEventListener('keydown', handleKeyDown);
+      const index = activeDialogCloseHandlers.lastIndexOf(closeHandler);
+      if (index !== -1) {
+        activeDialogCloseHandlers.splice(index, 1);
+      }
       unlockBodyScroll();
       previouslyFocused?.focus();
     };

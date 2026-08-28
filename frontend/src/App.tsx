@@ -295,6 +295,8 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
     try {
       await api.archiveStudent(session.token, studentId);
       setStudents((prev) => prev.filter((s) => s.id !== studentId));
+      // Archiving withdraws the student's enrollments server-side, so batch enrolled counts change.
+      setBatches(await api.batches(session.token));
     } catch (error) { showError(error); }
   };
 

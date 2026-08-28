@@ -3,7 +3,14 @@ import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { Course, FeeFrequency, FeeStructure, FEE_FREQUENCY_LABELS } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
-import { todayIsoDate as todayIso } from '../../lib/schedule';
+import { nextMonthlyDueDate, parseIsoDate, todayIsoDate as todayIso } from '../../lib/schedule';
+
+const DAYS_OF_MONTH = Array.from({ length: 31 }, (_, i) => i + 1);
+
+const ordinal = (n: number): string => {
+  if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
+  return `${n}${({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'}`;
+};
 
 export interface NewCourseFee {
   name: string;
@@ -35,6 +42,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   const [feeAmount, setFeeAmount] = useState('');
   const [feeFrequency, setFeeFrequency] = useState<FeeFrequency>('Monthly');
   const [feeDueDate, setFeeDueDate] = useState(todayIso());
+  const [feeDueDay, setFeeDueDay] = useState(new Date().getDate());
   const [submitting, setSubmitting] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState('');
@@ -49,6 +57,10 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   const [editPlanName, setEditPlanName] = useState('');
   const [editPlanEffectiveTo, setEditPlanEffectiveTo] = useState('');
   const [editPlanIsActive, setEditPlanIsActive] = useState(true);
+
+  // Monthly plans are entered as a day of the month; the anchor date sent to the server is the
+  // next occurrence of that day. Other frequencies still take a full start date.
+  const resolvedFeeDate = feeFrequency === 'Monthly' ? nextMonthlyDueDate(feeDueDay) : feeDueDate;
 
   const courseFeeStructures = editingCourse ? feeStructures.filter((f) => f.courseId === editingCourse.id) : [];
   const activePlan = courseFeeStructures.find((f) => f.isActive);
@@ -65,6 +77,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setFeeAmount('');
     setFeeFrequency('Monthly');
     setFeeDueDate(todayIso());
+    setFeeDueDay(new Date().getDate());
     setError('');
     setShowNewPlanForm(false);
     setShowHistory(false);
@@ -102,7 +115,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setError('');
     try {
       await onSave(name.trim(), description.trim(), isActive,
-        wantsFee ? { name: feeName.trim(), amount: parsedAmount, frequency: feeFrequency, dueDate: feeDueDate } : null);
+        wantsFee ? { name: feeName.trim(), amount: parsedAmount, frequency: feeFrequency, dueDate: resolvedFeeDate } : null);
       onClose();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not save the course.');
@@ -116,6 +129,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setFeeAmount('');
     setFeeFrequency(activePlan ? activePlan.frequency : 'Monthly');
     setFeeDueDate(todayIso());
+    setFeeDueDay(new Date().getDate());
     setPlanError('');
     setShowNewPlanForm(true);
   };
@@ -130,7 +144,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setPlanSubmitting(true);
     setPlanError('');
     try {
-      await onAddFeeStructure({ courseId: editingCourse.id, name: feeName.trim(), amount: parsedAmount, frequency: feeFrequency, effectiveFrom: feeDueDate });
+      await onAddFeeStructure({ courseId: editingCourse.id, name: feeName.trim(), amount: parsedAmount, frequency: feeFrequency, effectiveFrom: resolvedFeeDate });
       setShowNewPlanForm(false);
     } catch (requestError) {
       setPlanError(requestError instanceof Error ? requestError.message : 'Could not save the fee plan.');
@@ -226,16 +240,31 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                       </select>
                     </div>
                   </div>
-                  <div>
-                    <label htmlFor="course-fee-due" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">Due date</label>
-                    <input id="course-fee-due" type="date" value={feeDueDate} onChange={(event) => setFeeDueDate(event.target.value)}
-                      className="settings-input" />
-                    {feeFrequency !== 'OneTime' && (
+                  {feeFrequency === 'Monthly' ? (
+                    <div>
+                      <label htmlFor="course-fee-due-day" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">Due day of month</label>
+                      <select id="course-fee-due-day" value={feeDueDay} onChange={(event) => setFeeDueDay(Number(event.target.value))}
+                        className="w-full min-h-11 px-3.5 bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-sm font-semibold text-[#212121] dark:text-white outline-none focus:border-[#3fc073]">
+                        {DAYS_OF_MONTH.map((d) => <option key={d} value={d}>{ordinal(d)}</option>)}
+                      </select>
                       <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8]">
-                        Repeats on this day of the {feeFrequency === 'Monthly' ? 'month' : 'cycle'} for every student.
+                        Due on the {ordinal(feeDueDay)} of every month · first bill {parseIsoDate(resolvedFeeDate).toLocaleDateString('en-IN')}.
                       </p>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label htmlFor="course-fee-due" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">
+                        {feeFrequency === 'OneTime' ? 'Due date' : 'First due date'}
+                      </label>
+                      <input id="course-fee-due" type="date" value={feeDueDate} onChange={(event) => setFeeDueDate(event.target.value)}
+                        className="settings-input" />
+                      {feeFrequency !== 'OneTime' && (
+                        <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8]">
+                          Repeats on this day of the cycle for every student.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -313,8 +342,20 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                       {(Object.keys(FEE_FREQUENCY_LABELS) as FeeFrequency[]).map((f) => <option key={f} value={f}>{FEE_FREQUENCY_LABELS[f]}</option>)}
                     </select>
                   </div>
-                  <input type="date" value={feeDueDate} onChange={(event) => setFeeDueDate(event.target.value)}
-                    className="w-full min-h-9 px-2 rounded-xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] text-xs text-[#212121] dark:text-white" />
+                  {feeFrequency === 'Monthly' ? (
+                    <div>
+                      <select value={feeDueDay} onChange={(event) => setFeeDueDay(Number(event.target.value))} aria-label="Due day of month"
+                        className="w-full min-h-9 px-2 rounded-xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] text-xs text-[#212121] dark:text-white">
+                        {DAYS_OF_MONTH.map((d) => <option key={d} value={d}>Due on the {ordinal(d)} of every month</option>)}
+                      </select>
+                      <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8]">
+                        New price starts {parseIsoDate(resolvedFeeDate).toLocaleDateString('en-IN')}.
+                      </p>
+                    </div>
+                  ) : (
+                    <input type="date" value={feeDueDate} onChange={(event) => setFeeDueDate(event.target.value)} aria-label="First due date"
+                      className="w-full min-h-9 px-2 rounded-xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] text-xs text-[#212121] dark:text-white" />
+                  )}
                   {planError && <p className="text-xs text-[#ef4444] font-bold">{planError}</p>}
                   <div className="flex items-center gap-2 justify-end">
                     <Button type="button" onClick={() => setShowNewPlanForm(false)} className="min-h-8 px-2.5 rounded-xl text-xs font-semibold text-[#575757] hover:bg-white dark:hover:bg-[#172435]">Cancel</Button>
