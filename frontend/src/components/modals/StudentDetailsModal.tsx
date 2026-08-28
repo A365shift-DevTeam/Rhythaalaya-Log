@@ -94,7 +94,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 {student.outstandingBalance > 0 ? (
-                  <span className="text-xs bg-rose-100 text-[#ef4444] font-semibold px-2.5 py-0.5 rounded-full dark:bg-rose-950/80 dark:text-rose-300">
+                  <span className="inline-flex shrink-0 items-center whitespace-nowrap text-xs bg-rose-100 text-[#ef4444] font-semibold px-2.5 py-0.5 rounded-full dark:bg-rose-950/80 dark:text-rose-300">
                     ₹{student.outstandingBalance.toLocaleString('en-IN')} outstanding
                   </span>
                 ) : (

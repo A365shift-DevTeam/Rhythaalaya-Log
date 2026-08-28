@@ -417,12 +417,12 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#808080] dark:text-[#94a3b8] font-medium">Fee Status:</span>
                       {!isPending ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-[#22c55e] dark:text-emerald-300 text-xs font-bold">
+                        <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-[#22c55e] dark:text-emerald-300 text-xs font-bold">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]"></span>
                           Paid
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-[#ef4444] dark:text-rose-300 text-xs font-bold">
+                        <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-[#ef4444] dark:text-rose-300 text-xs font-bold">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] animate-pulse"></span>
                           Pending (₹{student.outstandingBalance.toLocaleString('en-IN')})
                         </span>
@@ -535,12 +535,12 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                       </td>
                       <td className="p-4">
                         {!isPending ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-[#22c55e] dark:text-emerald-300 text-xs font-bold">
+                          <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-[#22c55e] dark:text-emerald-300 text-xs font-bold">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]"></span>
                             Paid
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-[#ef4444] dark:text-rose-300 text-xs font-bold">
+                          <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-[#ef4444] dark:text-rose-300 text-xs font-bold">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]"></span>
                             ₹{student.outstandingBalance.toLocaleString('en-IN')}
                           </span>

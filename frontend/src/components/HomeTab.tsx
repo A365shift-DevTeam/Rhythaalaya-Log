@@ -409,7 +409,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                   </div>
                 </div>
                 <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#dbdbdb]/60 dark:border-[#243244]">
-                  <span className="font-sans text-xs font-semibold bg-white dark:bg-[#0b1422] text-[#35a160] dark:text-[#b3e6c7] px-3 py-1 rounded-full border border-[#dbdbdb]/60 dark:border-[#243244]">
+                  <span className="inline-flex shrink-0 items-center whitespace-nowrap font-sans text-xs font-semibold bg-white dark:bg-[#0b1422] text-[#35a160] dark:text-[#b3e6c7] px-3 py-1 rounded-full border border-[#dbdbdb]/60 dark:border-[#243244]">
                     {b.enrolledCount} Enrolled
                   </span>
                   <Button type="button" onClick={() => setCurrentTab('log')} className="btn-brand min-h-10 px-3 py-1.5 rounded-2xl text-xs font-semibold flex items-center gap-1">
@@ -424,11 +424,11 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         <div className="bg-gradient-to-br from-[#3fc073] via-[#35a160] to-[#2b824e] text-white rounded-3xl p-6 shadow-xl shadow-[#3fc073]/20 flex flex-col justify-between relative overflow-hidden">
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-start justify-between gap-2 mb-3">
               <span className="font-sans text-xs uppercase tracking-wider font-bold opacity-90 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-rose-300 animate-pulse"></span>Pending Fees Alert
+                <span className="w-2 h-2 rounded-full bg-rose-300 animate-pulse shrink-0"></span>Pending Fees Alert
               </span>
-              <span className="bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-xs font-bold">{pendingCount} Overdue</span>
+              <span className="inline-flex shrink-0 items-center whitespace-nowrap bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-xs font-bold">{pendingCount} Overdue</span>
             </div>
             <div className="font-heading text-3xl font-bold tracking-tight mt-1">₹{pendingTotal.toLocaleString('en-IN')}</div>
             <p className="font-sans text-xs opacity-80 mt-1">Outstanding fees requiring reminder action</p>

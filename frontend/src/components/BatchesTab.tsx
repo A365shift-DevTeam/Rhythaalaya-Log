@@ -421,7 +421,7 @@ function BatchCard({ batch, canManage, onEdit }: { batch: Batch; canManage: bool
 
       <div className="mt-4 pt-3 border-t border-[#dbdbdb]/60 dark:border-[#243244] flex items-center justify-between">
         <div className="text-xs text-[#808080] font-medium">Enrollment</div>
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#35a160] dark:text-[#b3e6c7] px-2.5 py-0.5 text-xs font-bold">
+        <div className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 rounded-full bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#35a160] dark:text-[#b3e6c7] px-2.5 py-0.5 text-xs font-bold">
           <JisIcon className="text-[15px]">groups</JisIcon>
           {batch.enrolledCount} student{batch.enrolledCount === 1 ? '' : 's'}
         </div>
