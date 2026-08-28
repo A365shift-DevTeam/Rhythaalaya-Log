@@ -459,6 +459,9 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             .Where(x => studentIds.Contains(x.StudentId)
                 && x.Status != FeeDueStatus.Cancelled && x.Status != FeeDueStatus.Upcoming)
             .Select(x => x.StudentId).Distinct().ToListAsync(ct)).ToHashSet();
+        var upcomingStudentIds = (await db.FeeDues.AsNoTracking()
+            .Where(x => studentIds.Contains(x.StudentId) && x.Status == FeeDueStatus.Upcoming)
+            .Select(x => x.StudentId).Distinct().ToListAsync(ct)).ToHashSet();
         return students.Select(student =>
         {
             var records = student.Enrollments.SelectMany(x => x.AttendanceRecords).ToList();
@@ -473,7 +476,8 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             return new StudentDto(student.Id, student.StudentNumber, student.Name, student.DateOfBirth,
                 student.ParentName, student.Address, student.Phone, student.Email, student.JoinDate, student.IsActive,
                 studentBalances.GetValueOrDefault(student.Id), attendancePercentage, wonCount, participatedCount, enrollments,
-                student.ConcessionPercent, student.ConcessionReason, billedStudentIds.Contains(student.Id));
+                student.ConcessionPercent, student.ConcessionReason, billedStudentIds.Contains(student.Id),
+                upcomingStudentIds.Contains(student.Id));
         }).ToList();
     }
 

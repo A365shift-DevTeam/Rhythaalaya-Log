@@ -371,6 +371,7 @@ function mapStudent(x: any): Student {
     parentName: x.parentName || undefined, address: x.address || undefined, phone: x.phone || undefined,
     email: x.email || undefined, joinDate: x.joinDate, isActive: x.isActive, outstandingBalance: x.outstandingBalance,
     hasBillableDues: x.hasBillableDues ?? false,
+    hasUpcomingDues: x.hasUpcomingDues ?? false,
     overallAttendance: x.attendancePercentage, wonCount: x.wonCount ?? 0, participatedCount: x.participatedCount ?? 0,
     concessionPercent: x.concessionPercent ?? 0, concessionReason: x.concessionReason || undefined,
     enrollments: (x.enrollments || []).map((e: any) => ({

@@ -78,6 +78,8 @@ export interface Student {
   outstandingBalance: number;
   /** False when nothing has ever been billed — the UI shows "No dues" instead of "Paid". */
   hasBillableDues: boolean;
+  /** True when a not-yet-due (Upcoming) bill exists — the UI shows "Payment upcoming" instead of "No dues". */
+  hasUpcomingDues: boolean;
   overallAttendance: number;
   wonCount: number;
   participatedCount: number;

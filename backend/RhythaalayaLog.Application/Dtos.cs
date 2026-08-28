@@ -18,7 +18,10 @@ public sealed record StudentDto(Guid Id, string StudentNumber, string Name, Date
     decimal ConcessionPercent = 0, string? ConcessionReason = null,
     // True when at least one non-cancelled, non-upcoming due exists: lets the UI say
     // "No dues" (never billed) instead of "Paid" for a zero balance.
-    bool HasBillableDues = false);
+    bool HasBillableDues = false,
+    // True when at least one not-yet-due (Upcoming) due exists: lets the UI show
+    // "Payment upcoming" instead of "No dues" for a student with a scheduled bill.
+    bool HasUpcomingDues = false);
 
 public sealed record StudentAchievementDto(Guid Id, Guid StudentId, string Title, AchievementCategory Category,
     string? Level, DateOnly EventDate, string? Note, string FileName, string ContentType, int FileSizeBytes,

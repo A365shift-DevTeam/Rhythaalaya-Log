@@ -334,10 +334,20 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ef4444]" />
                               ₹{student.outstandingBalance.toLocaleString('en-IN')}
                             </span>
-                          ) : (
+                          ) : student.hasUpcomingDues ? (
+                            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#b45309] dark:text-amber-300">
+                              <span className="h-1.5 w-1.5 rounded-full bg-[#f59e0b]" />
+                              Upcoming
+                            </span>
+                          ) : student.hasBillableDues ? (
                             <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#22c55e] dark:text-emerald-300">
                               <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
                               Paid
+                            </span>
+                          ) : (
+                            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#808080] dark:text-[#94a3b8]">
+                              <span className="h-1.5 w-1.5 rounded-full bg-[#9e9e9e]" />
+                              No dues
                             </span>
                           )}
                         </div>
@@ -416,22 +426,25 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                   <div className="p-3 bg-[#f0f0f0] dark:bg-[#111c2b]/60 rounded-2xl border border-[#dbdbdb]/70 dark:border-[#243244] space-y-2 mb-3.5">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#808080] dark:text-[#94a3b8] font-medium">Fee Status:</span>
-                      {!isPending ? (
-                        student.hasBillableDues ? (
-                          <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-[#22c55e] dark:text-emerald-300 text-xs font-bold">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]"></span>
-                            Paid
-                          </span>
-                        ) : (
-                          <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f0f0f0] dark:bg-[#172435] text-[#808080] dark:text-[#94a3b8] text-xs font-bold">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#9e9e9e]"></span>
-                            No dues
-                          </span>
-                        )
-                      ) : (
+                      {isPending ? (
                         <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-[#ef4444] dark:text-rose-300 text-xs font-bold">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] animate-pulse"></span>
                           Pending (₹{student.outstandingBalance.toLocaleString('en-IN')})
+                        </span>
+                      ) : student.hasUpcomingDues ? (
+                        <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-[#b45309] dark:text-amber-300 text-xs font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]"></span>
+                          Upcoming
+                        </span>
+                      ) : student.hasBillableDues ? (
+                        <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-[#22c55e] dark:text-emerald-300 text-xs font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]"></span>
+                          Paid
+                        </span>
+                      ) : (
+                        <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f0f0f0] dark:bg-[#172435] text-[#808080] dark:text-[#94a3b8] text-xs font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#9e9e9e]"></span>
+                          No dues
                         </span>
                       )}
                     </div>
@@ -541,22 +554,25 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                         )}
                       </td>
                       <td className="p-4">
-                        {!isPending ? (
-                          student.hasBillableDues ? (
-                            <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-[#22c55e] dark:text-emerald-300 text-xs font-bold">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]"></span>
-                              Paid
-                            </span>
-                          ) : (
-                            <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f0f0f0] dark:bg-[#172435] text-[#808080] dark:text-[#94a3b8] text-xs font-bold">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#9e9e9e]"></span>
-                              No dues
-                            </span>
-                          )
-                        ) : (
+                        {isPending ? (
                           <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-[#ef4444] dark:text-rose-300 text-xs font-bold">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]"></span>
                             ₹{student.outstandingBalance.toLocaleString('en-IN')}
+                          </span>
+                        ) : student.hasUpcomingDues ? (
+                          <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-[#b45309] dark:text-amber-300 text-xs font-bold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]"></span>
+                            Upcoming
+                          </span>
+                        ) : student.hasBillableDues ? (
+                          <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-[#22c55e] dark:text-emerald-300 text-xs font-bold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]"></span>
+                            Paid
+                          </span>
+                        ) : (
+                          <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f0f0f0] dark:bg-[#172435] text-[#808080] dark:text-[#94a3b8] text-xs font-bold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#9e9e9e]"></span>
+                            No dues
                           </span>
                         )}
                       </td>
