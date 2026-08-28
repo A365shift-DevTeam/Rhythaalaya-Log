@@ -7,7 +7,7 @@ build/
 .vite/
 **/.vite/
 *.log
-.env*
+# .env*
 !.env.example
 
 # .NET / Backend
