@@ -1,14 +1,16 @@
 import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
+import { Spinner } from './ui/spinner';
 import React, { useEffect, useState } from 'react';
-import { LateEnrollmentBillingPolicy, OrgSettings, ReceiptSettings } from '../types';
+import { api } from '../api';
+import { FeeHead, LateEnrollmentBillingPolicy, OrgSettings, ReceiptSettings } from '../types';
 
 interface FinancialSettingsProps {
   settings: OrgSettings;
   setSettings: React.Dispatch<React.SetStateAction<OrgSettings>>;
 }
 
-export function FinancialSettings({ settings, setSettings }: FinancialSettingsProps) {
+export function FinancialSettings({ settings, setSettings, token }: FinancialSettingsProps & { token: string }) {
   const [receiptDraft, setReceiptDraft] = useState<ReceiptSettings>(settings.receipt);
   const [saved, setSaved] = useState(false);
 
@@ -81,6 +83,12 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
         <BillingSettings settings={settings} setSettings={setSettings} />
       </section>
 
+      <section className="space-y-3" aria-labelledby="fee-head-settings-title">
+        <SectionHeading id="fee-head-settings-title" icon="sell" title="Fee Categories (Heads)"
+          description="Group fees as Tuition, Exam, Transport and so on. Attach a head to a fee structure and every charge it generates is reported under it." />
+        <FeeHeadsEditor token={token} />
+      </section>
+
       <section className="space-y-3" aria-labelledby="category-settings-title">
         <SectionHeading id="category-settings-title" icon="category" title="Income & Expense Categories"
           description="These categories appear automatically when recording financial entries." />
@@ -110,6 +118,102 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
             onChange={(attendanceAlerts) => setSettings((previous) => ({ ...previous, notifications: { ...previous.notifications, attendanceAlerts } }))} />
         </div>
       </section>
+    </div>
+  );
+}
+
+function FeeHeadsEditor({ token }: { token: string }) {
+  const [heads, setHeads] = useState<FeeHead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [newName, setNewName] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+    api.feeHeads(token)
+      .then((rows) => { if (!ignore) setHeads(rows); })
+      .catch(() => { if (!ignore) setError('Could not load fee categories.'); })
+      .finally(() => { if (!ignore) setLoading(false); });
+    return () => { ignore = true; };
+  }, [token]);
+
+  const add = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const name = newName.trim();
+    if (!name || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const created = await api.createFeeHead(token, { name, displayOrder: heads.length });
+      setHeads((prev) => [...prev, created]);
+      setNewName('');
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Could not add that category.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const save = async (head: FeeHead, patch: Partial<Pick<FeeHead, 'name' | 'isActive'>>) => {
+    const next = { ...head, ...patch, name: (patch.name ?? head.name).trim() };
+    if (!next.name) return;
+    setHeads((prev) => prev.map((h) => (h.id === head.id ? next : h)));
+    try {
+      const updated = await api.updateFeeHead(token, head.id, {
+        name: next.name, displayOrder: next.displayOrder, isActive: next.isActive,
+      });
+      setHeads((prev) => prev.map((h) => (h.id === head.id ? updated : h)));
+    } catch (requestError) {
+      setHeads((prev) => prev.map((h) => (h.id === head.id ? head : h))); // revert
+      setError(requestError instanceof Error ? requestError.message : 'Could not save that change.');
+    }
+  };
+
+  return (
+    <div className="premium-card p-4 sm:p-5">
+      {error && <div role="alert" className="mb-3 rounded-2xl bg-rose-50 px-3 py-2 text-xs font-bold text-[#ef4444] dark:bg-rose-950/40">{error}</div>}
+      {loading ? (
+        <Spinner size="xs" inline text="Loading fee categories…" />
+      ) : (
+        <>
+          <div className="divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
+            {heads.map((head) => (
+              <div key={head.id} className="flex items-center gap-2 py-2">
+                <input
+                  defaultValue={head.name}
+                  onBlur={(event) => { if (event.target.value.trim() !== head.name) void save(head, { name: event.target.value }); }}
+                  className="settings-input flex-1 py-2 text-sm"
+                  aria-label={`Rename ${head.name}`}
+                />
+                <span className="shrink-0 text-xs text-[#9e9e9e]">{head.structureCount} plan{head.structureCount === 1 ? '' : 's'}</span>
+                <button
+                  type="button"
+                  onClick={() => void save(head, { isActive: !head.isActive })}
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${head.isActive
+                    ? 'bg-emerald-100 text-[#15803d] dark:bg-emerald-950/60 dark:text-emerald-300'
+                    : 'bg-[#f0f0f0] text-[#9e9e9e] dark:bg-[#172435]'}`}
+                >
+                  {head.isActive ? 'Active' : 'Hidden'}
+                </button>
+              </div>
+            ))}
+          </div>
+          <form onSubmit={add} className="mt-3 flex gap-2">
+            <input
+              value={newName}
+              onChange={(event) => setNewName(event.target.value)}
+              placeholder="New fee category, e.g. Studio Hire"
+              maxLength={80}
+              className="settings-input flex-1 py-2 text-sm"
+            />
+            <Button type="submit" disabled={busy || !newName.trim()}
+              className="btn-brand min-h-11 shrink-0 rounded-2xl px-4 text-xs font-bold disabled:opacity-50">
+              <JisIcon className="text-[16px]">add</JisIcon>
+            </Button>
+          </form>
+        </>
+      )}
     </div>
   );
 }

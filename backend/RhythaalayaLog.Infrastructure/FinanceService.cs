@@ -10,9 +10,61 @@ namespace RhythaalayaLog.Infrastructure;
 public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext, FeeDueGenerator dueGenerator,
     IRowLocker rowLocker) : IFinanceService
 {
+    private static readonly string[] DefaultFeeHeads =
+        ["Tuition Fee", "Registration Fee", "Material Fee", "Exam Fee", "Transport Fee", "Other Fee"];
+
+    public async Task<IReadOnlyList<FeeHeadDto>> GetFeeHeadsAsync(CancellationToken ct)
+    {
+        await EnsureFeeHeadsExistAsync(ct);
+        var heads = await db.FeeHeads.AsNoTracking().OrderBy(x => x.DisplayOrder).ThenBy(x => x.Name).ToListAsync(ct);
+        var counts = await db.FeeStructures.AsNoTracking().Where(x => x.FeeHeadId != null)
+            .GroupBy(x => x.FeeHeadId!.Value).Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Key, x => x.Count, ct);
+        return heads.Select(x => new FeeHeadDto(x.Id, x.Name, x.DisplayOrder, x.IsActive, counts.GetValueOrDefault(x.Id))).ToList();
+    }
+
+    public async Task<FeeHeadDto> CreateFeeHeadAsync(CreateFeeHeadRequest request, CancellationToken ct)
+    {
+        RequireText(request.Name, nameof(request.Name));
+        var name = request.Name.Trim();
+        var tenantId = RequireTenant();
+        if (await db.FeeHeads.AnyAsync(x => x.Name == name, ct))
+            throw new ConflictException("A fee head with that name already exists.");
+        var head = new FeeHead { TenantId = tenantId, Name = name, DisplayOrder = request.DisplayOrder };
+        db.FeeHeads.Add(head);
+        await db.SaveChangesAsync(ct);
+        return new FeeHeadDto(head.Id, head.Name, head.DisplayOrder, head.IsActive, 0);
+    }
+
+    public async Task<FeeHeadDto> UpdateFeeHeadAsync(Guid id, UpdateFeeHeadRequest request, CancellationToken ct)
+    {
+        RequireText(request.Name, nameof(request.Name));
+        var name = request.Name.Trim();
+        var head = await db.FeeHeads.FindAsync([id], ct) ?? throw new NotFoundException(nameof(FeeHead));
+        if (await db.FeeHeads.AnyAsync(x => x.Name == name && x.Id != id, ct))
+            throw new ConflictException("A fee head with that name already exists.");
+        head.Name = name;
+        head.DisplayOrder = request.DisplayOrder;
+        head.IsActive = request.IsActive;
+        await db.SaveChangesAsync(ct);
+        var count = await db.FeeStructures.CountAsync(x => x.FeeHeadId == id, ct);
+        return new FeeHeadDto(head.Id, head.Name, head.DisplayOrder, head.IsActive, count);
+    }
+
+    /// <summary>Seeds the default fee-head set the first time a tenant looks at its heads (existing tenants pre-date the feature).</summary>
+    private async Task EnsureFeeHeadsExistAsync(CancellationToken ct)
+    {
+        if (await db.FeeHeads.AnyAsync(ct)) return;
+        var tenantId = RequireTenant();
+        for (var i = 0; i < DefaultFeeHeads.Length; i++)
+            db.FeeHeads.Add(new FeeHead { TenantId = tenantId, Name = DefaultFeeHeads[i], DisplayOrder = i });
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateException) { db.ChangeTracker.Clear(); } // a concurrent request seeded them first
+    }
+
     public async Task<IReadOnlyList<FeeStructureDto>> GetFeeStructuresAsync(Guid? courseId, CancellationToken ct)
     {
-        var query = db.FeeStructures.AsNoTracking().Include(x => x.Course).AsQueryable();
+        var query = db.FeeStructures.AsNoTracking().Include(x => x.Course).Include(x => x.FeeHead).AsQueryable();
         if (courseId.HasValue) query = query.Where(x => x.CourseId == courseId.Value);
         var items = await query.OrderByDescending(x => x.EffectiveFrom).ToListAsync(ct);
         return items.Select(MapStructure).ToList();
@@ -26,6 +78,8 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
             throw new AppValidationException(nameof(request.EffectiveTo));
         if (!await db.Courses.AnyAsync(x => x.Id == request.CourseId && x.IsActive, ct))
             throw new AppValidationException(nameof(request.CourseId));
+        if (request.FeeHeadId is { } headId && !await db.FeeHeads.AnyAsync(x => x.Id == headId, ct))
+            throw new AppValidationException(nameof(request.FeeHeadId));
 
         // Plans are resolved by effective-date window, so a future-dated plan must only trim the
         // current plan's window — never deactivate it early (that used to open a billing gap).
@@ -38,12 +92,14 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
 
         var structure = new FeeStructure
         {
-            TenantId = RequireTenant(), CourseId = request.CourseId, Name = request.Name.Trim(), Amount = request.Amount,
+            TenantId = RequireTenant(), CourseId = request.CourseId, FeeHeadId = request.FeeHeadId,
+            Name = request.Name.Trim(), Amount = request.Amount,
             Frequency = request.Frequency, EffectiveFrom = request.EffectiveFrom, EffectiveTo = request.EffectiveTo
         };
         db.FeeStructures.Add(structure);
         await db.SaveChangesAsync(ct);
-        return MapStructure(await db.FeeStructures.AsNoTracking().Include(x => x.Course).SingleAsync(x => x.Id == structure.Id, ct));
+        return MapStructure(await db.FeeStructures.AsNoTracking().Include(x => x.Course).Include(x => x.FeeHead)
+            .SingleAsync(x => x.Id == structure.Id, ct));
     }
 
     public async Task<FeeStructureDto> UpdateFeeStructureAsync(Guid id, UpdateFeeStructureRequest request, CancellationToken ct)
@@ -52,11 +108,15 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
         var structure = await db.FeeStructures.FindAsync([id], ct) ?? throw new NotFoundException(nameof(FeeStructure));
         if (request.EffectiveTo.HasValue && request.EffectiveTo.Value < structure.EffectiveFrom)
             throw new AppValidationException(nameof(request.EffectiveTo));
+        if (request.FeeHeadId is { } headId && !await db.FeeHeads.AnyAsync(x => x.Id == headId, ct))
+            throw new AppValidationException(nameof(request.FeeHeadId));
         structure.Name = request.Name.Trim();
         structure.EffectiveTo = request.EffectiveTo;
         structure.IsActive = request.IsActive;
+        structure.FeeHeadId = request.FeeHeadId;
         await db.SaveChangesAsync(ct);
-        return MapStructure(await db.FeeStructures.AsNoTracking().Include(x => x.Course).SingleAsync(x => x.Id == id, ct));
+        return MapStructure(await db.FeeStructures.AsNoTracking().Include(x => x.Course).Include(x => x.FeeHead)
+            .SingleAsync(x => x.Id == id, ct));
     }
 
     public async Task<IReadOnlyList<FeeDueDto>> GetStudentFeeDuesAsync(Guid studentId, CancellationToken ct)
@@ -244,9 +304,15 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
         var tenantId = RequireTenant();
         var userId = RequireUser();
         RequireText(request.Reason, nameof(request.Reason));
-        if (request.Type is not (FeeAdjustmentType.Discount or FeeAdjustmentType.Waiver))
+        // Proration is system-only (enrollment maths); everything else can be applied by hand.
+        if (request.Type is not (FeeAdjustmentType.Discount or FeeAdjustmentType.Waiver
+            or FeeAdjustmentType.Fine or FeeAdjustmentType.WriteOff))
             throw new AppValidationException(nameof(request.Type));
-        if (request.Amount == 0) throw new AppValidationException(nameof(request.Amount));
+        // A manual fine or write-off is always a positive amount; only Discount/Waiver keep the
+        // legacy "negative amount = correction of an earlier row" affordance.
+        if (request.Amount == 0
+            || (request.Amount < 0 && request.Type is FeeAdjustmentType.Fine or FeeAdjustmentType.WriteOff))
+            throw new AppValidationException(nameof(request.Amount));
 
         await using (var tx = await db.Database.BeginTransactionAsync(ct))
         {
@@ -256,11 +322,9 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
             if (due.Status == FeeDueStatus.Cancelled)
                 throw new ConflictException("A cancelled fee due cannot be adjusted.");
 
-            var existing = await db.FeeAdjustments.Where(x => x.FeeDueId == dueId).ToListAsync(ct);
-            var totalAfter = existing.Sum(x => x.Amount) + request.Amount;
-            var discountAfter = existing.Where(x => x.Type is FeeAdjustmentType.Discount or FeeAdjustmentType.Waiver)
-                .Sum(x => x.Amount) + request.Amount;
-            var newNet = due.Amount - totalAfter;
+            var adjustmentsAfter = await db.FeeAdjustments.Where(x => x.FeeDueId == dueId).ToListAsync(ct);
+            adjustmentsAfter.Add(new FeeAdjustment { Type = request.Type, Amount = request.Amount, Reason = "" });
+            var newNet = FeeDueMath.NetAmount(due.Amount, adjustmentsAfter);
             var allocated = await db.FeePaymentAllocations.Where(x => x.FeeDueId == dueId)
                 .SumAsync(x => (decimal?)x.Amount, ct) ?? 0;
             if (newNet < 0 || newNet < allocated)
@@ -271,7 +335,7 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
                 TenantId = tenantId, FeeDueId = dueId, Type = request.Type, Amount = request.Amount,
                 Reason = request.Reason.Trim(), PerformedByUserId = userId
             });
-            due.DiscountAmount = discountAfter;
+            due.DiscountAmount = FeeDueMath.DiscountAndWaiverTotal(adjustmentsAfter);
             due.NetAmount = newNet;
             await db.SaveChangesAsync(ct);
             await dueGenerator.RefreshDueStatusAsync(dueId, ct);
@@ -582,7 +646,8 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
     }
 
     private static FeeStructureDto MapStructure(FeeStructure x) =>
-        new(x.Id, x.CourseId, x.Course.Name, x.Name, x.Amount, x.Frequency, x.EffectiveFrom, x.EffectiveTo, x.IsActive);
+        new(x.Id, x.CourseId, x.Course.Name, x.Name, x.Amount, x.Frequency, x.EffectiveFrom, x.EffectiveTo, x.IsActive,
+            x.FeeHeadId, x.FeeHead?.Name);
 
     private static TransactionDto MapTransaction(FinancialTransaction item) =>
         new(item.Id, item.Title, item.Type, item.Amount, item.Category, item.OccurredAt, item.FeePaymentId);

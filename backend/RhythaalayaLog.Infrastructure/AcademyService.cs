@@ -16,7 +16,11 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     public async Task<CourseDto> CreateCourseAsync(CreateCourseRequest request, CancellationToken ct)
     {
         RequireText(request.Name, nameof(request.Name));
-        var course = new Course { TenantId = RequireTenant(), Name = request.Name.Trim(), Description = Clean(request.Description) };
+        var name = request.Name.Trim();
+        // The unique (TenantId, Name) index ignores IsActive, so an archived course counts too.
+        if (await db.Courses.AnyAsync(x => x.Name == name, ct))
+            throw new ConflictException($"A course named “{name}” already exists.");
+        var course = new Course { TenantId = RequireTenant(), Name = name, Description = Clean(request.Description) };
         db.Courses.Add(course);
         await db.SaveChangesAsync(ct);
         return new CourseDto(course.Id, course.Name, course.Description, true, 0);
@@ -26,7 +30,11 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     {
         RequireText(request.Name, nameof(request.Name));
         var course = await db.Courses.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Course));
-        course.Name = request.Name.Trim();
+        var name = request.Name.Trim();
+        if (!string.Equals(name, course.Name, StringComparison.Ordinal)
+            && await db.Courses.AnyAsync(x => x.Name == name && x.Id != id, ct))
+            throw new ConflictException($"A course named “{name}” already exists.");
+        course.Name = name;
         course.Description = Clean(request.Description);
         course.IsActive = request.IsActive;
         await db.SaveChangesAsync(ct);

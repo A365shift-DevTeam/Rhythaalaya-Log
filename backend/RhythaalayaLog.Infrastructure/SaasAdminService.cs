@@ -72,6 +72,9 @@ public sealed class SaasAdminService(AppDbContext db, PasswordHasher<UserAccount
             Id = Guid.NewGuid(), TenantId = tenant.Id, Name = tenant.Name,
             Type = "Academy", Currency = "INR", Locale = "en-IN", TimeZone = "Asia/Kolkata"
         });
+        var defaultHeads = new[] { "Tuition Fee", "Registration Fee", "Material Fee", "Exam Fee", "Transport Fee", "Other Fee" };
+        for (var i = 0; i < defaultHeads.Length; i++)
+            db.FeeHeads.Add(new FeeHead { TenantId = tenant.Id, Name = defaultHeads[i], DisplayOrder = i });
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
         return MapTenant(tenant, 0);

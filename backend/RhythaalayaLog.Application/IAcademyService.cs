@@ -44,6 +44,10 @@ public interface IAcademyService
 
 public interface IFinanceService
 {
+    Task<IReadOnlyList<FeeHeadDto>> GetFeeHeadsAsync(CancellationToken ct);
+    Task<FeeHeadDto> CreateFeeHeadAsync(CreateFeeHeadRequest request, CancellationToken ct);
+    Task<FeeHeadDto> UpdateFeeHeadAsync(Guid id, UpdateFeeHeadRequest request, CancellationToken ct);
+
     Task<IReadOnlyList<FeeStructureDto>> GetFeeStructuresAsync(Guid? courseId, CancellationToken ct);
     Task<FeeStructureDto> CreateFeeStructureAsync(CreateFeeStructureRequest request, CancellationToken ct);
     Task<FeeStructureDto> UpdateFeeStructureAsync(Guid id, UpdateFeeStructureRequest request, CancellationToken ct);

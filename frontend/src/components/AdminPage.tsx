@@ -99,7 +99,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
       {section === 'users' && <UserManagementSection session={session} />}
       {section === 'profile' && <OrgProfileSection settings={settings} setSettings={setSettings} />}
-      {section === 'finance' && <FinancialSettings settings={settings} setSettings={setSettings} />}
+      {section === 'finance' && <FinancialSettings settings={settings} setSettings={setSettings} token={session.token} />}
       {section === 'whatsapp' && <WhatsAppTemplateSection settings={settings} setSettings={setSettings} />}
       {section === 'backup' && <DataBackupSection onExportData={onExportData} />}
     </div>

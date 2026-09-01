@@ -913,5 +913,78 @@ BEGIN
     VALUES ('20260828114756_BatchSessionOverrides', '9.0.1');
     END IF;
 END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260901071230_FeeHeads') THEN
+    ALTER TABLE "FeeStructures" ADD "FeeHeadId" uuid;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260901071230_FeeHeads') THEN
+    ALTER TABLE "FeeDues" ADD "FeeHeadId" uuid;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260901071230_FeeHeads') THEN
+    CREATE TABLE "FeeHeads" (
+        "Id" uuid NOT NULL,
+        "TenantId" uuid NOT NULL,
+        "Name" character varying(80) NOT NULL,
+        "DisplayOrder" integer NOT NULL,
+        "IsActive" boolean NOT NULL,
+        "CreatedAt" timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_FeeHeads" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_FeeHeads_Tenants_TenantId" FOREIGN KEY ("TenantId") REFERENCES "Tenants" ("Id") ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260901071230_FeeHeads') THEN
+    CREATE INDEX "IX_FeeStructures_FeeHeadId" ON "FeeStructures" ("FeeHeadId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260901071230_FeeHeads') THEN
+    CREATE INDEX "IX_FeeDues_FeeHeadId" ON "FeeDues" ("FeeHeadId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260901071230_FeeHeads') THEN
+    CREATE UNIQUE INDEX "IX_FeeHeads_TenantId_Name" ON "FeeHeads" ("TenantId", "Name");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260901071230_FeeHeads') THEN
+    ALTER TABLE "FeeDues" ADD CONSTRAINT "FK_FeeDues_FeeHeads_FeeHeadId" FOREIGN KEY ("FeeHeadId") REFERENCES "FeeHeads" ("Id") ON DELETE SET NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260901071230_FeeHeads') THEN
+    ALTER TABLE "FeeStructures" ADD CONSTRAINT "FK_FeeStructures_FeeHeads_FeeHeadId" FOREIGN KEY ("FeeHeadId") REFERENCES "FeeHeads" ("Id") ON DELETE SET NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260901071230_FeeHeads') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260901071230_FeeHeads', '9.0.1');
+    END IF;
+END $EF$;
 COMMIT;
 

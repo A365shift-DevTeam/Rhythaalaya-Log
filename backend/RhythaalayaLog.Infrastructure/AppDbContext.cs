@@ -18,6 +18,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     public DbSet<BatchSessionOverride> BatchSessionOverrides => Set<BatchSessionOverride>();
     public DbSet<Enrollment> Enrollments => Set<Enrollment>();
     public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
+    public DbSet<FeeHead> FeeHeads => Set<FeeHead>();
     public DbSet<FeeStructure> FeeStructures => Set<FeeStructure>();
     public DbSet<FeeDue> FeeDues => Set<FeeDue>();
     public DbSet<FeeAdjustment> FeeAdjustments => Set<FeeAdjustment>();
@@ -144,16 +145,23 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
 
     private static void ConfigureFees(ModelBuilder modelBuilder)
     {
+        var head = modelBuilder.Entity<FeeHead>();
+        head.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+        head.Property(x => x.Name).HasMaxLength(80);
+        head.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
+
         var structure = modelBuilder.Entity<FeeStructure>();
         structure.Property(x => x.Name).HasMaxLength(160);
         structure.Property(x => x.Amount).HasPrecision(12, 2);
         structure.Property(x => x.Frequency).HasConversion<string>().HasMaxLength(16);
         structure.HasIndex(x => new { x.TenantId, x.CourseId, x.IsActive });
         structure.HasOne(x => x.Course).WithMany(x => x.FeeStructures).HasForeignKey(x => x.CourseId).OnDelete(DeleteBehavior.Restrict);
+        structure.HasOne(x => x.FeeHead).WithMany().HasForeignKey(x => x.FeeHeadId).OnDelete(DeleteBehavior.SetNull);
         structure.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
 
         var due = modelBuilder.Entity<FeeDue>();
         due.HasIndex(x => new { x.TenantId, x.EnrollmentId, x.FeeStructureId, x.DueDate }).IsUnique();
+        due.HasOne(x => x.FeeHead).WithMany().HasForeignKey(x => x.FeeHeadId).OnDelete(DeleteBehavior.SetNull);
         due.Property(x => x.Title).HasMaxLength(160);
         due.Property(x => x.Amount).HasPrecision(12, 2);
         due.Property(x => x.DiscountAmount).HasPrecision(12, 2);
@@ -248,6 +256,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         modelBuilder.Entity<Student>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<Enrollment>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<AttendanceRecord>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
+        modelBuilder.Entity<FeeHead>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<FeeStructure>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<FeeDue>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);
         modelBuilder.Entity<FeeAdjustment>().HasQueryFilter(x => tenantContext.TenantId.HasValue && x.TenantId == tenantContext.TenantId.Value);

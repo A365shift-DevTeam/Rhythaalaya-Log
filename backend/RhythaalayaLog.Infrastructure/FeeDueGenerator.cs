@@ -202,7 +202,7 @@ public sealed class FeeDueGenerator(AppDbContext db)
         var due = new FeeDue
         {
             TenantId = enrollment.TenantId, StudentId = enrollment.StudentId, EnrollmentId = enrollment.Id,
-            FeeStructureId = structure.Id, DueDate = dueDate, Amount = structure.Amount,
+            FeeStructureId = structure.Id, FeeHeadId = structure.FeeHeadId, DueDate = dueDate, Amount = structure.Amount,
             DiscountAmount = 0, NetAmount = structure.Amount,
             Status = dueDate > today ? FeeDueStatus.Upcoming : FeeDueStatus.Pending
         };

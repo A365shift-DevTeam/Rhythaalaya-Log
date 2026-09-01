@@ -14,13 +14,20 @@ interface AdjustDueModalProps {
   onApplied: () => Promise<void> | void;
 }
 
-type Mode = 'Discount' | 'Waiver' | 'Cancel';
+type Mode = 'Discount' | 'Waiver' | 'Fine' | 'WriteOff' | 'Cancel';
 
 const MODES: { value: Mode; icon: string; label: string; hint: string }[] = [
   { value: 'Discount', icon: 'percent', label: 'Discount', hint: 'Reduce this due by an amount' },
   { value: 'Waiver', icon: 'volunteer_activism', label: 'Waive', hint: 'Waive part or all of this due' },
+  { value: 'Fine', icon: 'gavel', label: 'Fine', hint: 'Add a late fee — raises what the student owes' },
+  { value: 'WriteOff', icon: 'money_off', label: 'Write off', hint: 'Stop pursuing this balance — recorded, not collected' },
   { value: 'Cancel', icon: 'block', label: 'Cancel', hint: 'Cancel the due entirely' },
 ];
+
+const AMOUNT_LABEL: Record<Exclude<Mode, 'Cancel'>, string> = {
+  Discount: 'Discount amount (₹)', Waiver: 'Waived amount (₹)',
+  Fine: 'Fine amount (₹)', WriteOff: 'Write-off amount (₹)',
+};
 
 export const AdjustDueModal: React.FC<AdjustDueModalProps> = ({ isOpen, onClose, due, token, onApplied }) => {
   const [mode, setMode] = useState<Mode>('Discount');
@@ -56,6 +63,7 @@ export const AdjustDueModal: React.FC<AdjustDueModalProps> = ({ isOpen, onClose,
 
   const alreadyPaid = due.paidAmount;
   const maxReduction = due.netAmount - alreadyPaid;
+  const isReduction = mode === 'Discount' || mode === 'Waiver' || mode === 'WriteOff';
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -126,9 +134,13 @@ export const AdjustDueModal: React.FC<AdjustDueModalProps> = ({ isOpen, onClose,
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-[#212121] dark:text-white">
                         <JisIcon className="text-[15px] text-[#3fc073]">
-                          {item.type === 'Discount' ? 'percent' : item.type === 'Waiver' ? 'volunteer_activism' : 'event_repeat'}
+                          {item.type === 'Discount' ? 'percent'
+                            : item.type === 'Waiver' ? 'volunteer_activism'
+                            : item.type === 'Fine' ? 'gavel'
+                            : item.type === 'WriteOff' ? 'money_off'
+                            : 'event_repeat'}
                         </JisIcon>
-                        <span>{item.type === 'Proration' ? 'Prorated' : item.type}</span>
+                        <span>{item.type === 'Proration' ? 'Prorated' : item.type === 'WriteOff' ? 'Write-off' : item.type}</span>
                         <span className="tabular-nums">₹{Math.abs(item.amount).toLocaleString('en-IN')}</span>
                         {item.amount < 0 && <span className="font-semibold text-[#9e9e9e]">(reversed)</span>}
                       </div>
@@ -170,20 +182,24 @@ export const AdjustDueModal: React.FC<AdjustDueModalProps> = ({ isOpen, onClose,
             <div>
               <div className="mb-1 flex items-center justify-between">
                 <label htmlFor="adjust-amount" className="text-xs font-semibold text-[#575757] dark:text-[#cbd5e1]">
-                  {mode === 'Discount' ? 'Discount amount (₹)' : 'Waived amount (₹)'}
+                  {AMOUNT_LABEL[mode]}
                 </label>
-                {maxReduction > 0 && Number(amount) !== maxReduction && (
+                {isReduction && maxReduction > 0 && Number(amount) !== maxReduction && (
                   <Button type="button" onClick={() => setAmount(String(maxReduction))} className="text-xs font-bold text-[#3fc073] hover:underline">
                     Max ₹{maxReduction.toLocaleString('en-IN')}
                   </Button>
                 )}
               </div>
-              <input id="adjust-amount" type="number" required min="0.01" step="0.01" max={maxReduction} value={amount} disabled={submitting}
+              <input id="adjust-amount" type="number" required min="0.01" step="0.01" max={isReduction ? maxReduction : undefined} value={amount} disabled={submitting}
                 onChange={(event) => setAmount(event.target.value)}
                 placeholder="Enter amount"
                 className="w-full min-h-12 p-3 text-lg font-bold bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-[#212121] dark:text-white outline-none focus:border-[#3fc073] focus:ring-4 focus:ring-[#3fc073]/15 disabled:opacity-60" />
               <p className="mt-1 text-xs text-[#9e9e9e]">
-                Cannot reduce below what's already paid (max ₹{maxReduction.toLocaleString('en-IN')}).
+                {mode === 'Fine'
+                  ? 'Added on top of the current balance — the student will owe this much more.'
+                  : mode === 'WriteOff'
+                    ? `Recorded as written off, not collected (max ₹${maxReduction.toLocaleString('en-IN')}).`
+                    : `Cannot reduce below what's already paid (max ₹${maxReduction.toLocaleString('en-IN')}).`}
               </p>
             </div>
           )}
@@ -204,7 +220,7 @@ export const AdjustDueModal: React.FC<AdjustDueModalProps> = ({ isOpen, onClose,
             </Button>
             <Button type="submit" disabled={submitting} className="btn-brand min-h-11 px-5 py-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
               <JisIcon className="text-[16px]">{submitting ? 'progress_activity' : 'check'}</JisIcon>
-              <span>{submitting ? 'Applying…' : mode === 'Cancel' ? 'Cancel this due' : `Apply ${mode.toLowerCase()}`}</span>
+              <span>{submitting ? 'Applying…' : mode === 'Cancel' ? 'Cancel this due' : mode === 'WriteOff' ? 'Apply write-off' : `Apply ${mode.toLowerCase()}`}</span>
             </Button>
           </div>
         </form>

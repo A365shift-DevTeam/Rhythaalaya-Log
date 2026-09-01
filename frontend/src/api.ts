@@ -1,6 +1,7 @@
-import { Achievement, AchievementCategory, Batch, Course, FeeAdjustment, FeeAdjustmentType, FeeDue, FeeDueStatus,
-  FeeFrequency, FeePayment, FeeStructure, LateEnrollmentBillingPolicy, OrgSettings, PaymentMethod, Receipt, Staff,
-  Student, Transaction } from './types';
+import { Achievement, AchievementCategory, BatchFinance, BatchFinanceRow, Batch, CollectionReport, Course,
+  FeeAdjustment, FeeAdjustmentType, FeeDue, FeeDueStatus, FeeFrequency, FeeHead, FinanceDashboard, FeePayment,
+  FeeStructure, LateEnrollmentBillingPolicy, OrgSettings, PaymentMethod, Receipt, Staff, Student, StudentLedger,
+  Transaction } from './types';
 import { DEFAULT_WHATSAPP_TEMPLATE } from './whatsappTemplate';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5101/api').replace(/\/$/, '');
@@ -218,15 +219,29 @@ export const api = {
       }))
     }) }, token),
 
+  // Fee heads
+  feeHeads: (token: string) =>
+    request<any[]>('/finance/fee-heads', {}, token).then(rows => rows.map(mapFeeHead)),
+  createFeeHead: (token: string, body: { name: string; displayOrder?: number }) =>
+    request<any>('/finance/fee-heads', { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeeHead),
+  updateFeeHead: (token: string, id: string, body: { name: string; displayOrder: number; isActive: boolean }) =>
+    request<any>('/finance/fee-heads/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapFeeHead),
+
   // Fee structures
   feeStructures: (token: string, courseId?: string) =>
     request<any[]>('/finance/fee-structures' + (courseId ? '?courseId=' + encodeURIComponent(courseId) : ''), {}, token)
       .then(rows => rows.map(mapFeeStructure)),
   createFeeStructure: (token: string, body: {
-    courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string; effectiveTo?: string | null;
+    courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string;
+    effectiveTo?: string | null; feeHeadId?: string | null;
   }) => request<any>('/finance/fee-structures', { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeeStructure),
-  updateFeeStructure: (token: string, id: string, body: { name: string; effectiveTo?: string | null; isActive: boolean }) =>
-    request<any>('/finance/fee-structures/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapFeeStructure),
+  updateFeeStructure: (token: string, id: string, body: {
+    name: string; effectiveTo?: string | null; isActive: boolean; feeHeadId?: string | null;
+  }) => request<any>('/finance/fee-structures/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapFeeStructure),
+
+  collectionReport: (token: string, from: string, to: string, granularity: 'Day' | 'Month') =>
+    request<any>(`/finance/reports/collections?from=${from}&to=${to}&granularity=${granularity}`, {}, token)
+      .then(mapCollectionReport),
 
   // Fee dues & payments
   feeDues: (token: string, status?: FeeDueStatus) =>
@@ -235,6 +250,21 @@ export const api = {
     request<any[]>(`/finance/students/${studentId}/dues`, {}, token).then(rows => rows.map(mapFeeDue)),
   studentPayments: (token: string, studentId: string) =>
     request<any[]>(`/finance/students/${studentId}/payments`, {}, token).then(rows => rows.map(mapFeePayment)),
+  studentLedger: (token: string, studentId: string) =>
+    request<any>(`/finance/students/${studentId}/ledger`, {}, token).then(mapStudentLedger),
+  batchFinanceList: (token: string) =>
+    request<any[]>('/finance/batches/finance', {}, token).then(rows => rows.map(mapBatchFinanceRow)),
+  batchFinance: (token: string, batchId: string) =>
+    request<any>(`/finance/batches/${batchId}/finance`, {}, token).then(mapBatchFinance),
+  financeDashboard: (token: string, params?: { from?: string; to?: string; batchId?: string; courseId?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.from) q.set('from', params.from);
+    if (params?.to) q.set('to', params.to);
+    if (params?.batchId) q.set('batchId', params.batchId);
+    if (params?.courseId) q.set('courseId', params.courseId);
+    const qs = q.toString();
+    return request<any>('/finance/dashboard' + (qs ? `?${qs}` : ''), {}, token).then(mapFinanceDashboard);
+  },
   recordPayment: (token: string, body: {
     studentId: string; feeDueId?: string | null; amount: number; method: PaymentMethod;
     referenceNumber?: string; remarks?: string; paymentDate?: string | null; idempotencyKey?: string;
@@ -393,7 +423,20 @@ function mapStudent(x: any): Student {
 function mapFeeStructure(x: any): FeeStructure {
   return {
     id: x.id, courseId: x.courseId, courseName: x.courseName, name: x.name, amount: x.amount,
-    frequency: x.frequency, effectiveFrom: x.effectiveFrom, effectiveTo: x.effectiveTo || undefined, isActive: x.isActive
+    frequency: x.frequency, effectiveFrom: x.effectiveFrom, effectiveTo: x.effectiveTo || undefined, isActive: x.isActive,
+    feeHeadId: x.feeHeadId || undefined, feeHeadName: x.feeHeadName || undefined
+  };
+}
+function mapFeeHead(x: any): FeeHead {
+  return { id: x.id, name: x.name, displayOrder: x.displayOrder ?? 0, isActive: x.isActive ?? true, structureCount: x.structureCount ?? 0 };
+}
+function mapCollectionReport(x: any): CollectionReport {
+  return {
+    from: x.from, to: x.to, granularity: x.granularity,
+    totalCollected: x.totalCollected ?? 0, totalRefunded: x.totalRefunded ?? 0, totalNet: x.totalNet ?? 0,
+    points: (x.points || []).map((p: any) => ({
+      period: p.period, collected: p.collected ?? 0, refunded: p.refunded ?? 0, net: p.net ?? 0,
+    })),
   };
 }
 function mapFeeDue(x: any): FeeDue {
@@ -418,6 +461,57 @@ function mapFeePayment(x: any): FeePayment {
     allocations: (x.allocations || []).map((a: any) => ({
       feeDueId: a.feeDueId, dueDate: a.dueDate, courseName: a.courseName, batchName: a.batchName, amount: a.amount
     }))
+  };
+}
+function mapStudentLedger(x: any): StudentLedger {
+  const s = x.summary || {};
+  return {
+    studentId: x.studentId, studentName: x.studentName,
+    summary: {
+      totalCharged: s.totalCharged ?? 0, totalFines: s.totalFines ?? 0,
+      totalAdjustments: s.totalAdjustments ?? 0, totalWrittenOff: s.totalWrittenOff ?? 0,
+      netCharged: s.netCharged ?? 0, totalPaid: s.totalPaid ?? 0,
+      pending: s.pending ?? 0, availableCredit: s.availableCredit ?? 0,
+      overdue: s.overdue ?? 0, totalRefunded: s.totalRefunded ?? 0,
+    },
+    entries: (x.entries || []).map((e: any) => ({
+      date: e.date, type: e.type, description: e.description,
+      debit: e.debit ?? 0, credit: e.credit ?? 0, balance: e.balance ?? 0,
+      feeDueId: e.feeDueId || undefined, paymentId: e.paymentId || undefined,
+      reference: e.reference || undefined, feeHeadName: e.feeHeadName || undefined,
+    })),
+  };
+}
+function mapBatchFinanceRow(x: any): BatchFinanceRow {
+  return {
+    batchId: x.batchId, batchName: x.batchName, courseName: x.courseName, studentCount: x.studentCount ?? 0,
+    netCharged: x.netCharged ?? 0, collected: x.collected ?? 0, pending: x.pending ?? 0,
+    overdue: x.overdue ?? 0, availableCredit: x.availableCredit ?? 0,
+  };
+}
+function mapBatchFinance(x: any): BatchFinance {
+  return {
+    batchId: x.batchId, batchName: x.batchName, courseName: x.courseName,
+    totalCharged: x.totalCharged ?? 0, totalFines: x.totalFines ?? 0, totalAdjustments: x.totalAdjustments ?? 0,
+    totalWrittenOff: x.totalWrittenOff ?? 0, netCharged: x.netCharged ?? 0, collected: x.collected ?? 0,
+    pending: x.pending ?? 0, overdue: x.overdue ?? 0, availableCredit: x.availableCredit ?? 0,
+    paidCount: x.paidCount ?? 0, partiallyPaidCount: x.partiallyPaidCount ?? 0, pendingCount: x.pendingCount ?? 0,
+    overdueCount: x.overdueCount ?? 0, withCreditCount: x.withCreditCount ?? 0, noDuesCount: x.noDuesCount ?? 0,
+    students: (x.students || []).map((s: any) => ({
+      studentId: s.studentId, studentName: s.studentName, enrollmentId: s.enrollmentId,
+      netCharged: s.netCharged ?? 0, collected: s.collected ?? 0, pending: s.pending ?? 0,
+      overdue: s.overdue ?? 0, availableCredit: s.availableCredit ?? 0, status: s.status,
+    })),
+  };
+}
+function mapFinanceDashboard(x: any): FinanceDashboard {
+  return {
+    totalCharged: x.totalCharged ?? 0, totalFines: x.totalFines ?? 0, totalAdjustments: x.totalAdjustments ?? 0,
+    totalWrittenOff: x.totalWrittenOff ?? 0, netCharged: x.netCharged ?? 0, totalCollected: x.totalCollected ?? 0,
+    totalPending: x.totalPending ?? 0, totalOverdue: x.totalOverdue ?? 0, totalStudentCredit: x.totalStudentCredit ?? 0,
+    collectionToday: x.collectionToday ?? 0, collectionThisMonth: x.collectionThisMonth ?? 0,
+    collectionInRange: x.collectionInRange ?? 0, refundsInRange: x.refundsInRange ?? 0,
+    writeOffsInRange: x.writeOffsInRange ?? 0, rangeFrom: x.rangeFrom || undefined, rangeTo: x.rangeTo || undefined,
   };
 }
 function mapReceipt(x: any): Receipt {

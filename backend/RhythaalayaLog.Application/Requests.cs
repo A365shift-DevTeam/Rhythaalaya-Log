@@ -36,9 +36,12 @@ public sealed record EndEnrollmentRequest(EnrollmentStatus Status, DateOnly? End
 
 public sealed record SubmitAttendanceRequest(DateOnly Date, Guid BatchId, IReadOnlyList<AttendanceEntryDto> Entries);
 
+public sealed record CreateFeeHeadRequest(string Name, int DisplayOrder = 0);
+public sealed record UpdateFeeHeadRequest(string Name, int DisplayOrder, bool IsActive);
+
 public sealed record CreateFeeStructureRequest(Guid CourseId, string Name, decimal Amount, FeeFrequency Frequency,
-    DateOnly EffectiveFrom, DateOnly? EffectiveTo);
-public sealed record UpdateFeeStructureRequest(string Name, DateOnly? EffectiveTo, bool IsActive);
+    DateOnly EffectiveFrom, DateOnly? EffectiveTo, Guid? FeeHeadId = null);
+public sealed record UpdateFeeStructureRequest(string Name, DateOnly? EffectiveTo, bool IsActive, Guid? FeeHeadId = null);
 
 public sealed record RecordFeePaymentRequest(Guid StudentId, Guid? FeeDueId, decimal Amount, PaymentMethod Method,
     string? ReferenceNumber, string? Remarks, DateTimeOffset? PaymentDate, string? IdempotencyKey = null);

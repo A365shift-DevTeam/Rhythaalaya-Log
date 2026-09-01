@@ -34,8 +34,11 @@ public sealed record AttendanceRecordDto(Guid EnrollmentId, Guid StudentId, stri
     bool StudentIsActive = true, int AttendedDays = 0, bool HasRecord = true);
 public sealed record AttendanceLogDto(DateOnly Date, Guid BatchId, string BatchName, IReadOnlyList<AttendanceRecordDto> Entries);
 
+public sealed record FeeHeadDto(Guid Id, string Name, int DisplayOrder, bool IsActive, int StructureCount);
+
 public sealed record FeeStructureDto(Guid Id, Guid CourseId, string CourseName, string Name, decimal Amount,
-    FeeFrequency Frequency, DateOnly EffectiveFrom, DateOnly? EffectiveTo, bool IsActive);
+    FeeFrequency Frequency, DateOnly EffectiveFrom, DateOnly? EffectiveTo, bool IsActive,
+    Guid? FeeHeadId = null, string? FeeHeadName = null);
 
 public sealed record FeeDueDto(Guid Id, Guid StudentId, string StudentName, Guid EnrollmentId, Guid BatchId,
     string BatchName, string CourseName, Guid? FeeStructureId, DateOnly DueDate, decimal Amount,

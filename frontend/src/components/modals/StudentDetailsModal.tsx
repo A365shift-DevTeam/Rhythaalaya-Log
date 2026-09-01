@@ -2,7 +2,7 @@ import { Button } from '../ui/button';
 import { JisIcon } from '../JisIcon';
 import { Spinner } from '../ui/spinner';
 import React, { useEffect, useState } from 'react';
-import { Achievement, FeeDue, FeePayment, PAYMENT_METHOD_LABELS, Student } from '../../types';
+import { Achievement, LedgerEntry, Student, StudentLedger } from '../../types';
 import { api } from '../../api';
 import { useDialogLifecycle } from './useDialogLifecycle';
 import { confirmAction } from '../../lib/confirm';
@@ -30,8 +30,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   isOpen, onClose, student, token, onRecordFee, onSendMessage, onDeleteStudent, onEdit, onAchievementsChanged
 }) => {
   const dialogRef = useDialogLifecycle(isOpen, onClose);
-  const [dues, setDues] = useState<FeeDue[]>([]);
-  const [payments, setPayments] = useState<FeePayment[]>([]);
+  const [ledger, setLedger] = useState<StudentLedger | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAddAchievementOpen, setIsAddAchievementOpen] = useState(false);
@@ -43,9 +42,9 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
     setTab('details');
     setAchievementError('');
     setLoading(true);
-    Promise.all([api.studentDues(token, student.id), api.studentPayments(token, student.id), api.achievements(token, student.id)])
-      .then(([dueRows, paymentRows, achievementRows]) => { setDues(dueRows); setPayments(paymentRows); setAchievements(achievementRows); })
-      .catch(() => { setDues([]); setPayments([]); setAchievements([]); })
+    Promise.all([api.studentLedger(token, student.id), api.achievements(token, student.id)])
+      .then(([ledgerData, achievementRows]) => { setLedger(ledgerData); setAchievements(achievementRows); })
+      .catch(() => { setLedger(null); setAchievements([]); })
       .finally(() => setLoading(false));
   }, [isOpen, student, token]);
 
@@ -82,7 +81,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
 
   const tabs: { id: DetailsTab; label: string; count: number | null }[] = [
     { id: 'details', label: 'Details', count: null },
-    { id: 'fees', label: 'Fees', count: payments.length },
+    { id: 'fees', label: 'Fees', count: ledger?.entries.length ?? null },
     { id: 'achievements', label: 'Achievements', count: achievements.length },
   ];
 
@@ -207,41 +206,13 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
           )}
 
           {tab === 'fees' && (
-            <>
-              <CollapsibleSection title="Fee dues" count={dues.length}>
-                {loading ? <div className="py-2"><Spinner size="xs" inline text="Loading dues…" /></div> : dues.length === 0 ? (
-                  <p className="text-xs text-[#808080]">No dues generated yet.</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {dues.map((due) => (
-                      <div key={due.id} className="flex items-center justify-between rounded-2xl bg-[#f0f0f0] dark:bg-[#111c2b] px-3 py-2 text-xs border border-[#dbdbdb]/60 dark:border-[#243244]">
-                        <span className="text-[#575757] dark:text-[#cbd5e1]">{due.courseName} · {new Date(due.dueDate).toLocaleDateString('en-IN')}</span>
-                        <span className={`font-bold ${due.status === 'Paid' ? 'text-[#22c55e]' : due.status === 'Overdue' ? 'text-[#ef4444]' : 'text-[#212121] dark:text-white'}`}>
-                          ₹{due.netAmount.toLocaleString('en-IN')} · {due.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CollapsibleSection>
-
-              <CollapsibleSection title="Payment history" count={payments.length}>
-                {loading ? <div className="py-2"><Spinner size="xs" inline text="Loading payments…" /></div> : payments.length === 0 ? (
-                  <p className="text-xs text-[#808080]">No payments recorded yet.</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {payments.map((payment) => (
-                      <div key={payment.id} className="flex items-center justify-between rounded-2xl bg-[#f0f0f0] dark:bg-[#111c2b] px-3 py-2 text-xs border border-[#dbdbdb]/60 dark:border-[#243244]">
-                        <span className="text-[#575757] dark:text-[#cbd5e1] font-mono">{payment.receiptNumber} · {PAYMENT_METHOD_LABELS[payment.method]}</span>
-                        <span className={`font-bold ${payment.amount < 0 ? 'text-[#ef4444]' : 'text-[#22c55e]'}`}>
-                          {payment.amount < 0 ? '-' : '+'}₹{Math.abs(payment.amount).toLocaleString('en-IN')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CollapsibleSection>
-            </>
+            loading ? (
+              <div className="py-2"><Spinner size="xs" inline text="Loading ledger…" /></div>
+            ) : !ledger ? (
+              <p className="text-xs text-[#808080]">Couldn’t load the fee ledger.</p>
+            ) : (
+              <FeeLedgerPanel ledger={ledger} hasUpcomingDues={student.hasUpcomingDues} />
+            )
           )}
 
           {tab === 'achievements' && (
@@ -323,25 +294,144 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   );
 };
 
-function CollapsibleSection({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
-  const [open, setOpen] = useState(true);
+const inr = (n: number) => `₹${Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+const ledgerDate = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
+
+const LEDGER_ROW_ICON: Record<LedgerEntry['type'], string> = {
+  FeeCharge: 'receipt_long', Payment: 'payments', Concession: 'redeem',
+  Waiver: 'volunteer_activism', Proration: 'pie_chart', Fine: 'gavel',
+  WriteOff: 'money_off', Refund: 'undo',
+};
+
+function FeeLedgerPanel({ ledger, hasUpcomingDues }: { ledger: StudentLedger; hasUpcomingDues: boolean }) {
+  const { summary, entries } = ledger;
+  const settled = summary.pending === 0 && summary.availableCredit === 0;
+  const received = summary.totalPaid - summary.totalRefunded;
+
   return (
-    <section>
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        className="mb-2 flex w-full items-center justify-between gap-2 text-left"
-      >
-        <span className="text-xs font-bold uppercase tracking-wider text-[#808080]">
-          {title}
-          {count ? <span className="ml-1.5 font-semibold text-[#9e9e9e]">· {count}</span> : null}
-        </span>
-        <JisIcon className={`text-[18px] text-[#9e9e9e] transition-transform ${open ? 'rotate-180' : ''}`}>expand_more</JisIcon>
-      </button>
-      {open && children}
-    </section>
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-2">
+        <StatTile label="Net fees" value={inr(summary.netCharged)} />
+        <StatTile label="Received" value={inr(received)} tone="success" />
+        <StatTile
+          label={summary.availableCredit > 0 ? 'Credit' : 'Pending'}
+          value={inr(summary.availableCredit > 0 ? summary.availableCredit : summary.pending)}
+          tone={summary.availableCredit > 0 ? 'success' : summary.pending > 0 ? 'danger' : 'muted'}
+        />
+      </div>
+
+      {(summary.overdue > 0 || summary.totalRefunded > 0 || summary.totalAdjustments > 0
+        || summary.totalFines > 0 || summary.totalWrittenOff > 0) && (
+        <div className="flex flex-wrap gap-1.5">
+          {summary.overdue > 0 && <SummaryChip label="Overdue" value={inr(summary.overdue)} tone="danger" />}
+          {summary.totalFines > 0 && <SummaryChip label="Fines" value={inr(summary.totalFines)} tone="danger" />}
+          {summary.totalAdjustments > 0 && <SummaryChip label="Adjustments" value={inr(summary.totalAdjustments)} tone="muted" />}
+          {summary.totalWrittenOff > 0 && <SummaryChip label="Written off" value={inr(summary.totalWrittenOff)} tone="muted" />}
+          {summary.totalRefunded > 0 && <SummaryChip label="Refunded" value={inr(summary.totalRefunded)} tone="muted" />}
+        </div>
+      )}
+
+      {entries.length === 0 ? (
+        <p className="text-xs text-[#808080]">
+          {hasUpcomingDues ? 'No fees due yet — the next bill hasn’t reached its due date.' : 'Nothing billed yet.'}
+        </p>
+      ) : (
+        <>
+          {/* Mobile — stacked rows */}
+          <div className="space-y-1.5 sm:hidden">
+            {entries.map((entry, i) => (
+              <div key={i} className="rounded-2xl bg-[#f0f0f0] dark:bg-[#111c2b] px-3 py-2.5 text-xs border border-[#dbdbdb]/60 dark:border-[#243244]">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <JisIcon className="shrink-0 text-[15px] text-[#9e9e9e]">{LEDGER_ROW_ICON[entry.type]}</JisIcon>
+                    <span className="truncate font-semibold text-[#212121] dark:text-white">
+                      {entry.description}
+                      {entry.feeHeadName ? <span className="ml-1 font-normal text-[#9e9e9e]">· {entry.feeHeadName}</span> : null}
+                    </span>
+                  </span>
+                  <span className={`shrink-0 font-bold tabular-nums ${entry.debit > 0 ? 'text-[#ef4444]' : 'text-[#22c55e]'}`}>
+                    {entry.debit > 0 ? `+${inr(entry.debit)}` : `−${inr(entry.credit)}`}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-[#808080] dark:text-[#94a3b8]">
+                  <span>{ledgerDate(entry.date)}{entry.reference ? ` · ${entry.reference}` : ''}</span>
+                  <span className="tabular-nums">Bal {balanceText(entry.balance)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop — statement table */}
+          <div className="hidden overflow-x-auto sm:block">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-[#808080] dark:text-[#94a3b8]">
+                  <th className="pb-2 pr-2 font-semibold">Date</th>
+                  <th className="pb-2 pr-2 font-semibold">Description</th>
+                  <th className="pb-2 pr-2 text-right font-semibold">Debit</th>
+                  <th className="pb-2 pr-2 text-right font-semibold">Credit</th>
+                  <th className="pb-2 text-right font-semibold">Balance</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
+                {entries.map((entry, i) => (
+                  <tr key={i} className="text-[#575757] dark:text-[#cbd5e1]">
+                    <td className="py-2 pr-2 whitespace-nowrap">{ledgerDate(entry.date)}</td>
+                    <td className="py-2 pr-2">
+                      <span className="font-medium text-[#212121] dark:text-white">{entry.description}</span>
+                      {entry.feeHeadName ? <span className="ml-1 text-[#9e9e9e]">· {entry.feeHeadName}</span> : null}
+                      {entry.reference ? <span className="ml-1 font-mono text-[#9e9e9e]">{entry.reference}</span> : null}
+                    </td>
+                    <td className="py-2 pr-2 text-right tabular-nums">{entry.debit > 0 ? inr(entry.debit) : '—'}</td>
+                    <td className="py-2 pr-2 text-right tabular-nums text-[#22c55e]">{entry.credit > 0 ? inr(entry.credit) : '—'}</td>
+                    <td className="py-2 text-right font-bold tabular-nums text-[#212121] dark:text-white">{balanceText(entry.balance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className={`flex items-center justify-between rounded-2xl px-3.5 py-3 text-xs font-bold ${
+            settled ? 'bg-[#f0f0f0] text-[#575757] dark:bg-[#111c2b] dark:text-[#cbd5e1]'
+              : summary.availableCredit > 0 ? 'bg-emerald-100 text-[#15803d] dark:bg-emerald-950/60 dark:text-emerald-300'
+              : 'bg-rose-100 text-[#b91c1c] dark:bg-rose-950/60 dark:text-rose-300'
+          }`}>
+            <span className="uppercase tracking-wider">
+              {settled ? 'Settled' : summary.availableCredit > 0 ? 'Available credit' : 'Balance outstanding'}
+            </span>
+            <span className="tabular-nums">
+              {settled ? inr(0) : inr(summary.availableCredit > 0 ? summary.availableCredit : summary.pending)}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
   );
+}
+
+// Positive balance = owed; negative = the student is in credit.
+function balanceText(balance: number) {
+  if (balance < 0) return `${inr(balance)} Cr`;
+  return inr(balance);
+}
+
+function StatTile({ label, value, tone = 'muted' }: { label: string; value: string; tone?: 'success' | 'danger' | 'muted' }) {
+  const toneClass = tone === 'success' ? 'text-[#22c55e]' : tone === 'danger' ? 'text-[#ef4444]' : 'text-[#212121] dark:text-white';
+  return (
+    <div className="rounded-2xl bg-[#f0f0f0] dark:bg-[#111c2b] p-3 border border-[#dbdbdb]/60 dark:border-[#243244]">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-[#808080]">{label}</div>
+      <div className={`mt-1 text-sm font-bold tabular-nums ${toneClass}`}>{value}</div>
+    </div>
+  );
+}
+
+function SummaryChip({ label, value, tone }: { label: string; value: string; tone: 'danger' | 'muted' }) {
+  const toneClass = tone === 'danger'
+    ? 'bg-rose-100 text-[#ef4444] dark:bg-rose-950/60 dark:text-rose-300'
+    : 'bg-[#f0f0f0] text-[#575757] dark:bg-[#172435] dark:text-[#94a3b8]';
+  return <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${toneClass}`}>
+    {label} <span className="tabular-nums font-bold">{value}</span>
+  </span>;
 }
 
 function InfoTile({ label, value, span2 }: { label: string; value: string; span2?: boolean }) {

@@ -86,9 +86,15 @@ public static class BillingSchedule
     /// Asia/Kolkata when the stored id is unknown, and to UTC as a last resort, so billing
     /// never crashes on a bad timezone value.
     /// </summary>
-    public static DateOnly TodayInTimeZone(string timeZoneId, DateTimeOffset? nowUtc = null)
+    public static DateOnly TodayInTimeZone(string timeZoneId, DateTimeOffset? nowUtc = null) =>
+        ToLocalDate(timeZoneId, nowUtc ?? DateTimeOffset.UtcNow);
+
+    /// <summary>
+    /// Converts an arbitrary instant (e.g. a payment timestamp) to the tenant's local calendar
+    /// date, with the same timezone fallbacks as <see cref="TodayInTimeZone"/>.
+    /// </summary>
+    public static DateOnly ToLocalDate(string timeZoneId, DateTimeOffset instant)
     {
-        var now = nowUtc ?? DateTimeOffset.UtcNow;
         TimeZoneInfo zone;
         try
         {
@@ -105,6 +111,6 @@ public static class BillingSchedule
                 zone = TimeZoneInfo.Utc;
             }
         }
-        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).Date);
+        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instant, zone).Date);
     }
 }

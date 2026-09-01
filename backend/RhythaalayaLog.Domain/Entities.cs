@@ -8,7 +8,20 @@ public enum SubscriptionStatus { Trial, Active, PastDue, Cancelled, Expired }
 public enum EnrollmentStatus { Active, Completed, Withdrawn }
 public enum FeeFrequency { Monthly, Quarterly, HalfYearly, Yearly, OneTime }
 public enum FeeDueStatus { Pending, Partial, Paid, Overdue, Cancelled, Upcoming }
-public enum FeeAdjustmentType { Discount, Waiver, Proration }
+public enum FeeAdjustmentType
+{
+    /// <summary>Reduces the billable amount — a manual price cut or the standing student concession.</summary>
+    Discount,
+    /// <summary>Reduces the billable amount — part or all of the fee forgiven up front.</summary>
+    Waiver,
+    /// <summary>System-only: reduces the first billing period for a mid-period enrollment.</summary>
+    Proration,
+    /// <summary>Late fee / surcharge — the only adjustment type that <em>increases</em> the billable amount.</summary>
+    Fine,
+    /// <summary>Uncollectable dues the academy has decided to stop pursuing. Reduces the balance to zero
+    /// but is reported on its own line — never as money collected.</summary>
+    WriteOff
+}
 public enum LateEnrollmentBillingPolicy { Skip, Full, Prorated }
 public enum AchievementCategory { Won, Participated, Other }
 
@@ -219,12 +232,31 @@ public sealed class AttendanceRecord : ITenantOwned
     public DateTimeOffset SubmittedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
+/// <summary>
+/// A fee category (Tuition, Registration, Exam, Transport, …). Every tenant gets a default set
+/// seeded on creation. Fee structures and one-off charges point at one; the head is copied onto
+/// each <see cref="FeeDue"/> so historical reporting survives later head edits.
+/// </summary>
+public sealed class FeeHead : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public required string Name { get; set; }
+    /// <summary>Ascending sort position in pickers and reports.</summary>
+    public int DisplayOrder { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+}
+
 public sealed class FeeStructure : ITenantOwned
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid TenantId { get; set; }
     public Guid CourseId { get; set; }
     public Course Course { get; set; } = null!;
+    /// <summary>Optional fee category; null keeps the pre-fee-head behaviour ("uncategorised").</summary>
+    public Guid? FeeHeadId { get; set; }
+    public FeeHead? FeeHead { get; set; }
     public required string Name { get; set; }
     public decimal Amount { get; set; }
     public FeeFrequency Frequency { get; set; }
@@ -246,6 +278,9 @@ public sealed class FeeDue : ITenantOwned
     /// <summary>Null for custom one-off charges, which have no billing schedule.</summary>
     public Guid? FeeStructureId { get; set; }
     public FeeStructure? FeeStructure { get; set; }
+    /// <summary>Fee category, copied from the structure at generation time; null when uncategorised.</summary>
+    public Guid? FeeHeadId { get; set; }
+    public FeeHead? FeeHead { get; set; }
     /// <summary>Display name for custom charges; scheduled dues use the fee structure's name.</summary>
     public string? Title { get; set; }
     public DateOnly DueDate { get; set; }

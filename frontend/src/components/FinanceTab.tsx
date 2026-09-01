@@ -1,6 +1,7 @@
 import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
 import { MobileSpeedDial } from './MobileSpeedDial';
+import { FinanceOverview } from './FinanceOverview';
 import React from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { FeeDue, Student, Transaction } from '../types';
@@ -12,6 +13,7 @@ interface FinanceTabProps {
   students: Student[];
   transactions: Transaction[];
   outstandingDues: FeeDue[];
+  token: string;
   canManage: boolean;
   darkMode: boolean;
   onOpenRecordFee: (student?: Student) => void;
@@ -33,6 +35,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
   students,
   transactions,
   outstandingDues,
+  token,
   canManage,
   darkMode,
   onOpenRecordFee,
@@ -131,6 +134,8 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
           </Button>
         </div>
       </div>
+
+      <FinanceOverview token={token} />
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-5">

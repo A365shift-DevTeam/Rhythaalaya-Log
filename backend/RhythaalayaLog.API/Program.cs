@@ -102,6 +102,10 @@ await using (var scope = app.Services.CreateAsyncScope())
     await scope.ServiceProvider.GetRequiredService<DatabaseInitializer>().InitializeAsync();
 
 app.UseMiddleware<ApiExceptionMiddleware>();
+// Local dev only: the "https" launch profile serves TLS from Kestrel and redirects http→https.
+// Production runs behind IIS/a reverse proxy that terminates TLS, so no redirect there.
+if (app.Environment.IsDevelopment())
+    app.UseHttpsRedirection();
 // Swagger runs in Development, and elsewhere when Swagger:Enabled is set - a config-only
 // toggle so it can be switched off on the server without a rebuild.
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger:Enabled"))

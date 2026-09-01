@@ -8,8 +8,28 @@ namespace RhythaalayaLog.API.Controllers;
 [ApiController]
 [Authorize(Roles = "TenantAdmin,Staff")]
 [Route("api/finance")]
-public sealed class FinanceController(IFinanceService service) : ControllerBase
+public sealed class FinanceController(
+    IFinanceService service, IStudentLedgerService ledgerService, IFinanceReportingService reportingService) : ControllerBase
 {
+    [HttpGet("students/{studentId:guid}/ledger")]
+    public async Task<ActionResult<StudentLedgerDto>> GetStudentLedger(Guid studentId, CancellationToken ct) =>
+        Ok(await ledgerService.GetStudentLedgerAsync(studentId, ct));
+
+    [HttpGet("batches/finance")]
+    public async Task<ActionResult<IReadOnlyList<BatchFinanceRowDto>>> GetBatchFinanceList(CancellationToken ct) =>
+        Ok(await reportingService.GetBatchFinanceListAsync(ct));
+
+    [HttpGet("batches/{batchId:guid}/finance")]
+    public async Task<ActionResult<BatchFinanceDto>> GetBatchFinance(Guid batchId, CancellationToken ct) =>
+        Ok(await reportingService.GetBatchFinanceAsync(batchId, ct));
+
+    [HttpGet("dashboard")]
+    public async Task<ActionResult<FinanceDashboardDto>> GetFinanceDashboard(
+        [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] Guid? batchId,
+        [FromQuery] Guid? courseId, [FromQuery] Guid? feeHeadId, CancellationToken ct) =>
+        Ok(await reportingService.GetFinanceDashboardAsync(
+            new FinanceDashboardQuery(from, to, batchId, courseId, feeHeadId), ct));
+
     [HttpGet("summary")]
     public async Task<ActionResult<FinanceSummaryDto>> GetSummary(
         [FromQuery] DateTimeOffset from, [FromQuery] DateTimeOffset to, CancellationToken ct) =>
@@ -35,6 +55,29 @@ public sealed class FinanceController(IFinanceService service) : ControllerBase
         await service.DeleteTransactionAsync(id, ct);
         return NoContent();
     }
+
+    [HttpGet("fee-heads")]
+    public async Task<ActionResult<IReadOnlyList<FeeHeadDto>>> GetFeeHeads(CancellationToken ct) =>
+        Ok(await service.GetFeeHeadsAsync(ct));
+
+    [HttpPost("fee-heads")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<ActionResult<FeeHeadDto>> CreateFeeHead(CreateFeeHeadRequest request, CancellationToken ct)
+    {
+        var result = await service.CreateFeeHeadAsync(request, ct);
+        return Created($"/api/finance/fee-heads/{result.Id}", result);
+    }
+
+    [HttpPut("fee-heads/{id:guid}")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<ActionResult<FeeHeadDto>> UpdateFeeHead(Guid id, UpdateFeeHeadRequest request, CancellationToken ct) =>
+        Ok(await service.UpdateFeeHeadAsync(id, request, ct));
+
+    [HttpGet("reports/collections")]
+    public async Task<ActionResult<CollectionReportDto>> GetCollectionReport(
+        [FromQuery] DateOnly from, [FromQuery] DateOnly to,
+        [FromQuery] CollectionGranularity granularity, CancellationToken ct) =>
+        Ok(await reportingService.GetCollectionReportAsync(from, to, granularity, ct));
 
     [HttpGet("fee-structures")]
     public async Task<ActionResult<IReadOnlyList<FeeStructureDto>>> GetFeeStructures(

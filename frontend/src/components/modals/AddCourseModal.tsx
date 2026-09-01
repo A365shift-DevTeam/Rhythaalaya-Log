@@ -1,7 +1,7 @@
 import { Button } from '../ui/button';
 import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
-import { Course, FeeFrequency, FeeStructure, FEE_FREQUENCY_LABELS } from '../../types';
+import { Course, FeeFrequency, FeeHead, FeeStructure, FEE_FREQUENCY_LABELS } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
 import { currentMonthlyDueDate, nextMonthlyDueDate, parseIsoDate, todayIsoDate as todayIso } from '../../lib/schedule';
 import { confirmAction } from '../../lib/confirm';
@@ -19,6 +19,7 @@ export interface NewCourseFee {
   amount: number;
   frequency: FeeFrequency;
   dueDate: string;
+  feeHeadId?: string | null;
 }
 
 interface AddCourseModalProps {
@@ -26,15 +27,20 @@ interface AddCourseModalProps {
   onClose: () => void;
   editingCourse?: Course | null;
   feeStructures: FeeStructure[];
+  feeHeads: FeeHead[];
   onSave: (name: string, description: string, isActive: boolean, fee: NewCourseFee | null) => Promise<void>;
   onArchive?: (courseId: string) => Promise<void>;
-  onAddFeeStructure: (payload: { courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string }) => Promise<void>;
-  onUpdateFeeStructure: (structureId: string, payload: { name: string; effectiveTo?: string | null; isActive: boolean }) => Promise<void>;
+  onAddFeeStructure: (payload: {
+    courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string; feeHeadId?: string | null;
+  }) => Promise<void>;
+  onUpdateFeeStructure: (structureId: string, payload: {
+    name: string; effectiveTo?: string | null; isActive: boolean; feeHeadId?: string | null;
+  }) => Promise<void>;
 }
 
 
 export const AddCourseModal: React.FC<AddCourseModalProps> = ({
-  isOpen, onClose, editingCourse, feeStructures, onSave, onArchive, onAddFeeStructure, onUpdateFeeStructure
+  isOpen, onClose, editingCourse, feeStructures, feeHeads, onSave, onArchive, onAddFeeStructure, onUpdateFeeStructure
 }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -43,6 +49,11 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   const [feeName, setFeeName] = useState('Monthly Fee');
   const [feeAmount, setFeeAmount] = useState('');
   const [feeFrequency, setFeeFrequency] = useState<FeeFrequency>('Monthly');
+  const [feeHeadId, setFeeHeadId] = useState('');
+  const feeHeadOptions = [
+    { value: '', label: '— No category —' },
+    ...feeHeads.filter((h) => h.isActive).map((h) => ({ value: h.id, label: h.name })),
+  ];
   const [feeDueDate, setFeeDueDate] = useState(todayIso());
   const [feeDueDay, setFeeDueDay] = useState(new Date().getDate());
   const [submitting, setSubmitting] = useState(false);
@@ -84,6 +95,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setFeeName('Monthly Fee');
     setFeeAmount('');
     setFeeFrequency('Monthly');
+    setFeeHeadId('');
     setFeeDueDate(todayIso());
     setFeeDueDay(new Date().getDate());
     setError('');
@@ -128,7 +140,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setError('');
     try {
       await onSave(name.trim(), description.trim(), isActive,
-        wantsFee ? { name: feeName.trim(), amount: parsedAmount, frequency: feeFrequency, dueDate: resolvedFeeDate } : null);
+        wantsFee ? { name: feeName.trim(), amount: parsedAmount, frequency: feeFrequency, dueDate: resolvedFeeDate, feeHeadId: feeHeadId || null } : null);
       onClose();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not save the course.');
@@ -141,6 +153,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setFeeName(activePlan ? activePlan.name : 'Monthly Fee');
     setFeeAmount('');
     setFeeFrequency(activePlan ? activePlan.frequency : 'Monthly');
+    setFeeHeadId(activePlan?.feeHeadId ?? '');
     setFeeDueDate(todayIso());
     setFeeDueDay(new Date().getDate());
     setPlanError('');
@@ -157,7 +170,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setPlanSubmitting(true);
     setPlanError('');
     try {
-      await onAddFeeStructure({ courseId: editingCourse.id, name: feeName.trim(), amount: parsedAmount, frequency: feeFrequency, effectiveFrom: resolvedFeeDate });
+      await onAddFeeStructure({ courseId: editingCourse.id, name: feeName.trim(), amount: parsedAmount, frequency: feeFrequency, effectiveFrom: resolvedFeeDate, feeHeadId: feeHeadId || null });
       setShowNewPlanForm(false);
     } catch (requestError) {
       setPlanError(requestError instanceof Error ? requestError.message : 'Could not save the fee plan.');
@@ -180,7 +193,11 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setPlanSubmitting(true);
     setPlanError('');
     try {
-      await onUpdateFeeStructure(activePlan.id, { name: editPlanName.trim(), effectiveTo: editPlanEffectiveTo || null, isActive: editPlanIsActive });
+      // Carry the plan's current category through — an update payload without it must never clear it.
+      await onUpdateFeeStructure(activePlan.id, {
+        name: editPlanName.trim(), effectiveTo: editPlanEffectiveTo || null, isActive: editPlanIsActive,
+        feeHeadId: activePlan.feeHeadId ?? null,
+      });
       setEditingPlan(false);
     } catch (requestError) {
       setPlanError(requestError instanceof Error ? requestError.message : 'Could not save changes.');
@@ -237,6 +254,10 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                     <input id="course-fee-name" type="text" value={feeName} onChange={(event) => setFeeName(event.target.value)}
                       placeholder="e.g. Monthly Fee"
                       className="settings-input" />
+                  </div>
+                  <div>
+                    <label htmlFor="course-fee-head" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">Fee category</label>
+                    <SimpleSelect id="course-fee-head" value={feeHeadId} onValueChange={setFeeHeadId} options={feeHeadOptions} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -351,6 +372,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                   )}
                   <input value={feeName} onChange={(event) => setFeeName(event.target.value)} placeholder="Fee name"
                     className="w-full min-h-9 px-2 rounded-xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] text-xs text-[#212121] dark:text-white" />
+                  <SimpleSelect aria-label="Fee category" value={feeHeadId} onValueChange={setFeeHeadId} options={feeHeadOptions} />
                   <div className="grid grid-cols-2 gap-2">
                     <input type="number" min="1" step="1" value={feeAmount} onChange={(event) => setFeeAmount(event.target.value)} placeholder="Amount ₹"
                       className="min-h-9 px-2 rounded-xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] text-xs text-[#212121] dark:text-white" />

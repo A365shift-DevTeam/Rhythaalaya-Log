@@ -4,7 +4,7 @@ export type AppTab = 'home' | 'students' | 'batches' | 'finance' | 'log' | 'repo
 export type EnrollmentStatus = 'Active' | 'Completed' | 'Withdrawn';
 export type FeeFrequency = 'Monthly' | 'Quarterly' | 'HalfYearly' | 'Yearly' | 'OneTime';
 export type FeeDueStatus = 'Pending' | 'Partial' | 'Paid' | 'Overdue' | 'Cancelled' | 'Upcoming';
-export type FeeAdjustmentType = 'Discount' | 'Waiver' | 'Proration';
+export type FeeAdjustmentType = 'Discount' | 'Waiver' | 'Proration' | 'Fine' | 'WriteOff';
 export type LateEnrollmentBillingPolicy = 'Skip' | 'Full' | 'Prorated';
 export type PaymentMethod = 'Cash' | 'Upi' | 'Card' | 'BankTransfer' | 'Cheque' | 'Other';
 export type AchievementCategory = 'Won' | 'Participated' | 'Other';
@@ -114,6 +114,14 @@ export interface Achievement {
   createdAt: string;
 }
 
+export interface FeeHead {
+  id: string;
+  name: string;
+  displayOrder: number;
+  isActive: boolean;
+  structureCount: number;
+}
+
 export interface FeeStructure {
   id: string;
   courseId: string;
@@ -124,6 +132,8 @@ export interface FeeStructure {
   effectiveFrom: string;
   effectiveTo?: string;
   isActive: boolean;
+  feeHeadId?: string;
+  feeHeadName?: string;
 }
 
 export interface FeeDue {
@@ -198,6 +208,138 @@ export interface Receipt {
   paymentDate: string;
   method: PaymentMethod;
   collectedByName: string;
+}
+
+export type LedgerEntryType =
+  'FeeCharge' | 'Payment' | 'Concession' | 'Waiver' | 'Proration' | 'Fine' | 'WriteOff' | 'Refund';
+
+export const LEDGER_ENTRY_TYPE_LABELS: Record<LedgerEntryType, string> = {
+  FeeCharge: 'Fee charge', Payment: 'Payment', Concession: 'Concession',
+  Waiver: 'Waiver', Proration: 'Proration', Fine: 'Fine', WriteOff: 'Write-off', Refund: 'Refund',
+};
+
+/** One line of the derived Student Fee Ledger. `balance` is the running balance after this row. */
+export interface LedgerEntry {
+  date: string; // yyyy-MM-dd
+  type: LedgerEntryType;
+  description: string;
+  debit: number;
+  credit: number;
+  balance: number;
+  feeDueId?: string;
+  paymentId?: string;
+  reference?: string; // receipt number, for payment / refund rows
+  feeHeadName?: string; // fee category, on charge rows
+}
+
+export interface StudentFinancialSummary {
+  totalCharged: number;
+  totalFines: number;
+  totalAdjustments: number;
+  totalWrittenOff: number;
+  netCharged: number;
+  totalPaid: number;
+  pending: number;
+  availableCredit: number;
+  overdue: number;
+  totalRefunded: number;
+}
+
+export interface StudentLedger {
+  studentId: string;
+  studentName: string;
+  summary: StudentFinancialSummary;
+  entries: LedgerEntry[];
+}
+
+export type FeePayerStatus =
+  'NoDues' | 'Paid' | 'PartiallyPaid' | 'Pending' | 'Overdue' | 'Credit';
+
+export const FEE_PAYER_STATUS_LABELS: Record<FeePayerStatus, string> = {
+  NoDues: 'No dues', Paid: 'Paid', PartiallyPaid: 'Partly paid',
+  Pending: 'Pending', Overdue: 'Overdue', Credit: 'In credit',
+};
+
+export interface BatchFinanceStudent {
+  studentId: string;
+  studentName: string;
+  enrollmentId: string;
+  netCharged: number;
+  collected: number;
+  pending: number;
+  overdue: number;
+  availableCredit: number;
+  status: FeePayerStatus;
+}
+
+export interface BatchFinance {
+  batchId: string;
+  batchName: string;
+  courseName: string;
+  totalCharged: number;
+  totalFines: number;
+  totalAdjustments: number;
+  totalWrittenOff: number;
+  netCharged: number;
+  collected: number;
+  pending: number;
+  overdue: number;
+  availableCredit: number;
+  paidCount: number;
+  partiallyPaidCount: number;
+  pendingCount: number;
+  overdueCount: number;
+  withCreditCount: number;
+  noDuesCount: number;
+  students: BatchFinanceStudent[];
+}
+
+export interface BatchFinanceRow {
+  batchId: string;
+  batchName: string;
+  courseName: string;
+  studentCount: number;
+  netCharged: number;
+  collected: number;
+  pending: number;
+  overdue: number;
+  availableCredit: number;
+}
+
+export interface FinanceDashboard {
+  totalCharged: number;
+  totalFines: number;
+  totalAdjustments: number;
+  totalWrittenOff: number;
+  netCharged: number;
+  totalCollected: number;
+  totalPending: number;
+  totalOverdue: number;
+  totalStudentCredit: number;
+  collectionToday: number;
+  collectionThisMonth: number;
+  collectionInRange: number;
+  refundsInRange: number;
+  writeOffsInRange: number;
+  rangeFrom?: string;
+  rangeTo?: string;
+}
+
+export interface CollectionPoint {
+  period: string; // yyyy-MM-dd or yyyy-MM
+  collected: number;
+  refunded: number;
+  net: number;
+}
+
+export interface CollectionReport {
+  from: string;
+  to: string;
+  granularity: 'Day' | 'Month';
+  totalCollected: number;
+  totalRefunded: number;
+  totalNet: number;
+  points: CollectionPoint[];
 }
 
 export interface Transaction {

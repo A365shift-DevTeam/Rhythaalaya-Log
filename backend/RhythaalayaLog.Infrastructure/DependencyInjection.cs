@@ -16,6 +16,8 @@ public static class DependencyInjection
         services.AddScoped<FeeBalanceCalculator>();
         services.AddScoped<IAcademyService, AcademyService>();
         services.AddScoped<IFinanceService, FinanceService>();
+        services.AddScoped<IStudentLedgerService, StudentLedgerService>();
+        services.AddScoped<IFinanceReportingService, FinanceReportingService>();
         services.AddScoped<PasswordHasher<UserAccount>>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddSingleton<IEmailSender, SmtpEmailSender>();
