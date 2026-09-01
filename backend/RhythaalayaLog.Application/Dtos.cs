@@ -2,7 +2,8 @@ using RhythaalayaLog.Domain;
 
 namespace RhythaalayaLog.Application;
 
-public sealed record CourseDto(Guid Id, string Name, string? Description, bool IsActive, int BatchCount);
+public sealed record CourseDto(Guid Id, string Name, string? Description, bool IsActive, int BatchCount,
+    int? FeeDueLeadDays = null);
 public sealed record StaffDto(Guid Id, string Name, string? Phone, string? Email, bool IsActive, int BatchCount);
 public sealed record BatchDto(Guid Id, string Name, Guid CourseId, string CourseName, Guid StaffId, string StaffName,
     IReadOnlyList<DayOfWeek> Days, TimeOnly StartTime, TimeOnly EndTime, DateOnly StartDate, DateOnly? EndDate,
@@ -58,7 +59,7 @@ public sealed record ReceiptDto(Guid PaymentId, string ReceiptNumber, string Org
     string? OrganizationAddress, string? OrganizationPhone, string? OrganizationEmail, string? OrganizationLogoUrl,
     bool ShowLogo, bool ShowSignature, string ReceiptFooter, string StudentName, string StudentNumber,
     string CourseName, string BatchName, decimal Amount, DateTimeOffset PaymentDate, PaymentMethod Method,
-    string CollectedByName);
+    string CollectedByName, string? StudentPhone = null);
 
 public sealed record TransactionDto(Guid Id, string Title, TransactionType Type, decimal Amount, string Category,
     DateTimeOffset OccurredAt, Guid? FeePaymentId);

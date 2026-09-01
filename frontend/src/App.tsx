@@ -9,7 +9,6 @@ import {
   Staff,
   Transaction,
   FeeDue,
-  FeeHead,
   FeeStructure,
   LateEnrollmentBillingPolicy,
   OrgSettings,
@@ -91,7 +90,6 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
   const [courses, setCourses] = useState<Course[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
-  const [feeHeads, setFeeHeads] = useState<FeeHead[]>([]);
   const [outstandingDues, setOutstandingDues] = useState<FeeDue[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [settings, setSettings] = useState<OrgSettings>(INITIAL_SETTINGS);
@@ -110,13 +108,12 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
   const reload = async (showLoader = false) => {
     if (showLoader) setLoading(true);
     try {
-      const [studentRows, batchRows, courseRows, staffRows, structureRows, dueRows, transactionRows, org, headRows] = await Promise.all([
+      const [studentRows, batchRows, courseRows, staffRows, structureRows, dueRows, transactionRows, org] = await Promise.all([
         api.students(session.token), api.batches(session.token), api.courses(session.token), api.staff(session.token),
-        api.feeStructures(session.token), api.feeDues(session.token), api.finance(session.token), api.settings(session.token),
-        api.feeHeads(session.token)
+        api.feeStructures(session.token), api.feeDues(session.token), api.finance(session.token), api.settings(session.token)
       ]);
       setStudents(studentRows); setBatches(batchRows); setCourses(courseRows); setStaff(staffRows);
-      setFeeStructures(structureRows); setFeeHeads(headRows);
+      setFeeStructures(structureRows);
       setOutstandingDues(dueRows.filter((due) => due.status === 'Pending' || due.status === 'Partial'
         || due.status === 'Overdue' || due.status === 'Upcoming'));
       setTransactions(transactionRows); setSettings(org);
@@ -285,7 +282,7 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
       if (fee) {
         await handleAddFeeStructure({
           courseId: created.id, name: fee.name, amount: fee.amount, frequency: fee.frequency,
-          effectiveFrom: fee.dueDate, feeHeadId: fee.feeHeadId ?? null
+          effectiveFrom: fee.dueDate
         });
       }
     }
@@ -313,7 +310,7 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
 
   const handleAddFeeStructure = async (payload: {
     courseId: string; name: string; amount: number; frequency: FeeStructure['frequency']; effectiveFrom: string;
-    effectiveTo?: string | null; feeHeadId?: string | null;
+    effectiveTo?: string | null;
   }) => {
     const created = await api.createFeeStructure(session.token, payload);
     setFeeStructures((prev) => [created, ...prev.filter((s) => s.courseId !== created.courseId || s.id !== created.id)]);
@@ -321,7 +318,7 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
   };
 
   const handleUpdateFeeStructure = async (structureId: string, payload: {
-    name: string; effectiveTo?: string | null; isActive: boolean; feeHeadId?: string | null;
+    name: string; effectiveTo?: string | null; isActive: boolean;
   }) => {
     const updated = await api.updateFeeStructure(session.token, structureId, payload);
     setFeeStructures((prev) => prev.map((s) => s.id === updated.id ? updated : s));
@@ -632,7 +629,6 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
         onClose={() => setIsAddCourseOpen(false)}
         editingCourse={editingCourse}
         feeStructures={feeStructures}
-        feeHeads={feeHeads}
         onSave={handleSaveCourse}
         onArchive={handleArchiveCourse}
         onAddFeeStructure={handleAddFeeStructure}

@@ -8,9 +8,22 @@ export function FeeReceiptModal({ isOpen, onClose, receipt }: { isOpen: boolean;
   const dialogRef = useDialogLifecycle(isOpen, onClose);
   if (!isOpen || !receipt) return null;
   const date = new Date(receipt.paymentDate);
+  const dateLabel = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const canWhatsApp = Boolean(receipt.studentPhone && receipt.studentPhone.replace(/[^0-9]/g, ''));
+
+  const sendWhatsApp = () => {
+    if (!receipt.studentPhone) return;
+    const digits = receipt.studentPhone.replace(/[^0-9]/g, '');
+    const amount = `₹${Math.abs(receipt.amount).toLocaleString('en-IN')}`;
+    const method = PAYMENT_METHOD_LABELS[receipt.method];
+    const message = receipt.amount < 0
+      ? `Hi ${receipt.studentName}, a refund of ${amount} has been processed (${method}). Receipt ${receipt.receiptNumber}. — ${receipt.organizationName}`
+      : `Hi ${receipt.studentName}, we've received your fee payment of ${amount} on ${dateLabel} (${method}). Receipt ${receipt.receiptNumber}. Thank you! — ${receipt.organizationName}`;
+    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
+  };
 
   return <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-0 backdrop-blur-md sm:items-center sm:p-4">
-    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="fee-receipt-title" className="max-h-[94dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-[#f0f0f0] p-3 shadow-2xl dark:bg-[#07111f] sm:rounded-3xl sm:p-5">
+    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="fee-receipt-title" className="max-h-[94dvh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-[#f0f0f0] p-3 shadow-2xl dark:bg-[#07111f] sm:rounded-3xl sm:p-5">
       <div className="mb-3 flex items-center justify-between print:hidden">
         <div>
           <h2 id="fee-receipt-title" className="text-base font-bold text-[#212121] dark:text-white">Payment receipt</h2>
@@ -40,7 +53,17 @@ export function FeeReceiptModal({ isOpen, onClose, receipt }: { isOpen: boolean;
         <div className="my-5 flex items-end justify-between rounded-2xl bg-[#e9f7ee] dark:bg-[#3fc073]/20 px-4 py-4"><div><p className="text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#b3e6c7]">{receipt.amount < 0 ? 'Amount refunded' : 'Amount received'}</p><p className="mt-1 text-xs text-[#575757] dark:text-[#cbecd8]">Fee payment</p></div><p className="text-2xl font-bold tabular-nums text-[#35a160] dark:text-[#b3e6c7]">₹{Math.abs(receipt.amount).toLocaleString('en-IN')}</p></div>
         <footer className="pt-2 text-center"><p className="text-xs text-[#808080]">{receipt.receiptFooter}</p>{receipt.showSignature && <div className="ml-auto mt-10 w-36 border-t border-[#dbdbdb] dark:border-[#334155] pt-1 text-xs text-[#808080]">Authorized signature</div>}</footer>
       </article>
-      <div className="mt-3 grid grid-cols-2 gap-2 print:hidden"><Button type="button" onClick={onClose} className="min-h-11 rounded-2xl border border-[#dbdbdb] bg-white px-4 text-xs font-bold text-[#575757] hover:bg-[#f0f0f0] dark:border-[#243244] dark:bg-[#0b1422] dark:text-white">Close</Button><Button type="button" onClick={() => window.print()} className="btn-brand min-h-11 rounded-2xl px-4 text-xs font-bold"><JisIcon className="mr-1 align-middle text-[18px]">print</JisIcon>Print receipt</Button></div>
+      <div className={`mt-3 grid gap-2 print:hidden ${canWhatsApp ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'}`}>
+        <Button type="button" onClick={onClose} className="min-h-11 rounded-2xl border border-[#dbdbdb] bg-white px-4 text-xs font-bold text-[#575757] hover:bg-[#f0f0f0] dark:border-[#243244] dark:bg-[#0b1422] dark:text-white">Close</Button>
+        {canWhatsApp && (
+          <Button type="button" onClick={sendWhatsApp}
+            className="col-span-2 min-h-11 rounded-2xl bg-[#25D366]/15 px-4 text-xs font-bold text-[#13773a] hover:bg-[#25D366]/25 dark:text-emerald-300 flex items-center justify-center gap-1.5 sm:col-span-1">
+            <JisIcon className="text-[18px]">chat</JisIcon>
+            <span>WhatsApp</span>
+          </Button>
+        )}
+        <Button type="button" onClick={() => window.print()} className="btn-brand min-h-11 rounded-2xl px-4 text-xs font-bold"><JisIcon className="mr-1 align-middle text-[18px]">print</JisIcon>Print receipt</Button>
+      </div>
     </div>
   </div>;
 }

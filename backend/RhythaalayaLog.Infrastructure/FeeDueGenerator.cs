@@ -51,6 +51,7 @@ public sealed class FeeDueGenerator(AppDbContext db)
         }
         var settings = await GetSettingsAsync(ct);
         var today = BillingSchedule.TodayInTimeZone(settings.TimeZone);
+        // "Upcoming" horizon = academy-wide default (7 unless changed in the DB).
         var horizon = today.AddDays(settings.FeeDueLeadDays);
 
         // All plans for the course, resolved per due date by effective window — IsActive is a UI

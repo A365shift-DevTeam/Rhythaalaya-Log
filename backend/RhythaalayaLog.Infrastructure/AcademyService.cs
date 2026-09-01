@@ -10,8 +10,11 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 {
     public async Task<IReadOnlyList<CourseDto>> GetCoursesAsync(CancellationToken ct) =>
         await db.Courses.AsNoTracking().OrderBy(x => x.Name)
-            .Select(x => new CourseDto(x.Id, x.Name, x.Description, x.IsActive, x.Batches.Count(b => b.IsActive)))
+            .Select(x => new CourseDto(x.Id, x.Name, x.Description, x.IsActive, x.Batches.Count(b => b.IsActive), x.FeeDueLeadDays))
             .ToListAsync(ct);
+
+    /// <summary>Clamps a per-course lead-days value to 0–90; null stays null (falls back to the academy default).</summary>
+    private static int? ClampLeadDays(int? value) => value is null ? null : Math.Clamp(value.Value, 0, 90);
 
     public async Task<CourseDto> CreateCourseAsync(CreateCourseRequest request, CancellationToken ct)
     {
@@ -20,10 +23,14 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         // The unique (TenantId, Name) index ignores IsActive, so an archived course counts too.
         if (await db.Courses.AnyAsync(x => x.Name == name, ct))
             throw new ConflictException($"A course named “{name}” already exists.");
-        var course = new Course { TenantId = RequireTenant(), Name = name, Description = Clean(request.Description) };
+        var course = new Course
+        {
+            TenantId = RequireTenant(), Name = name, Description = Clean(request.Description),
+            FeeDueLeadDays = ClampLeadDays(request.FeeDueLeadDays)
+        };
         db.Courses.Add(course);
         await db.SaveChangesAsync(ct);
-        return new CourseDto(course.Id, course.Name, course.Description, true, 0);
+        return new CourseDto(course.Id, course.Name, course.Description, true, 0, course.FeeDueLeadDays);
     }
 
     public async Task<CourseDto> UpdateCourseAsync(Guid id, UpdateCourseRequest request, CancellationToken ct)
@@ -37,9 +44,10 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         course.Name = name;
         course.Description = Clean(request.Description);
         course.IsActive = request.IsActive;
+        course.FeeDueLeadDays = ClampLeadDays(request.FeeDueLeadDays);
         await db.SaveChangesAsync(ct);
         var batchCount = await db.Batches.CountAsync(x => x.CourseId == id && x.IsActive, ct);
-        return new CourseDto(course.Id, course.Name, course.Description, course.IsActive, batchCount);
+        return new CourseDto(course.Id, course.Name, course.Description, course.IsActive, batchCount, course.FeeDueLeadDays);
     }
 
     public async Task ArchiveCourseAsync(Guid id, CancellationToken ct)

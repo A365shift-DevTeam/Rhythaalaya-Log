@@ -486,7 +486,7 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
         return new ReceiptDto(payment.Id, payment.ReceiptNumber, settings.Name, settings.ReceiptAddress, settings.ReceiptPhone,
             settings.ReceiptEmail, settings.LogoUrl, settings.ReceiptShowLogo, settings.ReceiptShowSignature,
             settings.ReceiptFooter, payment.Student.Name, payment.Student.StudentNumber, courseName, batchName,
-            payment.Amount, payment.PaymentDate, payment.Method, collectedByName);
+            payment.Amount, payment.PaymentDate, payment.Method, collectedByName, payment.Student.Phone);
     }
 
     public async Task<FinanceSummaryDto> GetFinanceAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken ct)

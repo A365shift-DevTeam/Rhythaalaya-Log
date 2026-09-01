@@ -94,7 +94,7 @@ export const AddAchievementModal: React.FC<AddAchievementModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-achievement-title"
-        className="bg-white dark:bg-[#0b1422] rounded-3xl max-w-lg w-full max-h-[92dvh] overflow-hidden shadow-2xl border border-[#dbdbdb] dark:border-[#243244]"
+        className="bg-white dark:bg-[#0b1422] rounded-3xl max-w-xl w-full max-h-[92dvh] overflow-hidden shadow-2xl border border-[#dbdbdb] dark:border-[#243244]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex justify-between items-start gap-4 px-5 sm:px-7 py-5 border-b border-[#dbdbdb]/60 dark:border-[#243244]">

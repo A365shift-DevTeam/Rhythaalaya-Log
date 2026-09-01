@@ -24,6 +24,8 @@ export interface Course {
   description?: string;
   isActive: boolean;
   batchCount: number;
+  /** Per-course "Upcoming" horizon in days; undefined = use the academy default. */
+  feeDueLeadDays?: number;
 }
 
 export interface Staff {
@@ -202,6 +204,7 @@ export interface Receipt {
   receiptFooter: string;
   studentName: string;
   studentNumber: string;
+  studentPhone?: string;
   courseName: string;
   batchName: string;
   amount: number;

@@ -233,10 +233,10 @@ export const api = {
       .then(rows => rows.map(mapFeeStructure)),
   createFeeStructure: (token: string, body: {
     courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string;
-    effectiveTo?: string | null; feeHeadId?: string | null;
+    effectiveTo?: string | null;
   }) => request<any>('/finance/fee-structures', { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeeStructure),
   updateFeeStructure: (token: string, id: string, body: {
-    name: string; effectiveTo?: string | null; isActive: boolean; feeHeadId?: string | null;
+    name: string; effectiveTo?: string | null; isActive: boolean;
   }) => request<any>('/finance/fee-structures/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapFeeStructure),
 
   collectionReport: (token: string, from: string, to: string, granularity: 'Day' | 'Month') =>
@@ -287,11 +287,17 @@ export const api = {
   receipt: (token: string, paymentId: string) =>
     request<any>(`/finance/payments/${paymentId}/receipt`, {}, token).then(mapReceipt),
 
-  // General ledger
-  finance: (token: string) =>
-    request<any>('/finance/summary?from=' + encodeURIComponent(isoStartOfYear()) +
-      '&to=' + encodeURIComponent(isoNextYear()), {}, token)
-      .then(result => result.transactions.map(mapTransaction)),
+  // General ledger. Pass yyyy-MM-dd from/to to fetch a specific window (the "to" day is
+  // included); with no args it returns the current calendar year.
+  finance: (token: string, from?: string, to?: string) => {
+    const fromIso = from ? new Date(from + 'T00:00:00').toISOString() : isoStartOfYear();
+    const toIso = to
+      ? new Date(new Date(to + 'T00:00:00').getTime() + 86_400_000).toISOString()
+      : isoNextYear();
+    return request<any>('/finance/summary?from=' + encodeURIComponent(fromIso) +
+      '&to=' + encodeURIComponent(toIso), {}, token)
+      .then(result => result.transactions.map(mapTransaction));
+  },
   createTransaction: (token: string, item: { title: string; type: 'income' | 'expense'; amount: number; category: string }) =>
     request<any>('/finance/transactions', { method: 'POST', body: JSON.stringify({
       title: item.title, type: item.type === 'income' ? 'Income' : 'Expense',
@@ -382,7 +388,10 @@ export const api = {
 };
 
 function mapCourse(x: any): Course {
-  return { id: x.id, name: x.name, description: x.description || undefined, isActive: x.isActive, batchCount: x.batchCount };
+  return {
+    id: x.id, name: x.name, description: x.description || undefined, isActive: x.isActive, batchCount: x.batchCount,
+    feeDueLeadDays: x.feeDueLeadDays ?? undefined
+  };
 }
 function mapStaff(x: any): Staff {
   return { id: x.id, name: x.name, phone: x.phone || undefined, email: x.email || undefined, isActive: x.isActive, batchCount: x.batchCount };
@@ -520,7 +529,8 @@ function mapReceipt(x: any): Receipt {
     organizationAddress: x.organizationAddress || undefined, organizationPhone: x.organizationPhone || undefined,
     organizationEmail: x.organizationEmail || undefined, organizationLogoUrl: x.organizationLogoUrl || undefined,
     showLogo: x.showLogo, showSignature: x.showSignature, receiptFooter: x.receiptFooter,
-    studentName: x.studentName, studentNumber: x.studentNumber, courseName: x.courseName, batchName: x.batchName,
+    studentName: x.studentName, studentNumber: x.studentNumber, studentPhone: x.studentPhone || undefined,
+    courseName: x.courseName, batchName: x.batchName,
     amount: x.amount, paymentDate: x.paymentDate, method: x.method, collectedByName: x.collectedByName
   };
 }

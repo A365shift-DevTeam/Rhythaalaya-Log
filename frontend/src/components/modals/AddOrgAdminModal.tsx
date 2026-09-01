@@ -42,7 +42,7 @@ export const AddOrgAdminModal: React.FC<AddOrgAdminModalProps> = ({ isOpen, onCl
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-md animate-fadeIn"
       role="dialog" aria-modal="true" aria-labelledby="add-org-admin-title" onClick={onClose}>
-      <div className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422]"
+      <div className="w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422]"
         onClick={(event) => event.stopPropagation()}>
         <div className="h-1.5 bg-gradient-to-r from-[#4d999d] to-[#64a85a]" />
         <div ref={dialogRef} tabIndex={-1} className="p-5 sm:p-6 space-y-4">

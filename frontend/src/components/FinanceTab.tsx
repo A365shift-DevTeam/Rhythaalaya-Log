@@ -1,10 +1,42 @@
 import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
 import { MobileSpeedDial } from './MobileSpeedDial';
-import { FinanceOverview } from './FinanceOverview';
+import { SimpleSelect } from './ui/select';
+import { Spinner } from './ui/spinner';
 import React from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { api } from '../api';
 import { FeeDue, Student, Transaction } from '../types';
+
+type RangePreset = 'thisMonth' | 'lastMonth' | 'last3Months' | 'thisYear' | 'all' | 'custom';
+
+const RANGE_OPTIONS: { value: RangePreset; label: string }[] = [
+  { value: 'thisMonth', label: 'This month' },
+  { value: 'lastMonth', label: 'Last month' },
+  { value: 'last3Months', label: 'Last 3 months' },
+  { value: 'thisYear', label: 'This year' },
+  { value: 'all', label: 'All time' },
+  { value: 'custom', label: 'Custom range' },
+];
+
+const isoLocal = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+function presetRange(preset: Exclude<RangePreset, 'custom'>): { from: string; to: string } {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  switch (preset) {
+    case 'thisMonth': return { from: isoLocal(new Date(y, m, 1)), to: isoLocal(now) };
+    case 'lastMonth': return { from: isoLocal(new Date(y, m - 1, 1)), to: isoLocal(new Date(y, m, 0)) };
+    case 'last3Months': return { from: isoLocal(new Date(y, m - 2, 1)), to: isoLocal(now) };
+    case 'thisYear': return { from: isoLocal(new Date(y, 0, 1)), to: isoLocal(now) };
+    case 'all': return { from: '2000-01-01', to: isoLocal(now) };
+  }
+}
+
+const fmtShort = (iso: string) =>
+  new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 
 const CATEGORICAL_LIGHT = ['#3fc073', '#6bd194', '#22c55e', '#f59e0b', '#b3e6c7', '#2b824e', '#a855f7', '#ec4899'];
 const CATEGORICAL_DARK = ['#6bd194', '#b3e6c7', '#4ade80', '#fbbf24', '#cbecd8', '#3fc073', '#c084fc', '#f472b6'];
@@ -33,7 +65,7 @@ const DUE_STATUS_STYLE: Record<string, string> = {
 
 export const FinanceTab: React.FC<FinanceTabProps> = ({
   students,
-  transactions,
+  transactions: allTransactions,
   outstandingDues,
   token,
   canManage,
@@ -48,6 +80,54 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
   const categorical = darkMode ? CATEGORICAL_DARK : CATEGORICAL_LIGHT;
   const pendingStudents = students.filter((s) => s.outstandingBalance > 0);
   const [expandedStudentId, setExpandedStudentId] = React.useState<string | null>(null);
+
+  // Date-range filter for the transaction-driven views (revenue/costs/net, category breakdown,
+  // financial logs). `draft` is what the filter bar edits; `applied` is what actually drives the
+  // server fetch and the labels — nothing changes until "Apply" is pressed. Dues & Collections
+  // shows current outstanding money, so it isn't affected.
+  const [showFilter, setShowFilter] = React.useState(false);
+  const initialRange = presetRange('thisYear');
+  const defaultFilter = { preset: 'thisYear' as RangePreset, from: initialRange.from, to: initialRange.to };
+  const [applied, setApplied] = React.useState(defaultFilter);
+  const [draft, setDraft] = React.useState(defaultFilter);
+
+  const labelFor = (f: typeof applied) =>
+    f.preset === 'thisYear' ? `${new Date(f.from).getFullYear()}`
+    : f.preset === 'all' ? 'All time'
+    : f.preset === 'last3Months' ? 'Last 3 months'
+    : f.preset === 'thisMonth' || f.preset === 'lastMonth'
+      ? new Date(f.from + 'T00:00:00').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+      : `${fmtShort(f.from)} – ${fmtShort(f.to)}`;
+  const range = { from: applied.from, to: applied.to };
+  const rangeLabel = labelFor(applied);
+  const filterActive = applied.preset !== 'thisYear';
+
+  const draftInvalid = !draft.from || !draft.to || draft.from > draft.to;
+  const draftDirty = draft.preset !== applied.preset || draft.from !== applied.from || draft.to !== applied.to;
+
+  const pickDraftPreset = (value: RangePreset) => {
+    if (value === 'custom') { setDraft((d) => ({ ...d, preset: 'custom' })); return; }
+    const r = presetRange(value);
+    setDraft({ preset: value, from: r.from, to: r.to });
+  };
+  const applyFilter = () => { if (!draftInvalid) setApplied(draft); };
+  const resetFilter = () => { setDraft(defaultFilter); setApplied(defaultFilter); };
+
+  // Transactions for the active window are fetched from the server; the year-to-date list from
+  // the app shell is only the fallback until the first response lands.
+  const [rangeRows, setRangeRows] = React.useState<Transaction[] | null>(null);
+  const [rangeLoading, setRangeLoading] = React.useState(false);
+  React.useEffect(() => {
+    if (!range.from || !range.to || range.from > range.to) return;
+    let ignore = false;
+    setRangeLoading(true);
+    api.finance(token, range.from, range.to)
+      .then((rows) => { if (!ignore) setRangeRows(rows); })
+      .catch(() => { if (!ignore) setRangeRows(null); })
+      .finally(() => { if (!ignore) setRangeLoading(false); });
+    return () => { ignore = true; };
+  }, [token, range.from, range.to]);
+  const transactions = rangeRows ?? allTransactions;
   // Upcoming dues are visible but not yet payable, so they don't count as pending money
   const totalDuePending = outstandingDues
     .filter((due) => due.status !== 'Upcoming')
@@ -114,6 +194,20 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Button
+            type="button"
+            onClick={() => setShowFilter((v) => !v)}
+            aria-expanded={showFilter}
+            className={`relative min-h-11 flex-1 sm:flex-initial rounded-2xl border px-4 py-2 font-sans text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 active:scale-95 ${
+              showFilter || filterActive
+                ? 'border-[#3fc073] bg-[#e9f7ee] text-[#35a160] dark:border-[#3fc073] dark:bg-[#3fc073]/20 dark:text-[#b3e6c7]'
+                : 'border-[#dbdbdb] bg-white text-[#575757] hover:bg-[#f0f0f0] dark:border-[#243244] dark:bg-[#0b1422] dark:text-[#cbd5e1] dark:hover:bg-[#172435]'
+            }`}
+          >
+            <JisIcon className="text-[18px]">filter_list</JisIcon>
+            <span>Filter</span>
+            {filterActive && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#3fc073] ring-2 ring-white dark:ring-[#0b1422]" />}
+          </Button>
           {canManage && (
             <Button
               type="button"
@@ -135,7 +229,40 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
         </div>
       </div>
 
-      <FinanceOverview token={token} />
+      {showFilter && (
+        <div className="premium-card flex flex-col gap-3 p-3.5 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 sm:p-4">
+          <div className="sm:w-48">
+            <label className="mb-1 block text-xs font-bold text-[#575757] dark:text-[#cbd5e1]">Period</label>
+            <SimpleSelect aria-label="Period" value={draft.preset}
+              onValueChange={(v) => pickDraftPreset(v as RangePreset)} options={RANGE_OPTIONS} />
+          </div>
+          <div className="flex-1 sm:max-w-[180px]">
+            <label htmlFor="finance-from" className="mb-1 block text-xs font-bold text-[#575757] dark:text-[#cbd5e1]">From</label>
+            <input id="finance-from" type="date" value={draft.from} max={draft.to || undefined}
+              onChange={(e) => setDraft((d) => ({ ...d, preset: 'custom', from: e.target.value }))}
+              className="settings-input min-h-10" />
+          </div>
+          <div className="flex-1 sm:max-w-[180px]">
+            <label htmlFor="finance-to" className="mb-1 block text-xs font-bold text-[#575757] dark:text-[#cbd5e1]">To</label>
+            <input id="finance-to" type="date" value={draft.to} min={draft.from || undefined}
+              onChange={(e) => setDraft((d) => ({ ...d, preset: 'custom', to: e.target.value }))}
+              className="settings-input min-h-10" />
+          </div>
+          <div className="flex items-center gap-2 sm:pb-1">
+            {rangeLoading && <Spinner size="xs" inline text="Updating…" />}
+            {filterActive && (
+              <Button type="button" onClick={resetFilter}
+                className="min-h-10 shrink-0 rounded-xl px-3 text-xs font-bold text-[#575757] hover:bg-[#f0f0f0] dark:text-[#cbd5e1] dark:hover:bg-[#172435]">
+                Reset
+              </Button>
+            )}
+            <Button type="button" onClick={applyFilter} disabled={draftInvalid || !draftDirty}
+              className="btn-brand min-h-10 shrink-0 rounded-xl px-4 text-xs font-bold disabled:opacity-50">
+              Apply
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
@@ -152,7 +279,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
             <div className="font-heading text-2xl sm:text-3xl font-bold text-[#22c55e] tracking-tight tabular-nums">
               ₹{totalIncome.toLocaleString('en-IN')}
             </div>
-            <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8] font-medium">Year to date</p>
+            <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8] font-medium">{rangeLabel}</p>
           </div>
         </div>
 
@@ -169,7 +296,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
             <div className="font-heading text-2xl sm:text-3xl font-bold text-[#ef4444] tracking-tight tabular-nums">
               ₹{totalExpense.toLocaleString('en-IN')}
             </div>
-            <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8] font-medium">Year to date</p>
+            <p className="mt-1 text-xs text-[#808080] dark:text-[#94a3b8] font-medium">{rangeLabel}</p>
           </div>
         </div>
 
@@ -207,7 +334,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
             <div>
               <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#3fc073]">Cost breakdown</span>
               <h4 className="font-heading text-lg sm:text-xl font-bold text-[#212121] dark:text-white mt-1">Spending by category</h4>
-              <p className="text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">Where operating costs are going, year to date</p>
+              <p className="text-xs text-[#808080] dark:text-[#94a3b8] mt-0.5">Where operating costs are going · {rangeLabel}</p>
             </div>
             <span className="shrink-0 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40 px-3 py-1.5 inline-flex items-center gap-1.5">
               <span className="text-sm sm:text-base font-bold text-[#ef4444] tabular-nums">{expenseEntries.length}</span>

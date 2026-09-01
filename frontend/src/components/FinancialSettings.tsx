@@ -1,16 +1,14 @@
 import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
-import { Spinner } from './ui/spinner';
 import React, { useEffect, useState } from 'react';
-import { api } from '../api';
-import { FeeHead, LateEnrollmentBillingPolicy, OrgSettings, ReceiptSettings } from '../types';
+import { LateEnrollmentBillingPolicy, OrgSettings, ReceiptSettings } from '../types';
 
 interface FinancialSettingsProps {
   settings: OrgSettings;
   setSettings: React.Dispatch<React.SetStateAction<OrgSettings>>;
 }
 
-export function FinancialSettings({ settings, setSettings, token }: FinancialSettingsProps & { token: string }) {
+export function FinancialSettings({ settings, setSettings }: FinancialSettingsProps) {
   const [receiptDraft, setReceiptDraft] = useState<ReceiptSettings>(settings.receipt);
   const [saved, setSaved] = useState(false);
 
@@ -77,18 +75,6 @@ export function FinancialSettings({ settings, setSettings, token }: FinancialSet
         </form>
       </section>
 
-      <section className="space-y-3" aria-labelledby="billing-settings-title">
-        <SectionHeading id="billing-settings-title" icon="event_repeat" title="Billing & Dues"
-          description="Control how far ahead dues appear and how mid-cycle joiners are billed." />
-        <BillingSettings settings={settings} setSettings={setSettings} />
-      </section>
-
-      <section className="space-y-3" aria-labelledby="fee-head-settings-title">
-        <SectionHeading id="fee-head-settings-title" icon="sell" title="Fee Categories (Heads)"
-          description="Group fees as Tuition, Exam, Transport and so on. Attach a head to a fee structure and every charge it generates is reported under it." />
-        <FeeHeadsEditor token={token} />
-      </section>
-
       <section className="space-y-3" aria-labelledby="category-settings-title">
         <SectionHeading id="category-settings-title" icon="category" title="Income & Expense Categories"
           description="These categories appear automatically when recording financial entries." />
@@ -122,156 +108,12 @@ export function FinancialSettings({ settings, setSettings, token }: FinancialSet
   );
 }
 
-function FeeHeadsEditor({ token }: { token: string }) {
-  const [heads, setHeads] = useState<FeeHead[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [newName, setNewName] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    let ignore = false;
-    api.feeHeads(token)
-      .then((rows) => { if (!ignore) setHeads(rows); })
-      .catch(() => { if (!ignore) setError('Could not load fee categories.'); })
-      .finally(() => { if (!ignore) setLoading(false); });
-    return () => { ignore = true; };
-  }, [token]);
-
-  const add = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const name = newName.trim();
-    if (!name || busy) return;
-    setBusy(true);
-    setError('');
-    try {
-      const created = await api.createFeeHead(token, { name, displayOrder: heads.length });
-      setHeads((prev) => [...prev, created]);
-      setNewName('');
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not add that category.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const save = async (head: FeeHead, patch: Partial<Pick<FeeHead, 'name' | 'isActive'>>) => {
-    const next = { ...head, ...patch, name: (patch.name ?? head.name).trim() };
-    if (!next.name) return;
-    setHeads((prev) => prev.map((h) => (h.id === head.id ? next : h)));
-    try {
-      const updated = await api.updateFeeHead(token, head.id, {
-        name: next.name, displayOrder: next.displayOrder, isActive: next.isActive,
-      });
-      setHeads((prev) => prev.map((h) => (h.id === head.id ? updated : h)));
-    } catch (requestError) {
-      setHeads((prev) => prev.map((h) => (h.id === head.id ? head : h))); // revert
-      setError(requestError instanceof Error ? requestError.message : 'Could not save that change.');
-    }
-  };
-
-  return (
-    <div className="premium-card p-4 sm:p-5">
-      {error && <div role="alert" className="mb-3 rounded-2xl bg-rose-50 px-3 py-2 text-xs font-bold text-[#ef4444] dark:bg-rose-950/40">{error}</div>}
-      {loading ? (
-        <Spinner size="xs" inline text="Loading fee categories…" />
-      ) : (
-        <>
-          <div className="divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
-            {heads.map((head) => (
-              <div key={head.id} className="flex items-center gap-2 py-2">
-                <input
-                  defaultValue={head.name}
-                  onBlur={(event) => { if (event.target.value.trim() !== head.name) void save(head, { name: event.target.value }); }}
-                  className="settings-input flex-1 py-2 text-sm"
-                  aria-label={`Rename ${head.name}`}
-                />
-                <span className="shrink-0 text-xs text-[#9e9e9e]">{head.structureCount} plan{head.structureCount === 1 ? '' : 's'}</span>
-                <button
-                  type="button"
-                  onClick={() => void save(head, { isActive: !head.isActive })}
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${head.isActive
-                    ? 'bg-emerald-100 text-[#15803d] dark:bg-emerald-950/60 dark:text-emerald-300'
-                    : 'bg-[#f0f0f0] text-[#9e9e9e] dark:bg-[#172435]'}`}
-                >
-                  {head.isActive ? 'Active' : 'Hidden'}
-                </button>
-              </div>
-            ))}
-          </div>
-          <form onSubmit={add} className="mt-3 flex gap-2">
-            <input
-              value={newName}
-              onChange={(event) => setNewName(event.target.value)}
-              placeholder="New fee category, e.g. Studio Hire"
-              maxLength={80}
-              className="settings-input flex-1 py-2 text-sm"
-            />
-            <Button type="submit" disabled={busy || !newName.trim()}
-              className="btn-brand min-h-11 shrink-0 rounded-2xl px-4 text-xs font-bold disabled:opacity-50">
-              <JisIcon className="text-[16px]">add</JisIcon>
-            </Button>
-          </form>
-        </>
-      )}
-    </div>
-  );
-}
-
+// Used by AddStudentModal for the per-student late-enrollment billing choice.
 export const POLICY_OPTIONS: { value: LateEnrollmentBillingPolicy; label: string; description: string }[] = [
   { value: 'Skip', label: 'Skip partial period', description: 'A mid-cycle joiner starts paying from the next full billing cycle.' },
   { value: 'Full', label: 'Charge full period', description: 'The first partial period is billed at the full amount.' },
   { value: 'Prorated', label: 'Prorate by days', description: 'The first partial period is billed only for the days enrolled.' },
 ];
-
-function BillingSettings({ settings, setSettings }: FinancialSettingsProps) {
-  const [leadDaysDraft, setLeadDaysDraft] = useState(String(settings.feeDueLeadDays));
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => setLeadDaysDraft(String(settings.feeDueLeadDays)), [settings.feeDueLeadDays]);
-
-  const save = (event: React.FormEvent) => {
-    event.preventDefault();
-    const leadDays = Math.min(90, Math.max(0, Math.round(Number(leadDaysDraft) || 0)));
-    setLeadDaysDraft(String(leadDays));
-    setSettings((previous) => ({ ...previous, feeDueLeadDays: leadDays }));
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2500);
-  };
-
-  return (
-    <form onSubmit={save} className="premium-card p-4 sm:p-6 space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Due lead days" id="fee-lead-days" hint="How many days before its date a due appears as “Upcoming” (0–90).">
-          <input id="fee-lead-days" type="number" min={0} max={90} required value={leadDaysDraft}
-            onChange={(event) => setLeadDaysDraft(event.target.value)}
-            className="settings-input" placeholder="7" />
-        </Field>
-        <div>
-          <span className="mb-1.5 block text-xs font-bold text-[#575757] dark:text-[#cbd5e1]">Late enrollment billing</span>
-          <div className="space-y-2">
-            {POLICY_OPTIONS.map((option) => (
-              <label key={option.value} className={`flex min-h-12 cursor-pointer items-start gap-2.5 rounded-2xl border px-3.5 py-2.5 transition-all ${settings.lateEnrollmentBillingPolicy === option.value ? 'border-[#3fc073] bg-[#e9f7ee] dark:border-[#3fc073] dark:bg-[#3fc073]/15' : 'border-[#dbdbdb] dark:border-[#243244] bg-[#f0f0f0] dark:bg-[#0b1422]'}`}>
-                <input type="radio" name="late-enrollment-policy" value={option.value}
-                  checked={settings.lateEnrollmentBillingPolicy === option.value}
-                  onChange={() => setSettings((previous) => ({ ...previous, lateEnrollmentBillingPolicy: option.value }))}
-                  className="mt-0.5 h-4 w-4 accent-[#3fc073]" />
-                <span className="min-w-0">
-                  <span className="block text-xs font-bold text-[#212121] dark:text-white">{option.label}</span>
-                  <span className="mt-0.5 block text-xs text-[#808080] dark:text-[#94a3b8]">{option.description}</span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center justify-end gap-3 border-t border-[#dbdbdb]/60 pt-4 dark:border-[#243244]">
-        {saved && <span role="status" className="text-xs font-semibold text-[#22c55e]">Billing settings saved</span>}
-        <Button type="submit" className="btn-brand min-h-11 rounded-2xl px-5 text-xs font-bold">Save billing settings</Button>
-      </div>
-    </form>
-  );
-}
 
 function SectionHeading({ id, icon, title, description }: { id: string; icon: string; title: string; description: string }) {
   return <div className="flex items-start gap-3 px-1">
