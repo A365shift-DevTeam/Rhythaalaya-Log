@@ -251,7 +251,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         if (batches.Count != batchIds.Count) throw new AppValidationException(nameof(request.BatchIds));
 
         ValidateConcession(request.ConcessionPercent);
-        var joinDate = request.JoinDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var joinDate = request.JoinDate ?? await dueGenerator.TodayForTenantAsync(ct);
         var student = new Student
         {
             TenantId = tenantId,
@@ -304,13 +304,17 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         student.IsActive = false;
         // Archiving must also close the student's enrollments — batch enrolled counts and the
         // fee-due generator both key off EnrollmentStatus.Active, not Student.IsActive.
-        var endedOn = DateOnly.FromDateTime(DateTime.UtcNow);
-        foreach (var enrollment in student.Enrollments.Where(x => x.Status == EnrollmentStatus.Active))
+        var endedOn = await dueGenerator.TodayForTenantAsync(ct);
+        var ended = student.Enrollments.Where(x => x.Status == EnrollmentStatus.Active).ToList();
+        foreach (var enrollment in ended)
         {
             enrollment.Status = EnrollmentStatus.Withdrawn;
             enrollment.EndedOn = endedOn;
         }
         await db.SaveChangesAsync(ct);
+        foreach (var enrollment in ended)
+            await dueGenerator.CancelDuesAfterAsync(enrollment.Id, endedOn, tenantContext.UserId,
+                $"Enrollment ended {endedOn:yyyy-MM-dd} (student archived)", ct);
     }
 
     public async Task<StudentDto> CreateEnrollmentAsync(CreateEnrollmentRequest request, CancellationToken ct)
@@ -325,7 +329,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         var enrollment = new Enrollment
         {
             TenantId = RequireTenant(), StudentId = student.Id, BatchId = batch.Id, CourseId = batch.CourseId,
-            EnrolledOn = request.EnrolledOn ?? DateOnly.FromDateTime(DateTime.UtcNow)
+            EnrolledOn = request.EnrolledOn ?? await dueGenerator.TodayForTenantAsync(ct)
         };
         db.Enrollments.Add(enrollment);
         await db.SaveChangesAsync(ct);
@@ -339,8 +343,13 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         var enrollment = await db.Enrollments.SingleOrDefaultAsync(x => x.Id == enrollmentId, ct)
             ?? throw new NotFoundException(nameof(Enrollment));
         enrollment.Status = request.Status;
-        enrollment.EndedOn = request.EndedOn ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var endedOn = request.EndedOn ?? await dueGenerator.TodayForTenantAsync(ct);
+        enrollment.EndedOn = endedOn;
         await db.SaveChangesAsync(ct);
+        // Bills for periods after the exit are cancelled (money on them released to credit);
+        // periods already started stay owed.
+        await dueGenerator.CancelDuesAfterAsync(enrollment.Id, endedOn, tenantContext.UserId,
+            $"Enrollment ended {endedOn:yyyy-MM-dd}", ct);
         return await GetStudentAsync(enrollment.StudentId, ct);
     }
 
@@ -464,12 +473,15 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     public async Task<DashboardDto> GetDashboardAsync(DateOnly date, CancellationToken ct)
     {
         await dueGenerator.EnsureForTenantAsync(ct);
-        var from = new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
-        var to = from.AddDays(1);
+        // The dashboard day is the academy's local calendar day, and "collected" is net of refunds
+        // (refund rows are negative income) — the same figures the finance dashboard reports.
+        var timeZoneId = await db.OrganizationSettings.AsNoTracking().Select(x => x.TimeZone).FirstOrDefaultAsync(ct) ?? "Asia/Kolkata";
+        var (from, to) = BillingSchedule.LocalDayRangeUtc(timeZoneId, date);
         var students = await db.Students.CountAsync(x => x.IsActive, ct);
         var batchCount = await db.Batches.CountAsync(x => x.IsActive, ct);
-        var activeStudentIds = await db.Students.Where(x => x.IsActive).Select(x => x.Id).ToListAsync(ct);
-        var outstanding = (await balances.ByStudentAsync(activeStudentIds, ct)).Values.Sum();
+        // Receivables are money owed, whoever owes it: an archived student's balance still counts.
+        var studentIds = await db.Students.Select(x => x.Id).ToListAsync(ct);
+        var outstanding = (await balances.ByStudentAsync(studentIds, ct)).Values.Sum();
         var collected = await db.Transactions.Where(x => x.Type == TransactionType.Income
             && x.OccurredAt >= from && x.OccurredAt < to).SumAsync(x => x.Amount, ct);
         var attendance = await db.AttendanceRecords.Where(x => x.Date == date).ToListAsync(ct);
@@ -608,7 +620,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             ParseCategories(x.IncomeCategoriesJson, ["Student Fees", "Registration", "Events", "Other Income"]),
             ParseCategories(x.ExpenseCategoriesJson, ["Rent & Operations", "Instructor Salary", "Equipment", "Utilities", "Marketing", "Other Expense", "Refund"]),
             x.NotificationsEnabled, x.FeeReminderNotifications, x.PaymentNotifications, x.AttendanceNotifications,
-            x.FeeDueLeadDays, x.LateEnrollmentBillingPolicy, x.WhatsappTemplate);
+            x.FeeDueLeadDays, x.LateEnrollmentBillingPolicy, x.WhatsappTemplate, x.FeeOverdueGraceDays, x.CreditNotePrefix);
 
     private static void ApplySettings(OrganizationSettings x, UpdateSettingsRequest request)
     {
@@ -635,6 +647,8 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         x.PaymentNotifications = request.PaymentNotifications;
         x.AttendanceNotifications = request.AttendanceNotifications;
         x.FeeDueLeadDays = request.FeeDueLeadDays;
+        x.FeeOverdueGraceDays = request.FeeOverdueGraceDays;
+        x.CreditNotePrefix = Clean(request.CreditNotePrefix) ?? x.CreditNotePrefix;
         x.LateEnrollmentBillingPolicy = request.LateEnrollmentBillingPolicy;
         x.WhatsappTemplate = Clean(request.WhatsappTemplate);
     }
@@ -690,6 +704,8 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         if (request.Currency.Trim().Length != 3) throw new AppValidationException(nameof(request.Currency));
         if (request.ReceiptPrefix.Trim().Length > 16) throw new AppValidationException(nameof(request.ReceiptPrefix));
         if (request.FeeDueLeadDays is < 0 or > 90) throw new AppValidationException(nameof(request.FeeDueLeadDays));
+        if (request.FeeOverdueGraceDays is < 0 or > 90) throw new AppValidationException(nameof(request.FeeOverdueGraceDays));
+        if (request.CreditNotePrefix is { } cn && cn.Trim().Length is 0 or > 16) throw new AppValidationException(nameof(request.CreditNotePrefix));
         if (request.WhatsappTemplate is { Length: > 2000 })
             throw new AppValidationException("The WhatsApp template is too long — keep it under 2000 characters.");
         if (!Enum.IsDefined(request.LateEnrollmentBillingPolicy)) throw new AppValidationException(nameof(request.LateEnrollmentBillingPolicy));

@@ -22,6 +22,20 @@ const addPeriodsIso = (iso: string, freq: FeeFrequency, k: number): string => {
   return toIsoDate(new Date(target.getFullYear(), target.getMonth(), Math.min(d.getDate(), lastDay)));
 };
 
+/**
+ * The next cycle date on or after today — what a student joining today is billed next. The plan
+ * date is the cycle anchor, so this walks the anchor's cadence rather than showing the plan date.
+ */
+const nextCycleIso = (effectiveFromIso: string, freq: FeeFrequency): string => {
+  const anchor = effectiveFromIso.slice(0, 10);
+  const today = todayIso();
+  if (freq === 'OneTime' || anchor >= today) return anchor;
+  let k = 1;
+  let date = addPeriodsIso(anchor, freq, k);
+  while (date < today && k < 1200) { k++; date = addPeriodsIso(anchor, freq, k); }
+  return date;
+};
+
 function ToggleRow({ checked, onChange, title, hint }: {
   checked: boolean; onChange: (v: boolean) => void; title: string; hint: string;
 }) {
@@ -43,10 +57,12 @@ function FirstBillDateField({ id, value, onChange, frequency, min, isNewPlan }: 
   const past = !!value && !min && value < todayIso();
   const preview = !value ? ''
     : oneTime ? `One-time bill on ${fmtDate(value)}.`
-    : `Bills on ${fmtDate(value)}, then ${fmtDate(addPeriodsIso(value, frequency, 1))}, ${fmtDate(addPeriodsIso(value, frequency, 2))}…`;
+    : isNewPlan ? `New price from ${fmtDate(value)}; bills keep their existing cycle.`
+    : `Bills fall on ${fmtDate(value)}, ${fmtDate(addPeriodsIso(value, frequency, 1))}, ${fmtDate(addPeriodsIso(value, frequency, 2))}… `
+      + 'Students attending before this date are billed from their join date (or batch start) on the same cycle.';
   return (
     <div>
-      <label htmlFor={id} className={labelClass}>{oneTime ? 'Bill date' : isNewPlan ? 'New price starts' : 'First bill date'}</label>
+      <label htmlFor={id} className={labelClass}>{oneTime ? 'Bill date' : isNewPlan ? 'New price starts' : 'Billing cycle date'}</label>
       <input id={id} type="date" value={value} min={min} onChange={(event) => onChange(event.target.value)} className="settings-input" />
       {preview && <p className="mt-1 text-xs text-[#9e9e9e]">{preview}</p>}
       {past && (
@@ -397,7 +413,11 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                         <span className="font-bold text-[#3fc073] tabular-nums">₹{activePlan.amount.toLocaleString('en-IN')}</span>
                         {' · '}{FEE_FREQUENCY_LABELS[activePlan.frequency]}
                       </div>
-                      <div className="mt-0.5 text-xs text-[#9e9e9e]">Next due {fmtDate(activePlan.effectiveFrom)}</div>
+                      <div className="mt-0.5 text-xs text-[#9e9e9e]">
+                        {activePlan.frequency === 'OneTime' ? 'Billed once on ' : 'Next bill '}
+                        {fmtDate(nextCycleIso(activePlan.effectiveFrom, activePlan.frequency))}
+                        {activePlan.frequency !== 'OneTime' && ` · cycle from ${fmtDate(activePlan.effectiveFrom)}`}
+                      </div>
                     </div>
                   ) : (
                     <p className="mt-2 text-xs text-[#808080] dark:text-[#94a3b8]">No plan yet — students won't be billed until one is added.</p>

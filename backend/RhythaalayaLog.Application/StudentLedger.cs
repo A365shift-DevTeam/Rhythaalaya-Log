@@ -58,7 +58,10 @@ public sealed record StudentFinancialSummaryDto(
     decimal Pending,
     decimal AvailableCredit,
     decimal Overdue,
-    decimal TotalRefunded);
+    decimal TotalRefunded,
+    // Advance money already reserved against not-yet-due (Upcoming) bills. Total unconsumed
+    // credit = AvailableCredit + ReservedCredit, so no rupee is hidden between the two views.
+    decimal ReservedCredit = 0);
 
 public sealed record StudentLedgerDto(
     Guid StudentId,

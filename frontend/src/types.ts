@@ -159,6 +159,9 @@ export interface FeeDue {
   status: FeeDueStatus;
   cancelledAt?: string;
   cancelReason?: string;
+  /** Service period this charge pays for (inclusive). Scheduled dues only. */
+  periodStart?: string;
+  periodEnd?: string;
 }
 
 export interface FeeAdjustment {
@@ -248,6 +251,8 @@ export interface StudentFinancialSummary {
   availableCredit: number;
   overdue: number;
   totalRefunded: number;
+  /** Advance money already applied to not-yet-due bills; total credit = available + reserved. */
+  reservedCredit: number;
 }
 
 export interface StudentLedger {
@@ -388,6 +393,10 @@ export interface OrgSettings {
   expenseCategories: string[];
   notifications: NotificationSettings;
   feeDueLeadDays: number;
+  /** Days after the due date before an unpaid bill turns Overdue (0 = the next day). */
+  feeOverdueGraceDays: number;
+  /** Refunds are numbered from their own credit-note series, e.g. CN-000001. */
+  creditNotePrefix: string;
   lateEnrollmentBillingPolicy: LateEnrollmentBillingPolicy;
   whatsappTemplate: string;
 }

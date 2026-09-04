@@ -326,9 +326,10 @@ function FeeLedgerPanel({ ledger, hasUpcomingDues }: { ledger: StudentLedger; ha
       </div>
 
       {(summary.overdue > 0 || summary.totalRefunded > 0 || summary.totalAdjustments > 0
-        || summary.totalFines > 0 || summary.totalWrittenOff > 0) && (
+        || summary.totalFines > 0 || summary.totalWrittenOff > 0 || summary.reservedCredit > 0) && (
         <div className="flex flex-wrap gap-1.5">
           {summary.overdue > 0 && <SummaryChip label="Overdue" value={inr(summary.overdue)} tone="danger" />}
+          {summary.reservedCredit > 0 && <SummaryChip label="Reserved for upcoming" value={inr(summary.reservedCredit)} tone="muted" />}
           {summary.totalFines > 0 && <SummaryChip label="Fines" value={inr(summary.totalFines)} tone="danger" />}
           {summary.totalAdjustments > 0 && <SummaryChip label="Adjustments" value={inr(summary.totalAdjustments)} tone="muted" />}
           {summary.totalWrittenOff > 0 && <SummaryChip label="Written off" value={inr(summary.totalWrittenOff)} tone="muted" />}

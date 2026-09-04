@@ -289,6 +289,12 @@ public sealed class FeeDue : ITenantOwned
     /// <summary>Display name for custom charges; scheduled dues use the fee structure's name.</summary>
     public string? Title { get; set; }
     public DateOnly DueDate { get; set; }
+    /// <summary>
+    /// Service period this charge pays for (inclusive). Set for scheduled dues; null for custom
+    /// charges and for dues generated before periods were recorded.
+    /// </summary>
+    public DateOnly? PeriodStart { get; set; }
+    public DateOnly? PeriodEnd { get; set; }
     public decimal Amount { get; set; }
     /// <summary>Cached sum of Discount/Waiver adjustments (kept for backward compatibility).</summary>
     public decimal DiscountAmount { get; set; }
@@ -406,11 +412,16 @@ public sealed class OrganizationSettings : ITenantOwned
     public string TimeZone { get; set; } = "Asia/Kolkata";
     /// <summary>How many days before its due date a fee due is generated and shown as Upcoming.</summary>
     public int FeeDueLeadDays { get; set; } = 7;
+    /// <summary>Days after the due date before an unpaid due is marked Overdue (0 = the next day).</summary>
+    public int FeeOverdueGraceDays { get; set; }
     public LateEnrollmentBillingPolicy LateEnrollmentBillingPolicy { get; set; } = LateEnrollmentBillingPolicy.Skip;
     /// <summary>Last tenant-local date the daily billing sweep completed for this tenant.</summary>
     public DateOnly? LastBillingRunDate { get; set; }
     public string ReceiptPrefix { get; set; } = "REC";
     public int NextReceiptNumber { get; set; } = 1;
+    /// <summary>Refunds are numbered from their own credit-note series, never from the receipt series.</summary>
+    public string CreditNotePrefix { get; set; } = "CN";
+    public int NextCreditNoteNumber { get; set; } = 1;
     public string? ReceiptAddress { get; set; }
     public string? ReceiptPhone { get; set; }
     public string? ReceiptEmail { get; set; }

@@ -11,8 +11,12 @@ namespace RhythaalayaLog.Infrastructure;
 /// </summary>
 public sealed class FeeBalanceCalculator(AppDbContext db)
 {
-    /// <summary>Pending owed, spare credit, and overdue balance for one student — the figures behind the fee ledger summary.</summary>
-    public sealed record StudentFinancials(decimal Pending, decimal AvailableCredit, decimal Overdue);
+    /// <summary>
+    /// Pending owed, spare credit, overdue balance, and credit reserved against not-yet-due bills
+    /// for one student — the figures behind the fee ledger summary. Total unconsumed credit is
+    /// AvailableCredit + ReservedCredit.
+    /// </summary>
+    public sealed record StudentFinancials(decimal Pending, decimal AvailableCredit, decimal Overdue, decimal ReservedCredit = 0);
 
     public async Task<Dictionary<Guid, decimal>> ByEnrollmentAsync(IReadOnlyCollection<Guid> enrollmentIds, CancellationToken ct)
     {
@@ -50,15 +54,14 @@ public sealed class FeeBalanceCalculator(AppDbContext db)
     /// <summary>Pending / available-credit / overdue for one student. See <see cref="StudentFinancialsBatchAsync"/>.</summary>
     public async Task<StudentFinancials> StudentFinancialsAsync(Guid studentId, CancellationToken ct) =>
         (await StudentFinancialsBatchAsync([studentId], ct))
-            .GetValueOrDefault(studentId, new StudentFinancials(0m, 0m, 0m));
+            .GetValueOrDefault(studentId, new StudentFinancials(0m, 0m, 0m, 0m));
 
     /// <summary>
     /// <see cref="StudentFinancials.Pending"/> matches <see cref="ByStudentAsync"/> exactly (same
     /// net/paid/credit math, same zero clamp), so the fee-ledger summary, the batch-finance rows,
     /// and the student header all agree. <see cref="StudentFinancials.AvailableCredit"/> mirrors
-    /// that clamp. Known limitation: an advance payment parked against a not-yet-due (Upcoming)
-    /// fee is treated as spent, not spare — Pending still agrees, only the credit figure can read
-    /// lower than the ledger's running balance would suggest, and that figure is not in the header.
+    /// that clamp. Money explicitly paid against a not-yet-due (Upcoming) bill is neither owed nor
+    /// spare: it is reported separately as <see cref="StudentFinancials.ReservedCredit"/>.
     /// </summary>
     public async Task<Dictionary<Guid, StudentFinancials>> StudentFinancialsBatchAsync(
         IReadOnlyCollection<Guid> studentIds, CancellationToken ct)
@@ -83,6 +86,10 @@ public sealed class FeeBalanceCalculator(AppDbContext db)
             .ToDictionaryAsync(x => x.Key, x => x.Sum, ct);
         var overdueByStudent = overdueRows.GroupBy(x => x.StudentId).ToDictionary(g => g.Key,
             g => g.Sum(d => Math.Max(0m, d.NetAmount - overdueAllocated.GetValueOrDefault(d.Id))));
+        var reserved = (await db.FeePaymentAllocations
+            .Where(x => studentIds.Contains(x.FeeDue.StudentId) && x.FeeDue.Status == FeeDueStatus.Upcoming)
+            .GroupBy(x => x.FeeDue.StudentId).Select(g => new { g.Key, Sum = g.Sum(x => x.Amount) }).ToListAsync(ct))
+            .ToDictionary(x => x.Key, x => x.Sum);
 
         return studentIds.ToDictionary(id => id, id =>
         {
@@ -90,7 +97,8 @@ public sealed class FeeBalanceCalculator(AppDbContext db)
             return new StudentFinancials(
                 Pending: Math.Max(0m, signed),
                 AvailableCredit: Math.Max(0m, -signed),
-                Overdue: overdueByStudent.GetValueOrDefault(id));
+                Overdue: overdueByStudent.GetValueOrDefault(id),
+                ReservedCredit: Math.Max(0m, reserved.GetValueOrDefault(id)));
         });
     }
 
@@ -114,8 +122,10 @@ public sealed class FeeBalanceCalculator(AppDbContext db)
         var refunded = await db.FeePayments
             .Where(x => studentIds.Contains(x.StudentId) && x.Amount < 0)
             .GroupBy(x => x.StudentId).Select(g => new { g.Key, Sum = g.Sum(x => -x.Amount) }).ToListAsync(ct);
+        // Only reversals carried by a refund payment are money leaving; a released allocation
+        // (negative row on the original payment) merely returns money to credit.
         var refundReversals = await db.FeePaymentAllocations
-            .Where(x => studentIds.Contains(x.FeePayment.StudentId) && x.Amount < 0)
+            .Where(x => studentIds.Contains(x.FeePayment.StudentId) && x.Amount < 0 && x.FeePayment.Amount < 0)
             .GroupBy(x => x.FeePayment.StudentId).Select(g => new { g.Key, Sum = g.Sum(x => -x.Amount) }).ToListAsync(ct);
 
         var positiveMap = positivePayments.ToDictionary(x => x.Key, x => x.Sum);

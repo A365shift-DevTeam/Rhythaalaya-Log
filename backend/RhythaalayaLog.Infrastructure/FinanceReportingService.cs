@@ -8,7 +8,9 @@ namespace RhythaalayaLog.Infrastructure;
 /// Batch-level finance rollups and the org finance dashboard (finance PRP §29–30). Read-only;
 /// every figure reuses the same net/paid/credit maths as <see cref="FeeBalanceCalculator"/> and
 /// the same Cancelled/Upcoming cutoff as the student ledger. Tenant scoping is the DbContext's.
-/// Batch rollups cover <see cref="EnrollmentStatus.Active"/> enrollments only.
+/// Receivables are money owed regardless of who owes it: batch rollups cover every enrollment of
+/// the batch (a withdrawn student's unpaid bills still belong to it) and the org dashboard covers
+/// every student, archived or not.
 /// </summary>
 public sealed class FinanceReportingService(
     AppDbContext db, FeeDueGenerator dueGenerator, FeeBalanceCalculator balanceCalculator)
@@ -24,7 +26,6 @@ public sealed class FinanceReportingService(
             .OrderBy(x => x.Course.Name).ThenBy(x => x.Name).ToListAsync(ct);
 
         var enrollments = await db.Enrollments.AsNoTracking()
-            .Where(x => x.Status == EnrollmentStatus.Active)
             .Select(x => new { x.Id, x.BatchId, x.StudentId }).ToListAsync(ct);
         var byBatch = enrollments.ToLookup(x => x.BatchId);
         var enrollmentIds = enrollments.Select(x => x.Id).ToList();
@@ -57,7 +58,7 @@ public sealed class FinanceReportingService(
         await dueGenerator.EnsureForTenantAsync(ct);
 
         var enrollments = await db.Enrollments.AsNoTracking()
-            .Where(x => x.BatchId == batchId && x.Status == EnrollmentStatus.Active)
+            .Where(x => x.BatchId == batchId)
             .Select(x => new { x.Id, x.StudentId, StudentName = x.Student.Name })
             .OrderBy(x => x.StudentName).ToListAsync(ct);
         var enrollmentIds = enrollments.Select(x => x.Id).ToList();
@@ -237,12 +238,11 @@ public sealed class FinanceReportingService(
 
     private async Task<List<Guid>> ScopedStudentIdsAsync(FinanceDashboardQuery query, CancellationToken ct)
     {
-        // Active students only, matching AcademyService.GetDashboardAsync so the two dashboards'
-        // outstanding figures agree. (An archived student who still owes is therefore excluded
-        // here — surface those through the per-student ledger, not the org rollup.)
+        // Every student, archived or not, matching AcademyService.GetDashboardAsync: a receivable
+        // does not stop being owed because the student record was archived.
         if (query.BatchId is null && query.CourseId is null)
-            return await db.Students.AsNoTracking().Where(x => x.IsActive).Select(x => x.Id).ToListAsync(ct);
-        var enrollments = db.Enrollments.AsNoTracking().Where(x => x.Status == EnrollmentStatus.Active);
+            return await db.Students.AsNoTracking().Select(x => x.Id).ToListAsync(ct);
+        var enrollments = db.Enrollments.AsNoTracking();
         if (query.BatchId is { } b) enrollments = enrollments.Where(x => x.BatchId == b);
         if (query.CourseId is { } c) enrollments = enrollments.Where(x => x.CourseId == c);
         return await enrollments.Select(x => x.StudentId).Distinct().ToListAsync(ct);

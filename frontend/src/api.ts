@@ -331,6 +331,8 @@ export const api = {
       paymentNotifications: settings.notifications.paymentUpdates,
       attendanceNotifications: settings.notifications.attendanceAlerts,
       feeDueLeadDays: settings.feeDueLeadDays,
+      feeOverdueGraceDays: settings.feeOverdueGraceDays,
+      creditNotePrefix: settings.creditNotePrefix || null,
       lateEnrollmentBillingPolicy: settings.lateEnrollmentBillingPolicy,
       whatsappTemplate: settings.whatsappTemplate || null
     }) }, token).then(mapSettings),
@@ -456,7 +458,8 @@ function mapFeeDue(x: any): FeeDue {
     title: x.title || undefined, dueDate: x.dueDate,
     amount: x.amount, discountAmount: x.discountAmount, netAmount: x.netAmount, paidAmount: x.paidAmount,
     balanceAmount: x.balanceAmount, status: x.status,
-    cancelledAt: x.cancelledAt || undefined, cancelReason: x.cancelReason || undefined
+    cancelledAt: x.cancelledAt || undefined, cancelReason: x.cancelReason || undefined,
+    periodStart: x.periodStart || undefined, periodEnd: x.periodEnd || undefined
   };
 }
 function mapFeeAdjustment(x: any): FeeAdjustment {
@@ -481,7 +484,7 @@ function mapStudentLedger(x: any): StudentLedger {
       totalCharged: s.totalCharged ?? 0, totalFines: s.totalFines ?? 0,
       totalAdjustments: s.totalAdjustments ?? 0, totalWrittenOff: s.totalWrittenOff ?? 0,
       netCharged: s.netCharged ?? 0, totalPaid: s.totalPaid ?? 0,
-      pending: s.pending ?? 0, availableCredit: s.availableCredit ?? 0,
+      pending: s.pending ?? 0, availableCredit: s.availableCredit ?? 0, reservedCredit: s.reservedCredit ?? 0,
       overdue: s.overdue ?? 0, totalRefunded: s.totalRefunded ?? 0,
     },
     entries: (x.entries || []).map((e: any) => ({
@@ -564,6 +567,8 @@ function mapSettings(x: any): OrgSettings {
       attendanceAlerts: x.attendanceNotifications ?? true
     },
     feeDueLeadDays: x.feeDueLeadDays ?? 7,
+    feeOverdueGraceDays: x.feeOverdueGraceDays ?? 0,
+    creditNotePrefix: x.creditNotePrefix || 'CN',
     lateEnrollmentBillingPolicy: x.lateEnrollmentBillingPolicy ?? 'Skip',
     whatsappTemplate: x.whatsappTemplate || DEFAULT_WHATSAPP_TEMPLATE
   };

@@ -18,6 +18,8 @@ export const INITIAL_SETTINGS: OrgSettings = {
     enabled: true, feeReminders: true, paymentUpdates: true, attendanceAlerts: true
   },
   feeDueLeadDays: 7,
+  feeOverdueGraceDays: 0,
+  creditNotePrefix: 'CN',
   lateEnrollmentBillingPolicy: 'Skip',
   whatsappTemplate: DEFAULT_WHATSAPP_TEMPLATE
 };

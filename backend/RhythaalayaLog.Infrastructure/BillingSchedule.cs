@@ -34,14 +34,41 @@ public static class BillingSchedule
         _ => throw new ArgumentOutOfRangeException(nameof(frequency))
     };
 
-    /// <summary>First cadence date (relative to <paramref name="anchor"/>) on or after <paramref name="minDate"/>.</summary>
+    /// <summary>
+    /// First cadence date (relative to <paramref name="anchor"/>) on or after <paramref name="minDate"/>.
+    /// The cadence extends backwards as well as forwards: for a plan anchored on 10 Oct, the first
+    /// cycle date on or after 15 Aug is 10 Sep, not 10 Oct.
+    /// </summary>
     public static DateOnly FirstOnOrAfter(DateOnly anchor, DateOnly minDate, FeeFrequency frequency)
     {
         if (frequency == FeeFrequency.OneTime) return anchor >= minDate ? anchor : minDate;
-        if (anchor >= minDate) return anchor;
-        var k = 1;
+        var k = 0;
         while (Step(anchor, frequency, k) < minDate) k++;
+        while (Step(anchor, frequency, k - 1) >= minDate) k--;
         return Step(anchor, frequency, k);
+    }
+
+    /// <summary>
+    /// Start of the cadence period containing <paramref name="date"/>, stepping backwards from the
+    /// anchor when the date precedes it (a plan anchored on the 10th of next month still defines
+    /// the 10th-to-9th periods before it). OneTime plans have a single period at the anchor.
+    /// </summary>
+    public static DateOnly PeriodStartOnOrBefore(DateOnly anchor, DateOnly date, FeeFrequency frequency)
+    {
+        if (frequency == FeeFrequency.OneTime) return anchor;
+        if (anchor <= date) return LastOnOrBefore(anchor, date, frequency);
+        var k = -1;
+        while (Step(anchor, frequency, k) > date) k--;
+        return Step(anchor, frequency, k);
+    }
+
+    /// <summary>UTC instants [from, to) covering one tenant-local calendar day.</summary>
+    public static (DateTimeOffset From, DateTimeOffset To) LocalDayRangeUtc(string timeZoneId, DateOnly day)
+    {
+        var zone = FindZone(timeZoneId);
+        var start = TimeZoneInfo.ConvertTimeToUtc(day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified), zone);
+        var end = TimeZoneInfo.ConvertTimeToUtc(day.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified), zone);
+        return (new DateTimeOffset(start, TimeSpan.Zero), new DateTimeOffset(end, TimeSpan.Zero));
     }
 
     /// <summary>Last cadence date (relative to <paramref name="anchor"/>) on or before <paramref name="maxDate"/> (or the anchor itself when it is later).</summary>
@@ -93,24 +120,25 @@ public static class BillingSchedule
     /// Converts an arbitrary instant (e.g. a payment timestamp) to the tenant's local calendar
     /// date, with the same timezone fallbacks as <see cref="TodayInTimeZone"/>.
     /// </summary>
-    public static DateOnly ToLocalDate(string timeZoneId, DateTimeOffset instant)
+    public static DateOnly ToLocalDate(string timeZoneId, DateTimeOffset instant) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instant, FindZone(timeZoneId)).Date);
+
+    private static TimeZoneInfo FindZone(string timeZoneId)
     {
-        TimeZoneInfo zone;
         try
         {
-            zone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+            return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
         }
         catch (Exception e) when (e is TimeZoneNotFoundException or InvalidTimeZoneException)
         {
             try
             {
-                zone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata");
+                return TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata");
             }
             catch (Exception inner) when (inner is TimeZoneNotFoundException or InvalidTimeZoneException)
             {
-                zone = TimeZoneInfo.Utc;
+                return TimeZoneInfo.Utc;
             }
         }
-        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instant, zone).Date);
     }
 }

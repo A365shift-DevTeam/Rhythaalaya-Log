@@ -33,7 +33,7 @@ public sealed class UpcomingNotificationTests
     {
         using var h = new TestHarness(leadDays: 0, courseNoticeDays: noticeDays);
         PlanDueIn(h, noticeDays); // today = DueDate - noticeDays: first day of the window
-        var enrollment = h.Enroll(Today);
+        var enrollment = h.Enroll(Today.AddDays(noticeDays)); // joins on the cycle date, so nothing is owed before it
 
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
 
@@ -50,7 +50,7 @@ public sealed class UpcomingNotificationTests
     {
         using var h = new TestHarness(leadDays: 90, courseNoticeDays: noticeDays); // academy window is wider: course must win
         PlanDueIn(h, noticeDays + 1);
-        var enrollment = h.Enroll(Today);
+        var enrollment = h.Enroll(Today.AddDays(noticeDays + 1)); // joins on the cycle date
 
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
 

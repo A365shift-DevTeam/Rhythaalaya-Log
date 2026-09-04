@@ -81,14 +81,19 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
         if (request.FeeHeadId is { } headId && !await db.FeeHeads.AnyAsync(x => x.Id == headId, ct))
             throw new AppValidationException(nameof(request.FeeHeadId));
 
-        // Plans are resolved by effective-date window, so a future-dated plan must only trim the
-        // current plan's window — never deactivate it early (that used to open a billing gap).
-        var overlapping = await db.FeeStructures.Where(x => x.CourseId == request.CourseId
-            && (x.EffectiveTo == null || x.EffectiveTo >= request.EffectiveFrom)).ToListAsync(ct);
-        if (overlapping.Any(x => x.EffectiveFrom >= request.EffectiveFrom))
-            throw new ConflictException("A new fee structure must start after the course's existing structures.");
-        foreach (var previous in overlapping)
-            previous.EffectiveTo = request.EffectiveFrom.AddDays(-1);
+        // Each fee head is its own price lineage: a new recurring plan supersedes only the same
+        // head's current plan (trimming its window, never deactivating it early). Plans on other
+        // heads, and one-time charges, are independent and untouched.
+        if (request.Frequency != FeeFrequency.OneTime)
+        {
+            var overlapping = await db.FeeStructures.Where(x => x.CourseId == request.CourseId
+                && x.FeeHeadId == request.FeeHeadId && x.Frequency != FeeFrequency.OneTime
+                && (x.EffectiveTo == null || x.EffectiveTo >= request.EffectiveFrom)).ToListAsync(ct);
+            if (overlapping.Any(x => x.EffectiveFrom >= request.EffectiveFrom))
+                throw new ConflictException("A new fee plan must start after the fee head's existing plans.");
+            foreach (var previous in overlapping)
+                previous.EffectiveTo = request.EffectiveFrom.AddDays(-1);
+        }
 
         var structure = new FeeStructure
         {
@@ -110,6 +115,24 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
             throw new AppValidationException(nameof(request.EffectiveTo));
         if (request.FeeHeadId is { } headId && !await db.FeeHeads.AnyAsync(x => x.Id == headId, ct))
             throw new AppValidationException(nameof(request.FeeHeadId));
+        if (request.EffectiveFrom is { } newFrom && newFrom != structure.EffectiveFrom)
+        {
+            // The start date is the cycle anchor of every due billed from the plan, so it can only
+            // be corrected while nothing has been billed — history is never re-anchored silently.
+            if (await db.FeeDues.AnyAsync(x => x.FeeStructureId == id, ct))
+                throw new ConflictException("Fees have already been billed from this plan; its start date can no longer be changed.");
+            if (request.EffectiveTo is { } to && to < newFrom) throw new AppValidationException(nameof(request.EffectiveFrom));
+            if (structure.Frequency != FeeFrequency.OneTime)
+            {
+                var headForOverlap = request.FeeHeadId ?? structure.FeeHeadId;
+                var clash = await db.FeeStructures.AnyAsync(x => x.CourseId == structure.CourseId && x.Id != id
+                    && x.FeeHeadId == headForOverlap && x.Frequency != FeeFrequency.OneTime
+                    && x.EffectiveFrom <= (request.EffectiveTo ?? DateOnly.MaxValue)
+                    && (x.EffectiveTo == null || x.EffectiveTo >= newFrom), ct);
+                if (clash) throw new ConflictException("The new start date overlaps another plan of the same fee head.");
+            }
+            structure.EffectiveFrom = newFrom;
+        }
         structure.Name = request.Name.Trim();
         structure.EffectiveTo = request.EffectiveTo;
         structure.IsActive = request.IsActive;
@@ -149,9 +172,11 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
             if (replay is not null) return replay;
         }
 
-        var student = await db.Students.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.StudentId && x.IsActive, ct)
+        // An archived student can still settle what they owe: a receivable outlives the record's
+        // active flag (audit FIN-006).
+        var student = await db.Students.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.StudentId, ct)
             ?? throw new NotFoundException(nameof(Student));
-        var paymentDate = (request.PaymentDate ?? DateTimeOffset.UtcNow).ToUniversalTime();
+        var paymentDate = (request.PaymentDate ?? BusinessClock.UtcNow).ToUniversalTime();
         await EnsureSettingsExistAsync(ct);
 
         // One atomic unit: receipt number, payment, allocations, ledger entry, and status updates
@@ -187,10 +212,15 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
                 }
                 else
                 {
-                    var outstanding = await db.FeeDues.Where(x => x.StudentId == student.Id
+                    // A payment settles what has fallen due first (oldest first), then bills that
+                    // are listed but not yet due (a student paying early), and only the remainder
+                    // stays on account as credit. Money placed on a not-yet-due bill is reported as
+                    // reserved credit until the bill is fully covered (then it is simply Paid).
+                    var outstanding = (await db.FeeDues.Where(x => x.StudentId == student.Id
                         && (x.Status == FeeDueStatus.Pending || x.Status == FeeDueStatus.Partial
                             || x.Status == FeeDueStatus.Overdue || x.Status == FeeDueStatus.Upcoming))
-                        .OrderBy(x => x.DueDate).ToListAsync(ct);
+                        .ToListAsync(ct))
+                        .OrderBy(x => x.Status == FeeDueStatus.Upcoming ? 1 : 0).ThenBy(x => x.DueDate).ToList();
                     await rowLocker.LockFeeDuesAsync(db, outstanding.Select(x => x.Id).ToList(), ct);
                     var remaining = request.Amount;
                     foreach (var due in outstanding)
@@ -252,8 +282,8 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
 
             var refund = new FeePayment
             {
-                TenantId = tenantId, StudentId = original.StudentId, ReceiptNumber = await NextReceiptNumberAsync(ct),
-                Amount = -amount, PaymentDate = DateTimeOffset.UtcNow, Method = original.Method,
+                TenantId = tenantId, StudentId = original.StudentId, ReceiptNumber = await NextCreditNoteNumberAsync(ct),
+                Amount = -amount, PaymentDate = BusinessClock.UtcNow, Method = original.Method,
                 CollectedByUserId = userId, Remarks = Clean(request.Remarks), RefundOfPaymentId = original.Id
             };
             db.FeePayments.Add(refund);
@@ -267,9 +297,16 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
                 .GroupBy(x => x.ReversalOfAllocationId!.Value)
                 .Select(g => new { AllocationId = g.Key, Reversed = -g.Sum(x => x.Amount) })
                 .ToDictionaryAsync(x => x.AllocationId, x => x.Reversed, ct);
-            var remaining = amount;
+            // Refund unapplied credit first; only when the refund exceeds it are allocations pulled
+            // back from settled bills (latest first). A paid bill never becomes unpaid while the
+            // student still has money on account.
+            var priorReversals = alreadyReversedByAllocation.Values.Sum();
+            var allocatedNet = originalAllocations.Where(x => x.Amount > 0).Sum(x => x.Amount) - priorReversals;
+            var refundedOutOfCreditSoFar = alreadyRefunded - priorReversals;
+            var unallocated = Math.Max(0m, original.Amount - allocatedNet - refundedOutOfCreditSoFar);
+            var remaining = amount - Math.Min(amount, unallocated);
             var touchedDueIds = new List<Guid>();
-            foreach (var allocation in originalAllocations)
+            foreach (var allocation in originalAllocations.Where(x => x.Amount > 0))
             {
                 if (remaining <= 0) break;
                 var reversible = allocation.Amount - alreadyReversedByAllocation.GetValueOrDefault(allocation.Id);
@@ -285,10 +322,11 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
             }
             // any remainder was unconsumed credit on the original payment; nothing more to reverse against a due
 
+            // A refund is contra-revenue (negative income), never an operating expense.
             refund.Transaction = new FinancialTransaction
             {
-                TenantId = tenantId, Title = string.Concat("Refund - ", original.Student.Name), Type = TransactionType.Expense,
-                Amount = amount, Category = "Refund", OccurredAt = refund.PaymentDate, FeePayment = refund
+                TenantId = tenantId, Title = string.Concat("Refund - ", original.Student.Name), Type = TransactionType.Income,
+                Amount = -amount, Category = "Refund", OccurredAt = refund.PaymentDate, FeePayment = refund
             };
             await db.SaveChangesAsync(ct);
 
@@ -370,15 +408,15 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
                 ?? throw new NotFoundException(nameof(FeeDue));
             if (due.Status != FeeDueStatus.Cancelled)
             {
-                var allocated = await db.FeePaymentAllocations.Where(x => x.FeeDueId == dueId)
-                    .SumAsync(x => (decimal?)x.Amount, ct) ?? 0;
-                if (allocated > 0)
-                    throw new ConflictException("Money is already allocated to this due. Refund or reallocate it before cancelling.");
+                // Money already applied to the bill is released back to the student's credit
+                // (append-only reversal rows). Returning it to the student is a separate refund.
+                await dueGenerator.DeallocateAsync(dueId, ct);
                 due.Status = FeeDueStatus.Cancelled;
                 due.CancelledAt = DateTimeOffset.UtcNow;
                 due.CancelledByUserId = userId;
                 due.CancelReason = request.Reason.Trim();
                 await db.SaveChangesAsync(ct);
+                await dueGenerator.ApplyCreditToArrivedDuesAsync(due.StudentId, ct);
             }
             await tx.CommitAsync(ct);
         }
@@ -432,15 +470,20 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
 
     /// <summary>
     /// Creates one custom (structure-less) due and applies advance credit. Custom dues aren't
-    /// covered by the schedule's unique index (null FeeStructureId), so an identical live charge
-    /// on the enrollment is treated as the same submission and returned instead of billed twice.
+    /// covered by the schedule's unique index (null FeeStructureId), so an identical charge raised
+    /// within the double-submit window is treated as the same submission and returned instead of
+    /// billed twice. Outside that window an identical charge is a new, separate bill.
     /// </summary>
+    private static readonly TimeSpan DoubleSubmitWindow = TimeSpan.FromMinutes(2);
+
     private async Task<Guid> CreateCustomDueCoreAsync(Enrollment enrollment, string title, decimal amount,
         DateOnly dueDate, DateOnly today, CancellationToken ct)
     {
+        var since = DateTimeOffset.UtcNow - DoubleSubmitWindow;
         var existing = await db.FeeDues.AsNoTracking()
             .Where(x => x.EnrollmentId == enrollment.Id && x.FeeStructureId == null && x.Title == title
-                && x.Amount == amount && x.DueDate == dueDate && x.Status != FeeDueStatus.Cancelled)
+                && x.Amount == amount && x.DueDate == dueDate && x.Status != FeeDueStatus.Cancelled
+                && x.CreatedAt >= since)
             .Select(x => (Guid?)x.Id).FirstOrDefaultAsync(ct);
         if (existing is not null) return existing.Value;
 
@@ -453,7 +496,7 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
         };
         db.FeeDues.Add(due);
         await db.SaveChangesAsync(ct);
-        await dueGenerator.AllocateCreditAsync(due, ct);
+        if (due.Status != FeeDueStatus.Upcoming) await dueGenerator.AllocateCreditAsync(due, ct);
         await dueGenerator.RefreshDueStatusAsync(due.Id, ct);
         return due.Id;
     }
@@ -497,9 +540,11 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
         var items = await db.Transactions.AsNoTracking()
             .Where(x => x.OccurredAt >= from && x.OccurredAt < to)
             .OrderByDescending(x => x.OccurredAt).ToListAsync(ct);
-        var income = items.Where(x => x.Type == TransactionType.Income).Sum(x => x.Amount);
+        var income = items.Where(x => x.Type == TransactionType.Income && x.Amount > 0).Sum(x => x.Amount);
+        var refunds = items.Where(x => x.Type == TransactionType.Income && x.Amount < 0).Sum(x => -x.Amount);
         var expenses = items.Where(x => x.Type == TransactionType.Expense).Sum(x => x.Amount);
-        return new FinanceSummaryDto(from, to, income, expenses, income - expenses, items.Select(MapTransaction).ToList());
+        return new FinanceSummaryDto(from, to, income, expenses, income - refunds - expenses,
+            items.Select(MapTransaction).ToList(), refunds);
     }
 
     public async Task<TransactionDto> CreateTransactionAsync(CreateTransactionRequest request, CancellationToken ct)
@@ -564,7 +609,8 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
             var paid = paidMap.GetValueOrDefault(x.Id);
             return new FeeDueDto(x.Id, x.StudentId, x.Student.Name, x.EnrollmentId, x.Enrollment.BatchId,
                 x.Enrollment.Batch.Name, x.Enrollment.Batch.Course.Name, x.FeeStructureId, x.DueDate, x.Amount,
-                x.DiscountAmount, x.NetAmount, paid, x.NetAmount - paid, x.Status, x.Title, x.CancelledAt, x.CancelReason);
+                x.DiscountAmount, x.NetAmount, paid, x.NetAmount - paid, x.Status, x.Title, x.CancelledAt, x.CancelReason,
+                x.PeriodStart, x.PeriodEnd);
         }).ToList();
     }
 
@@ -643,6 +689,14 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
         var number = settings.NextReceiptNumber;
         settings.NextReceiptNumber++;
         return $"{settings.ReceiptPrefix}-{number:D6}";
+    }
+
+    private async Task<string> NextCreditNoteNumberAsync(CancellationToken ct)
+    {
+        var settings = await db.OrganizationSettings.SingleAsync(ct);
+        var number = settings.NextCreditNoteNumber;
+        settings.NextCreditNoteNumber++;
+        return $"{settings.CreditNotePrefix}-{number:D6}";
     }
 
     private static FeeStructureDto MapStructure(FeeStructure x) =>

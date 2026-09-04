@@ -75,13 +75,26 @@ public sealed class TestHarness : IDisposable
         return course;
     }
 
+    public FeeHead AddFeeHead(string name)
+    {
+        var head = new FeeHead { TenantId = TenantId, Name = name, DisplayOrder = 0 };
+        Db.FeeHeads.Add(head);
+        Db.SaveChanges();
+        return head;
+    }
+
+    public FixedTenantContext TenantContext => new() { TenantId = TenantId, UserId = UserId, Role = UserRole.TenantAdmin };
+    public AcademyService Academy => new(Db, TenantContext, Generator, new FeeBalanceCalculator(Db));
+    public FinanceReportingService Reporting => new(Db, Generator, new FeeBalanceCalculator(Db));
+    public StudentLedgerService Ledger => new(Db, Generator, new FeeBalanceCalculator(Db));
+
     public FeeStructure AddStructure(decimal amount, FeeFrequency frequency, DateOnly effectiveFrom, DateOnly? effectiveTo = null,
-        Course? course = null)
+        Course? course = null, Guid? feeHeadId = null, string? name = null)
     {
         var structure = new FeeStructure
         {
-            TenantId = TenantId, CourseId = (course ?? Course).Id, Name = $"Fee {amount}", Amount = amount,
-            Frequency = frequency, EffectiveFrom = effectiveFrom, EffectiveTo = effectiveTo
+            TenantId = TenantId, CourseId = (course ?? Course).Id, Name = name ?? $"Fee {amount}", Amount = amount,
+            Frequency = frequency, EffectiveFrom = effectiveFrom, EffectiveTo = effectiveTo, FeeHeadId = feeHeadId
         };
         Db.FeeStructures.Add(structure);
         Db.SaveChanges();

@@ -48,7 +48,8 @@ public sealed record FeeStructureDto(Guid Id, Guid CourseId, string CourseName, 
 public sealed record FeeDueDto(Guid Id, Guid StudentId, string StudentName, Guid EnrollmentId, Guid BatchId,
     string BatchName, string CourseName, Guid? FeeStructureId, DateOnly DueDate, decimal Amount,
     decimal DiscountAmount, decimal NetAmount, decimal PaidAmount, decimal BalanceAmount, FeeDueStatus Status,
-    string? Title = null, DateTimeOffset? CancelledAt = null, string? CancelReason = null);
+    string? Title = null, DateTimeOffset? CancelledAt = null, string? CancelReason = null,
+    DateOnly? PeriodStart = null, DateOnly? PeriodEnd = null);
 
 public sealed record FeeAdjustmentDto(Guid Id, FeeAdjustmentType Type, decimal Amount, string Reason,
     string PerformedByName, DateTimeOffset CreatedAt);
@@ -67,8 +68,10 @@ public sealed record ReceiptDto(Guid PaymentId, string ReceiptNumber, string Org
 
 public sealed record TransactionDto(Guid Id, string Title, TransactionType Type, decimal Amount, string Category,
     DateTimeOffset OccurredAt, Guid? FeePaymentId);
+// Income is gross receipts, Refunds the money returned (contra-revenue, never an expense),
+// Expenses operating spend; Net = Income - Refunds - Expenses.
 public sealed record FinanceSummaryDto(DateTimeOffset From, DateTimeOffset To, decimal Income, decimal Expenses,
-    decimal Net, IReadOnlyList<TransactionDto> Transactions);
+    decimal Net, IReadOnlyList<TransactionDto> Transactions, decimal Refunds = 0);
 public sealed record DashboardDto(int ActiveStudents, int ActiveBatches, decimal OutstandingFees,
     decimal CollectedFees, decimal AttendancePercentage);
 
@@ -80,4 +83,4 @@ public sealed record SettingsDto(Guid Id, string Name, string Type, string? Logo
     bool NotificationsEnabled, bool FeeReminderNotifications, bool PaymentNotifications,
     bool AttendanceNotifications, int FeeDueLeadDays = 7,
     LateEnrollmentBillingPolicy LateEnrollmentBillingPolicy = LateEnrollmentBillingPolicy.Skip,
-    string? WhatsappTemplate = null);
+    string? WhatsappTemplate = null, int FeeOverdueGraceDays = 0, string CreditNotePrefix = "CN");

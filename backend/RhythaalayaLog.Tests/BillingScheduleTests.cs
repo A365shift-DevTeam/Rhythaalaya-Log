@@ -32,9 +32,13 @@ public sealed class BillingScheduleTests
     }
 
     [Fact]
-    public void FirstOnOrAfter_ReturnsAnchorWhenAnchorIsLater()
+    public void FirstOnOrAfter_StepsBackwardsWhenAnchorIsLater()
     {
-        Assert.Equal(D(2026, 5, 5), BillingSchedule.FirstOnOrAfter(D(2026, 5, 5), D(2026, 1, 1), FeeFrequency.Monthly));
+        // Audit FIN-003 (2026-09-04): the cadence extends before the anchor, so a plan anchored on
+        // 5 May already defines the 5th-of-the-month cycle for January.
+        Assert.Equal(D(2026, 1, 5), BillingSchedule.FirstOnOrAfter(D(2026, 5, 5), D(2026, 1, 1), FeeFrequency.Monthly));
+        Assert.Equal(D(2026, 5, 5), BillingSchedule.FirstOnOrAfter(D(2026, 5, 5), D(2026, 4, 6), FeeFrequency.Monthly));
+        Assert.Equal(D(2026, 5, 5), BillingSchedule.FirstOnOrAfter(D(2026, 5, 5), D(2026, 5, 5), FeeFrequency.Monthly));
     }
 
     [Fact]

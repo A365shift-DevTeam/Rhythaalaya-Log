@@ -435,10 +435,10 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                     <div className="flex shrink-0 items-center gap-2 pl-2">
                       <div
                         className={`font-sans text-xs sm:text-sm font-bold tabular-nums ${
-                          item.type === 'income' ? 'text-[#22c55e]' : 'text-[#ef4444]'
+                          item.type === 'income' && item.amount >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'
                         }`}
                       >
-                        {item.type === 'income' ? '+' : '-'}₹{item.amount.toLocaleString('en-IN')}
+                        {item.type === 'income' && item.amount >= 0 ? '+' : '-'}₹{Math.abs(item.amount).toLocaleString('en-IN')}
                       </div>
                       {editable && <JisIcon className="text-[16px] text-[#9e9e9e]">edit</JisIcon>}
                     </div>

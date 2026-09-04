@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using RhythaalayaLog.Application;
 using RhythaalayaLog.Domain;
@@ -32,7 +33,7 @@ public sealed class StudentLedgerService(
         // fee-due endpoint does, so a freshly opened ledger is current.
         await dueGenerator.EnsureForStudentAsync(studentId, ct);
 
-        var dues = await db.FeeDues.AsNoTracking()
+        var dues = await db.FeeDues.AsNoTracking().Include(x => x.FeeStructure)
             .Where(x => x.StudentId == studentId && LedgerVisibleDueStatuses.Contains(x.Status))
             .ToListAsync(ct);
         var dueById = dues.ToDictionary(x => x.Id);
@@ -132,13 +133,24 @@ public sealed class StudentLedgerService(
             Pending: financials.Pending,
             AvailableCredit: financials.AvailableCredit,
             Overdue: financials.Overdue,
-            TotalRefunded: totalRefunded);
+            TotalRefunded: totalRefunded,
+            ReservedCredit: financials.ReservedCredit);
 
         return new StudentLedgerDto(student.Id, student.Name, summary, entries);
     }
 
-    private static string DescribeCharge(FeeDue due) =>
-        string.IsNullOrWhiteSpace(due.Title) ? "Fee charge" : due.Title!.Trim();
+    /// <summary>"Tuition · 10 Sep – 9 Oct 2026": the plan name plus the service period the charge pays for.</summary>
+    private static string DescribeCharge(FeeDue due)
+    {
+        var name = !string.IsNullOrWhiteSpace(due.Title) ? due.Title!.Trim()
+            : due.FeeStructure?.Name is { Length: > 0 } planName ? planName : "Fee charge";
+        if (due.PeriodStart is not { } start || due.PeriodEnd is not { } end) return name;
+        var inv = CultureInfo.InvariantCulture; // stable "Sep", whatever the server culture
+        var period = start == end ? start.ToString("d MMM yyyy", inv)
+            : start.Year == end.Year ? $"{start.ToString("d MMM", inv)} – {end.ToString("d MMM yyyy", inv)}"
+            : $"{start.ToString("d MMM yyyy", inv)} – {end.ToString("d MMM yyyy", inv)}";
+        return $"{name} · {period}";
+    }
 
     private enum SortRank { Charge = 0, Adjustment = 1, Payment = 2 }
 

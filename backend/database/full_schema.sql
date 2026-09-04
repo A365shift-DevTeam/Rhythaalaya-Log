@@ -1016,5 +1016,58 @@ BEGIN
     VALUES ('20260904061042_CourseUpcomingNotificationDays', '9.0.1');
     END IF;
 END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260904091945_BillingPeriodsGraceAndCreditNotes') THEN
+    ALTER TABLE "OrganizationSettings" ADD "CreditNotePrefix" text NOT NULL DEFAULT 'CN';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260904091945_BillingPeriodsGraceAndCreditNotes') THEN
+    ALTER TABLE "OrganizationSettings" ADD "FeeOverdueGraceDays" integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260904091945_BillingPeriodsGraceAndCreditNotes') THEN
+    ALTER TABLE "OrganizationSettings" ADD "NextCreditNoteNumber" integer NOT NULL DEFAULT 1;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260904091945_BillingPeriodsGraceAndCreditNotes') THEN
+    ALTER TABLE "FeeDues" ADD "PeriodEnd" date;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260904091945_BillingPeriodsGraceAndCreditNotes') THEN
+    ALTER TABLE "FeeDues" ADD "PeriodStart" date;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260904091945_BillingPeriodsGraceAndCreditNotes') THEN
+    UPDATE "Transactions" t
+    SET "Type" = 'Income', "Amount" = -t."Amount"
+    FROM "FeePayments" p
+    WHERE t."FeePaymentId" = p."Id" AND p."RefundOfPaymentId" IS NOT NULL AND t."Type" = 'Expense';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260904091945_BillingPeriodsGraceAndCreditNotes') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260904091945_BillingPeriodsGraceAndCreditNotes', '9.0.1');
+    END IF;
+END $EF$;
 COMMIT;
 

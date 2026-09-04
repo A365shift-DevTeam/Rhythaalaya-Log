@@ -75,6 +75,30 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
         </form>
       </section>
 
+      <section className="space-y-3" aria-labelledby="billing-rules-title">
+        <SectionHeading id="billing-rules-title" icon="event_repeat" title="Billing Rules"
+          description="How bills appear before and after their due date, and how refunds are numbered." />
+        <div className="premium-card grid gap-4 p-4 sm:grid-cols-3 sm:p-5">
+          <Field label="Upcoming notice (days)" id="fee-lead-days"
+            hint="Default for courses without their own notice: a bill shows as Upcoming this many days before its due date.">
+            <input id="fee-lead-days" type="number" min={0} max={90} value={settings.feeDueLeadDays}
+              onChange={(event) => setSettings((previous) => ({ ...previous, feeDueLeadDays: Math.min(90, Math.max(0, Number(event.target.value) || 0)) }))}
+              className="settings-input" />
+          </Field>
+          <Field label="Grace period (days)" id="fee-grace-days"
+            hint="An unpaid bill turns Overdue only after this many days past its due date. 0 = the day after.">
+            <input id="fee-grace-days" type="number" min={0} max={90} value={settings.feeOverdueGraceDays}
+              onChange={(event) => setSettings((previous) => ({ ...previous, feeOverdueGraceDays: Math.min(90, Math.max(0, Number(event.target.value) || 0)) }))}
+              className="settings-input" />
+          </Field>
+          <Field label="Credit-note prefix" id="credit-note-prefix" hint={`Refunds are numbered ${settings.creditNotePrefix || 'CN'}-000001, separate from receipts.`}>
+            <input id="credit-note-prefix" maxLength={16} value={settings.creditNotePrefix}
+              onChange={(event) => setSettings((previous) => ({ ...previous, creditNotePrefix: event.target.value.trim().toUpperCase() }))}
+              className="settings-input" placeholder="CN" />
+          </Field>
+        </div>
+      </section>
+
       <section className="space-y-3" aria-labelledby="category-settings-title">
         <SectionHeading id="category-settings-title" icon="category" title="Income & Expense Categories"
           description="These categories appear automatically when recording financial entries." />

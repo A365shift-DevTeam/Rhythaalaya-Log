@@ -152,15 +152,22 @@ public sealed class FinanceServiceTests
     }
 
     [Fact]
-    public async Task Cancel_WithAllocatedMoney_IsRejected()
+    public async Task Cancel_WithAllocatedMoney_ReleasesItToCredit()
     {
-        var (h, _, dues) = await SeedBilledEnrollmentAsync();
-        using var _1 = h;
-
+        // Rule changed in the 2026-09-04 finance audit (FIN-011): cancelling a bill releases the
+        // money applied to it back to the student's credit; returning it is a separate refund.
+        // Here the released money immediately pays the next unpaid bill, oldest first.
+        var (h, enrollment, dues) = await SeedBilledEnrollmentAsync();
+        using var _ = h;
         await h.Finance.RecordFeePaymentAsync(Payment(h.Student.Id, 500m, dues[0].Id), default);
 
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            h.Finance.CancelFeeDueAsync(dues[0].Id, new CancelFeeDueRequest("mistake"), default));
+        var cancelled = await h.Finance.CancelFeeDueAsync(dues[0].Id, new CancelFeeDueRequest("mistake"), default);
+
+        Assert.Equal(FeeDueStatus.Cancelled, cancelled.Status);
+        Assert.Equal(0m, await h.Db.FeePaymentAllocations.Where(x => x.FeeDueId == dues[0].Id).SumAsync(x => x.Amount));
+        Assert.DoesNotContain(h.Db.FeePayments, x => x.Amount < 0); // released, not refunded
+        var next = h.DuesFor(enrollment.Id).First(x => x.Id != dues[0].Id && x.Status != FeeDueStatus.Cancelled);
+        Assert.Equal(500m, await h.Db.FeePaymentAllocations.Where(x => x.FeeDueId == next.Id).SumAsync(x => x.Amount));
     }
 
     [Fact]

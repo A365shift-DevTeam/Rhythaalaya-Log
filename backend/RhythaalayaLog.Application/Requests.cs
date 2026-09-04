@@ -41,7 +41,9 @@ public sealed record UpdateFeeHeadRequest(string Name, int DisplayOrder, bool Is
 
 public sealed record CreateFeeStructureRequest(Guid CourseId, string Name, decimal Amount, FeeFrequency Frequency,
     DateOnly EffectiveFrom, DateOnly? EffectiveTo, Guid? FeeHeadId = null);
-public sealed record UpdateFeeStructureRequest(string Name, DateOnly? EffectiveTo, bool IsActive, Guid? FeeHeadId = null);
+// EffectiveFrom may only be changed while no due has been generated from the plan.
+public sealed record UpdateFeeStructureRequest(string Name, DateOnly? EffectiveTo, bool IsActive, Guid? FeeHeadId = null,
+    DateOnly? EffectiveFrom = null);
 
 public sealed record RecordFeePaymentRequest(Guid StudentId, Guid? FeeDueId, decimal Amount, PaymentMethod Method,
     string? ReferenceNumber, string? Remarks, DateTimeOffset? PaymentDate, string? IdempotencyKey = null);
@@ -65,4 +67,4 @@ public sealed record UpdateSettingsRequest(string Name, string Type, string? Log
     bool NotificationsEnabled, bool FeeReminderNotifications, bool PaymentNotifications,
     bool AttendanceNotifications, int FeeDueLeadDays = 7,
     LateEnrollmentBillingPolicy LateEnrollmentBillingPolicy = LateEnrollmentBillingPolicy.Skip,
-    string? WhatsappTemplate = null);
+    string? WhatsappTemplate = null, int FeeOverdueGraceDays = 0, string? CreditNotePrefix = null);
