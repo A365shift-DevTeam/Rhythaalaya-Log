@@ -565,6 +565,7 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
         onAddStudent={handleAddStudent}
         onUpdateStudent={handleUpdateStudent}
         batches={batches}
+        feeStructures={feeStructures}
         defaultBillingPolicy={settings.lateEnrollmentBillingPolicy}
       />
 

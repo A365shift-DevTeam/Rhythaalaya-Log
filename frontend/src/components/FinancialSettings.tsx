@@ -110,9 +110,21 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
 
 // Used by AddStudentModal for the per-student late-enrollment billing choice.
 export const POLICY_OPTIONS: { value: LateEnrollmentBillingPolicy; label: string; description: string }[] = [
-  { value: 'Skip', label: 'Skip partial period', description: 'A mid-cycle joiner starts paying from the next full billing cycle.' },
-  { value: 'Full', label: 'Charge full period', description: 'The first partial period is billed at the full amount.' },
-  { value: 'Prorated', label: 'Prorate by days', description: 'The first partial period is billed only for the days enrolled.' },
+  {
+    value: 'Skip',
+    label: 'Start from the next bill',
+    description: 'If the student joins after a billing date, that period is skipped — their first bill is the next full one.',
+  },
+  {
+    value: 'Full',
+    label: 'Full first bill',
+    description: 'Charge the whole fee for the first period even when the student joined partway through it.',
+  },
+  {
+    value: 'Prorated',
+    label: 'Pay for days joined',
+    description: 'Reduce the first bill to cover only the days from the join date to the next billing date. No effect if they join on or before the first billing date.',
+  },
 ];
 
 function SectionHeading({ id, icon, title, description }: { id: string; icon: string; title: string; description: string }) {

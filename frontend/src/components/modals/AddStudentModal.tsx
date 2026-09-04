@@ -1,10 +1,12 @@
 import { Button } from '../ui/button';
 import { JisIcon } from '../JisIcon';
 import React, { useEffect, useRef, useState } from 'react';
-import { Batch, LateEnrollmentBillingPolicy, Student } from '../../types';
+import { Batch, FeeStructure, LateEnrollmentBillingPolicy, Student } from '../../types';
 import { POLICY_OPTIONS } from '../FinancialSettings';
 import { useDialogLifecycle } from './useDialogLifecycle';
 import { todayIsoDate as todayIso } from '../../lib/schedule';
+
+const fmtDate = (iso: string) => new Date(iso.slice(0, 10) + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
 const WIZARD_STEPS = ['Student', 'Contact', 'Batches', 'Review'];
 const LAST_STEP = WIZARD_STEPS.length - 1;
@@ -16,6 +18,7 @@ interface AddStudentModalProps {
   onUpdateStudent: (studentId: string, studentData: any, batchIds: string[]) => Promise<void>;
   editingStudent?: Student | null;
   batches: Batch[];
+  feeStructures: FeeStructure[];
   /** Org-wide late-enrollment billing setting; the wizard pre-selects it. */
   defaultBillingPolicy: LateEnrollmentBillingPolicy;
 }
@@ -27,6 +30,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   onUpdateStudent,
   editingStudent,
   batches,
+  feeStructures,
   defaultBillingPolicy,
 }) => {
   const [name, setName] = useState('');
@@ -306,10 +310,31 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
 
   // Per-student late-enrollment billing choice, pre-selected to the org-wide setting. Only for
   // new students: enrollments made from the edit form keep following the org default.
+  // Selected batches whose course fee plan starts after the student's join date — the student
+  // won't be billed for the gap, which surprises admins if we don't say so.
+  const laterBillingCourses = joinDate
+    ? Array.from(new Set(selectedBatches.map((b) => b.courseId)))
+        .map((courseId) => {
+          const starts = feeStructures.filter((f) => f.courseId === courseId).map((f) => f.effectiveFrom.slice(0, 10)).sort();
+          const earliest = starts[0];
+          const course = selectedBatches.find((b) => b.courseId === courseId);
+          return earliest && earliest > joinDate.slice(0, 10) && course ? { name: course.courseName, date: earliest } : null;
+        })
+        .filter((x): x is { name: string; date: string } => x !== null)
+    : [];
+
   const billingPolicyPicker = (
     <fieldset className="mt-5">
-      <legend className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Late enrollment billing</legend>
-      <p className="mb-2.5 text-xs text-[#808080] dark:text-[#94a3b8]">How the first month is billed when the student joins mid-cycle.</p>
+      <legend className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">First bill for a mid-period join</legend>
+      <p className="mb-2.5 text-xs text-[#808080] dark:text-[#94a3b8]">
+        Only applies when the student joins <em>after</em> the course's billing date, partway through a period they'd be charged for.
+      </p>
+      {laterBillingCourses.map((c) => (
+        <p key={c.name} className="mb-2 flex items-start gap-1.5 rounded-2xl bg-amber-50 px-3 py-2 text-xs font-semibold text-[#b45309] dark:bg-amber-950/40 dark:text-amber-300">
+          <JisIcon className="shrink-0 text-[15px]">info</JisIcon>
+          <span>Billing for <strong>{c.name}</strong> starts {fmtDate(c.date)} — this student joins before that and isn't charged for the earlier period.</span>
+        </p>
+      ))}
       <div className="space-y-2">
         {POLICY_OPTIONS.map((option) => (
           <label key={option.value} className={`flex min-h-12 cursor-pointer items-start gap-2.5 rounded-2xl border px-3.5 py-2.5 transition-all ${billingPolicy === option.value

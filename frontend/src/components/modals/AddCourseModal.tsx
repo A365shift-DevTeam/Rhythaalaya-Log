@@ -4,18 +4,22 @@ import { Switch } from '../ui/switch';
 import React, { useEffect, useState } from 'react';
 import { Course, FeeFrequency, FeeStructure, FEE_FREQUENCY_LABELS } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
-import { currentMonthlyDueDate, nextMonthlyDueDate, parseIsoDate, todayIsoDate as todayIso } from '../../lib/schedule';
+import { addDaysToIso, parseIsoDate, toIsoDate, todayIsoDate as todayIso } from '../../lib/schedule';
 import { confirmAction } from '../../lib/confirm';
 import { SimpleSelect } from '../ui/select';
 
-const DAYS_OF_MONTH = Array.from({ length: 31 }, (_, i) => i + 1);
 const labelClass = 'block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5';
 const fmtDate = (iso: string | Date) =>
   new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
-const ordinal = (n: number): string => {
-  if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
-  return `${n}${({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'}`;
+const PERIOD_MONTHS: Record<FeeFrequency, number> = { Monthly: 1, Quarterly: 3, HalfYearly: 6, Yearly: 12, OneTime: 0 };
+
+/** Same day, k periods later — clamps day 29–31 to shorter months, matching the billing engine. */
+const addPeriodsIso = (iso: string, freq: FeeFrequency, k: number): string => {
+  const d = parseIsoDate(iso);
+  const target = new Date(d.getFullYear(), d.getMonth() + PERIOD_MONTHS[freq] * k, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  return toIsoDate(new Date(target.getFullYear(), target.getMonth(), Math.min(d.getDate(), lastDay)));
 };
 
 function ToggleRow({ checked, onChange, title, hint }: {
@@ -29,6 +33,29 @@ function ToggleRow({ checked, onChange, title, hint }: {
       </span>
       <Switch checked={checked} onCheckedChange={onChange} className="mt-0.5 shrink-0" />
     </label>
+  );
+}
+
+function FirstBillDateField({ id, value, onChange, frequency, min, isNewPlan }: {
+  id: string; value: string; onChange: (v: string) => void; frequency: FeeFrequency; min?: string; isNewPlan: boolean;
+}) {
+  const oneTime = frequency === 'OneTime';
+  const past = !!value && !min && value < todayIso();
+  const preview = !value ? ''
+    : oneTime ? `One-time bill on ${fmtDate(value)}.`
+    : `Bills on ${fmtDate(value)}, then ${fmtDate(addPeriodsIso(value, frequency, 1))}, ${fmtDate(addPeriodsIso(value, frequency, 2))}…`;
+  return (
+    <div>
+      <label htmlFor={id} className={labelClass}>{oneTime ? 'Bill date' : isNewPlan ? 'New price starts' : 'First bill date'}</label>
+      <input id={id} type="date" value={value} min={min} onChange={(event) => onChange(event.target.value)} className="settings-input" />
+      {preview && <p className="mt-1 text-xs text-[#9e9e9e]">{preview}</p>}
+      {past && (
+        <p className="mt-1 flex items-start gap-1 text-xs font-semibold text-[#b45309] dark:text-amber-300">
+          <JisIcon className="shrink-0 text-[14px]">history</JisIcon>
+          <span>This date is in the past — students already enrolled by then get back-dated (overdue) bills.</span>
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -67,8 +94,8 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   const [feeName, setFeeName] = useState('Monthly Fee');
   const [feeAmount, setFeeAmount] = useState('');
   const [feeFrequency, setFeeFrequency] = useState<FeeFrequency>('Monthly');
-  const [feeDueDate, setFeeDueDate] = useState(todayIso());
-  const [feeDueDay, setFeeDueDay] = useState(new Date().getDate());
+  // The date the first bill is dated. Recurring bills fall on the same day, one period apart.
+  const [feeStartDate, setFeeStartDate] = useState(todayIso());
   const [submitting, setSubmitting] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState('');
@@ -83,16 +110,12 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
 
   const courseFeeStructures = editingCourse ? feeStructures.filter((f) => f.courseId === editingCourse.id) : [];
 
-  // Monthly plans are entered as a day of the month. A course's FIRST plan anchors on that day
-  // in the CURRENT month (never a prior month, even when the day is still ahead of today), so
-  // billing starts this month and never charges for a period that ended before the course
-  // existed — each student's first due still follows their own join/batch start. A price change
-  // on a course that already bills anchors on the NEXT occurrence, so an already-billed period
-  // is never re-priced.
+  // The admin picks the exact first-bill date; the engine bills from there on the plan's cadence.
   const isFirstPlan = !editingCourse || courseFeeStructures.length === 0;
-  const resolvedFeeDate = feeFrequency !== 'Monthly' ? feeDueDate
-    : isFirstPlan ? currentMonthlyDueDate(feeDueDay) : nextMonthlyDueDate(feeDueDay);
+  const resolvedFeeDate = feeStartDate;
   const activePlan = courseFeeStructures.find((f) => f.isActive);
+  // A superseding (price-change) plan must begin after the current one.
+  const minStartDate = !isFirstPlan && activePlan ? addDaysToIso(activePlan.effectiveFrom.slice(0, 10), 1) : undefined;
   const pastPlans = [...courseFeeStructures.filter((f) => !f.isActive)]
     .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
 
@@ -106,8 +129,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setFeeName('Monthly Fee');
     setFeeAmount('');
     setFeeFrequency('Monthly');
-    setFeeDueDate(todayIso());
-    setFeeDueDay(new Date().getDate());
+    setFeeStartDate(todayIso());
     setError('');
     setPlanFormOpen(false);
     setShowHistory(false);
@@ -176,9 +198,10 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   const openPlanForm = () => {
     setFeeName(activePlan?.name ?? 'Monthly Fee');
     setFeeAmount(activePlan ? String(activePlan.amount) : '');
-    setFeeFrequency(activePlan?.frequency ?? 'Monthly');
-    setFeeDueDate(todayIso());
-    setFeeDueDay(new Date().getDate());
+    const freq = activePlan?.frequency ?? 'Monthly';
+    setFeeFrequency(freq);
+    // A price change supersedes the current plan, so default the start one period ahead of it.
+    setFeeStartDate(activePlan ? addPeriodsIso(activePlan.effectiveFrom.slice(0, 10), freq, 1) : todayIso());
     setPlanActive(activePlan?.isActive ?? true);
     setPlanError('');
     setPlanFormOpen(true);
@@ -316,28 +339,8 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                           options={(Object.keys(FEE_FREQUENCY_LABELS) as FeeFrequency[]).map((f) => ({ value: f, label: FEE_FREQUENCY_LABELS[f] }))} />
                       </div>
                     </div>
-                    {feeFrequency === 'Monthly' ? (
-                      <div>
-                        <label htmlFor="course-fee-due-day" className={labelClass}>Due day of month</label>
-                        <SimpleSelect id="course-fee-due-day" value={String(feeDueDay)}
-                          onValueChange={(value) => setFeeDueDay(Number(value))}
-                          options={DAYS_OF_MONTH.map((d) => ({ value: String(d), label: ordinal(d) }))} />
-                        <p className="mt-1 text-xs text-[#9e9e9e]">
-                          Due on the {ordinal(feeDueDay)} each month · a student's first bill follows their join date.
-                        </p>
-                      </div>
-                    ) : (
-                      <div>
-                        <label htmlFor="course-fee-due" className={labelClass}>
-                          {feeFrequency === 'OneTime' ? 'Due date' : 'First due date'}
-                        </label>
-                        <input id="course-fee-due" type="date" value={feeDueDate} onChange={(event) => setFeeDueDate(event.target.value)}
-                          className="settings-input" />
-                        {feeFrequency !== 'OneTime' && (
-                          <p className="mt-1 text-xs text-[#9e9e9e]">Repeats on this day of the cycle for every student.</p>
-                        )}
-                      </div>
-                    )}
+                    <FirstBillDateField id="course-fee-start" value={feeStartDate} onChange={setFeeStartDate}
+                      frequency={feeFrequency} isNewPlan={false} />
                   </div>
                 ) : (
                   <p className="text-xs text-[#808080] dark:text-[#94a3b8]">
@@ -380,7 +383,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                   <div className="mt-2.5 space-y-2.5" onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void handlePlanSubmit(); } }}>
                     <p className="text-xs text-[#808080] dark:text-[#94a3b8]">
                       {planFormCreatesNew
-                        ? `Starts a new plan on ${fmtDate(parseIsoDate(resolvedFeeDate))}. The current plan ends the day before — past bills keep their price.`
+                        ? `Starts a new plan on ${fmtDate(resolvedFeeDate)}. The current plan ends the day before — past bills keep their price.`
                         : 'Editing this plan. Change the amount or frequency to start a new priced plan instead.'}
                     </p>
                     <div>
@@ -400,22 +403,8 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                       </div>
                     </div>
                     {planFormCreatesNew ? (
-                      feeFrequency === 'Monthly' ? (
-                        <div>
-                          <label className={labelClass}>New price starts</label>
-                          <SimpleSelect aria-label="Due day of month" value={String(feeDueDay)}
-                            onValueChange={(value) => setFeeDueDay(Number(value))}
-                            options={DAYS_OF_MONTH.map((d) => ({ value: String(d), label: `Due on the ${ordinal(d)} of every month` }))} />
-                          <p className="mt-1 text-xs text-[#9e9e9e]">
-                            {isFirstPlan ? 'Billing starts' : 'New price starts'} {fmtDate(parseIsoDate(resolvedFeeDate))}.
-                          </p>
-                        </div>
-                      ) : (
-                        <div>
-                          <label className={labelClass}>Start date</label>
-                          <input type="date" value={feeDueDate} onChange={(event) => setFeeDueDate(event.target.value)} className="settings-input" />
-                        </div>
-                      )
+                      <FirstBillDateField id="plan-fee-start" value={feeStartDate} onChange={setFeeStartDate}
+                        frequency={feeFrequency} min={minStartDate} isNewPlan={!isFirstPlan} />
                     ) : (
                       <label className="flex items-center gap-2 text-xs font-semibold text-[#575757] dark:text-[#cbd5e1] cursor-pointer">
                         <input type="checkbox" checked={planActive} onChange={(event) => setPlanActive(event.target.checked)} className="h-3.5 w-3.5 accent-[#3fc073] rounded" />
