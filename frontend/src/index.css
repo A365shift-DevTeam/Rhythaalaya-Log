@@ -739,3 +739,27 @@ body:has([role="dialog"]) .mobile-speed-dial {
   box-shadow: none;
 }
 
+/* Fee card (student details → Fees): stamped period tiles and receipt counterfoils */
+.fee-strip { scrollbar-width: thin; scroll-snap-type: x proximity; }
+.fee-tile { scroll-snap-align: end; }
+.fee-stamp {
+  transform: rotate(-7deg);
+  mix-blend-mode: multiply;
+  animation: fee-stamp-press 360ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.dark .fee-stamp { mix-blend-mode: normal; }
+@keyframes fee-stamp-press {
+  from { opacity: 0; transform: rotate(-7deg) scale(1.35); }
+  70%  { opacity: 1; transform: rotate(-7deg) scale(0.96); }
+  to   { opacity: 1; transform: rotate(-7deg) scale(1); }
+}
+.fee-stub::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 6px; bottom: 6px;
+  border-left: 2px dashed #c9d6cd;
+}
+.dark .fee-stub::before { border-left-color: #2a3a4f; }
+@media (prefers-reduced-motion: reduce) {
+  .fee-stamp { animation: none; }
+}

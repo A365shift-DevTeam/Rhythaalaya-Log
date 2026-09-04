@@ -2,7 +2,7 @@ import { Button } from '../ui/button';
 import { JisIcon } from '../JisIcon';
 import { Spinner } from '../ui/spinner';
 import React, { useEffect, useState } from 'react';
-import { Achievement, LedgerEntry, Student, StudentLedger } from '../../types';
+import { Achievement, FeeDue, FeePayment, LedgerEntry, PAYMENT_METHOD_LABELS, Student, StudentLedger } from '../../types';
 import { api } from '../../api';
 import { useDialogLifecycle } from './useDialogLifecycle';
 import { confirmAction } from '../../lib/confirm';
@@ -31,6 +31,8 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
 }) => {
   const dialogRef = useDialogLifecycle(isOpen, onClose);
   const [ledger, setLedger] = useState<StudentLedger | null>(null);
+  const [dues, setDues] = useState<FeeDue[]>([]);
+  const [payments, setPayments] = useState<FeePayment[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAddAchievementOpen, setIsAddAchievementOpen] = useState(false);
@@ -42,9 +44,14 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
     setTab('details');
     setAchievementError('');
     setLoading(true);
-    Promise.all([api.studentLedger(token, student.id), api.achievements(token, student.id)])
-      .then(([ledgerData, achievementRows]) => { setLedger(ledgerData); setAchievements(achievementRows); })
-      .catch(() => { setLedger(null); setAchievements([]); })
+    Promise.all([
+      api.studentLedger(token, student.id), api.studentDues(token, student.id),
+      api.studentPayments(token, student.id), api.achievements(token, student.id),
+    ])
+      .then(([ledgerData, dueRows, paymentRows, achievementRows]) => {
+        setLedger(ledgerData); setDues(dueRows); setPayments(paymentRows); setAchievements(achievementRows);
+      })
+      .catch(() => { setLedger(null); setDues([]); setPayments([]); setAchievements([]); })
       .finally(() => setLoading(false));
   }, [isOpen, student, token]);
 
@@ -216,7 +223,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
             ) : !ledger ? (
               <p className="text-xs text-[#808080]">Couldn’t load the fee ledger.</p>
             ) : (
-              <FeeLedgerPanel ledger={ledger} hasUpcomingDues={student.hasUpcomingDues} />
+              <FeeHistoryPanel ledger={ledger} dues={dues} payments={payments} hasUpcomingDues={student.hasUpcomingDues} />
             )
           )}
 
@@ -307,6 +314,212 @@ const LEDGER_ROW_ICON: Record<LedgerEntry['type'], string> = {
   Waiver: 'volunteer_activism', Proration: 'pie_chart', Fine: 'gavel',
   WriteOff: 'money_off', Refund: 'undo',
 };
+
+const shortDate = (iso: string) => new Date(iso.length === 10 ? iso + 'T00:00:00' : iso)
+  .toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+const shortDateYear = (iso: string) => new Date(iso.length === 10 ? iso + 'T00:00:00' : iso)
+  .toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+const monthLabel = (iso: string) => new Date(iso + 'T00:00:00')
+  .toLocaleDateString('en-IN', { month: 'short' }).toUpperCase();
+
+/** "10 Sep – 9 Oct" for a scheduled bill; "10 Sep" for a one-off charge. */
+const periodText = (due: FeeDue) =>
+  due.periodStart && due.periodEnd && due.periodStart !== due.periodEnd
+    ? `${shortDate(due.periodStart)} – ${shortDate(due.periodEnd)}`
+    : shortDate(due.dueDate);
+
+type Stamp = 'paid' | 'due' | 'overdue' | 'notyet' | 'void' | 'part';
+const STAMP: Record<Stamp, { text: string; ink: string }> = {
+  paid: { text: 'PAID', ink: 'text-[#15803d] border-[#15803d] dark:text-emerald-300 dark:border-emerald-300' },
+  part: { text: 'PART PAID', ink: 'text-[#b45309] border-[#b45309] dark:text-amber-300 dark:border-amber-300' },
+  due: { text: 'DUE', ink: 'text-[#b45309] border-[#b45309] dark:text-amber-300 dark:border-amber-300' },
+  overdue: { text: 'OVERDUE', ink: 'text-[#b91c1c] border-[#b91c1c] dark:text-rose-300 dark:border-rose-300' },
+  notyet: { text: 'NOT YET', ink: 'text-[#0369a1] border-[#0369a1] border-dashed dark:text-sky-300 dark:border-sky-300' },
+  void: { text: 'VOID', ink: 'text-[#9e9e9e] border-[#9e9e9e] dark:text-[#64748b] dark:border-[#64748b]' },
+};
+
+/**
+ * The fee card: the office-stamped fee diary an Indian academy keeps for each student. One tile
+ * per bill in date order, each carrying its stamp, so "which months are paid" is read like a
+ * calendar, not a ledger. Receipts follow as counterfoil stubs. The debit/credit statement stays
+ * behind a toggle for the accountant.
+ */
+function FeeHistoryPanel({ ledger, dues, payments, hasUpcomingDues }: {
+  ledger: StudentLedger; dues: FeeDue[]; payments: FeePayment[]; hasUpcomingDues: boolean;
+}) {
+  const [showStatement, setShowStatement] = useState(false);
+  const stripRef = React.useRef<HTMLDivElement>(null);
+  const { summary } = ledger;
+  const received = summary.totalPaid - summary.totalRefunded;
+  const toPay = summary.pending;
+  const credit = summary.availableCredit;
+
+  const bills = [...dues].sort((a, b) => a.dueDate.localeCompare(b.dueDate) || (a.title || '').localeCompare(b.title || ''));
+  const receipts = [...payments].sort((a, b) => b.paymentDate.localeCompare(a.paymentDate));
+
+  // Net money each receipt put on each bill; reversal rows on the same receipt cancel out.
+  const paidOn = (dueId: string) => payments
+    .filter((p) => p.amount > 0)
+    .map((p) => ({ p, amount: p.allocations.filter((a) => a.feeDueId === dueId).reduce((t, a) => t + a.amount, 0) }))
+    .filter((x) => x.amount > 0);
+  const usedFor = (p: FeePayment) => {
+    const byBill = new Map<string, number>();
+    p.allocations.forEach((a) => byBill.set(a.feeDueId, (byBill.get(a.feeDueId) || 0) + a.amount));
+    const applied = [...byBill.entries()].filter(([, amount]) => amount > 0)
+      .map(([id, amount]) => ({ due: dues.find((d) => d.id === id), amount }));
+    return { applied, onAccount: Math.max(0, p.amount - applied.reduce((t, b) => t + b.amount, 0)) };
+  };
+
+  const stampFor = (due: FeeDue): { kind: Stamp; note: string } => {
+    switch (due.status) {
+      case 'Paid': {
+        const first = paidOn(due.id)[0];
+        return { kind: 'paid', note: first ? `${shortDate(first.p.paymentDate)} · ${first.p.receiptNumber}` : 'settled' };
+      }
+      case 'Partial': return { kind: 'part', note: `${inr(due.balanceAmount)} left` };
+      case 'Overdue': return { kind: 'overdue', note: due.paidAmount > 0 ? `${inr(due.balanceAmount)} left` : `since ${shortDate(due.dueDate)}` };
+      case 'Upcoming': return { kind: 'notyet', note: due.paidAmount > 0 ? `${inr(due.paidAmount)} paid early` : `due ${shortDate(due.dueDate)}` };
+      case 'Cancelled': return { kind: 'void', note: due.cancelReason ? due.cancelReason : 'cancelled' };
+      default: return { kind: 'due', note: `by ${shortDate(due.dueDate)}` };
+    }
+  };
+
+  // The newest tile is the one staff need; bring it into view on open.
+  useEffect(() => {
+    const strip = stripRef.current;
+    if (strip) strip.scrollLeft = strip.scrollWidth;
+  }, [bills.length]);
+
+  const headline = toPay > 0
+    ? { text: `${inr(toPay)} to collect`, tone: 'text-[#b91c1c] dark:text-rose-300' }
+    : credit > 0
+      ? { text: `${inr(credit)} on account`, tone: 'text-[#15803d] dark:text-emerald-300' }
+      : bills.length === 0
+        ? { text: 'Nothing billed yet', tone: 'text-[#808080] dark:text-[#94a3b8]' }
+        : { text: 'All paid up', tone: 'text-[#15803d] dark:text-emerald-300' };
+
+  return (
+    <div className="space-y-5">
+      {/* Headline in words, with the two numbers staff are asked for */}
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#808080]">Fee card</div>
+          <div className={`font-heading text-xl font-bold leading-tight ${headline.tone}`}>{headline.text}</div>
+        </div>
+        <div className="text-right text-xs text-[#575757] dark:text-[#cbd5e1]">
+          <div>Billed <span className="font-bold tabular-nums text-[#212121] dark:text-white">{inr(summary.netCharged)}</span></div>
+          <div>Received <span className="font-bold tabular-nums text-[#15803d] dark:text-emerald-300">{inr(received)}</span></div>
+        </div>
+      </div>
+
+      {(summary.overdue > 0 || summary.reservedCredit > 0 || credit > 0) && (
+        <p className="-mt-2 text-xs leading-5 text-[#575757] dark:text-[#cbd5e1]">
+          {summary.overdue > 0 && <span className="font-semibold text-[#b91c1c] dark:text-rose-300">{inr(summary.overdue)} is overdue. </span>}
+          {credit > 0 && <span>{inr(credit)} is on the student’s account and pays the next bill by itself. </span>}
+          {summary.reservedCredit > 0 && <span>{inr(summary.reservedCredit)} was paid early towards a bill not due yet.</span>}
+        </p>
+      )}
+
+      {/* The strip: one stamped tile per bill */}
+      {bills.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-[#c2c2c2] px-4 py-6 text-center text-xs text-[#808080] dark:border-[#243244] dark:text-[#94a3b8]">
+          {hasUpcomingDues ? 'The first bill has not come due yet. It will appear here on its due date.' : 'No bills yet. Add the student to a batch with a fee plan to start billing.'}
+        </div>
+      ) : (
+        <div ref={stripRef} className="fee-strip -mx-1 flex gap-2.5 overflow-x-auto px-1 pb-2 pt-1" role="list" aria-label="Bills">
+          {bills.map((due, index) => {
+            const stamp = stampFor(due);
+            const voided = stamp.kind === 'void';
+            return (
+              <div key={due.id} role="listitem"
+                className={`fee-tile relative flex w-[132px] shrink-0 flex-col rounded-2xl border bg-[#fbfdf9] p-3 dark:bg-[#0f1a2b] ${
+                  voided ? 'border-[#e5e5e5] dark:border-[#1e2a3b]' : 'border-[#dbdbdb] dark:border-[#243244]'
+                }`}
+                title={`${due.title || 'Fee'} · ${periodText(due)} · ${inr(due.netAmount)} · ${STAMP[stamp.kind].text} ${stamp.note}`}>
+                <div className="flex items-baseline justify-between">
+                  <span className={`font-heading text-lg font-bold leading-none tracking-tight ${voided ? 'text-[#c2c2c2] line-through dark:text-[#475569]' : 'text-[#212121] dark:text-white'}`}>
+                    {monthLabel(due.periodStart || due.dueDate)}
+                  </span>
+                  <span className="text-[10px] font-semibold text-[#9e9e9e]">{(due.periodStart || due.dueDate).slice(0, 4)}</span>
+                </div>
+                <div className="mt-1 truncate text-[11px] font-semibold text-[#575757] dark:text-[#cbd5e1]">{due.title || 'Fee'}</div>
+                <div className="truncate text-[10px] text-[#9e9e9e]">{periodText(due)}</div>
+                <div className={`mt-2 font-heading text-sm font-bold tabular-nums ${voided ? 'text-[#c2c2c2] line-through dark:text-[#475569]' : 'text-[#212121] dark:text-white'}`}>
+                  {inr(due.netAmount)}
+                </div>
+                {/* the stamp */}
+                <div className="mt-2.5 flex h-[46px] items-center justify-center">
+                  <span
+                    className={`fee-stamp inline-flex flex-col items-center rounded-md border-2 px-2 py-0.5 ${STAMP[stamp.kind].ink}`}
+                    style={{ animationDelay: `${Math.min(index, 8) * 70}ms` }}>
+                    <span className="font-heading text-[11px] font-black uppercase leading-none tracking-[0.2em]">{STAMP[stamp.kind].text}</span>
+                    <span className="mt-0.5 max-w-[104px] truncate text-[9px] font-semibold uppercase leading-none tracking-wider opacity-80">{stamp.note}</span>
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Receipt counterfoils */}
+      {receipts.length > 0 && (
+        <section>
+          <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#808080]">Money received</h4>
+          <div className="space-y-2">
+            {receipts.map((p) => {
+              const refund = p.amount < 0;
+              const { applied, onAccount } = usedFor(p);
+              return (
+                <div key={p.id}
+                  className={`fee-stub relative rounded-r-2xl border border-l-0 py-2.5 pl-4 pr-3 text-xs ${
+                    refund ? 'border-[#f3c5c5] bg-rose-50/60 dark:border-rose-900/50 dark:bg-rose-950/20'
+                      : 'border-[#dbdbdb] bg-white dark:border-[#243244] dark:bg-[#0b1422]'
+                  }`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold text-[#212121] dark:text-white">
+                        {refund ? 'Refund given back' : `Paid by ${PAYMENT_METHOD_LABELS[p.method] || p.method}`}
+                      </span>
+                      <span className="block text-[#808080] dark:text-[#94a3b8]">
+                        {shortDateYear(p.paymentDate)} <span className="font-mono text-[#9e9e9e]">{p.receiptNumber}</span>
+                      </span>
+                    </span>
+                    <span className={`shrink-0 font-heading text-base font-bold tabular-nums ${refund ? 'text-[#b91c1c] dark:text-rose-300' : 'text-[#15803d] dark:text-emerald-300'}`}>
+                      {refund ? '−' : ''}{inr(p.amount)}
+                    </span>
+                  </div>
+                  {!refund && (applied.length > 0 || onAccount > 0) && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {applied.map((b) => (
+                        <span key={b.due?.id ?? 'x'} className="rounded-full bg-[#e9f7ee] px-2 py-0.5 text-[10px] font-semibold text-[#15803d] dark:bg-emerald-950/50 dark:text-emerald-300">
+                          {b.due ? `${monthLabel(b.due.periodStart || b.due.dueDate)} ${b.due.title || 'fee'}` : 'a bill'} · {inr(b.amount)}
+                        </span>
+                      ))}
+                      {onAccount > 0 && (
+                        <span className="rounded-full bg-[#f0f0f0] px-2 py-0.5 text-[10px] font-semibold text-[#575757] dark:bg-[#172435] dark:text-[#cbd5e1]">
+                          on account · {inr(onAccount)}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {p.remarks && <div className="mt-1 text-[#808080] dark:text-[#94a3b8]">{p.remarks}</div>}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <Button type="button" onClick={() => setShowStatement((value) => !value)}
+        className="flex items-center gap-1 text-xs font-bold text-[#808080] hover:text-[#212121] dark:hover:text-white">
+        <JisIcon className={`text-[16px] transition-transform ${showStatement ? 'rotate-180' : ''}`}>expand_more</JisIcon>
+        {showStatement ? 'Hide account statement' : 'Show account statement (debit / credit)'}
+      </Button>
+      {showStatement && <FeeLedgerPanel ledger={ledger} hasUpcomingDues={hasUpcomingDues} />}
+    </div>
+  );
+}
 
 function FeeLedgerPanel({ ledger, hasUpcomingDues }: { ledger: StudentLedger; hasUpcomingDues: boolean }) {
   const { summary, entries } = ledger;
