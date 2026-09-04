@@ -2,8 +2,8 @@ using RhythaalayaLog.Domain;
 
 namespace RhythaalayaLog.Application;
 
-public sealed record CreateCourseRequest(string Name, string? Description, int? FeeDueLeadDays = null);
-public sealed record UpdateCourseRequest(string Name, string? Description, bool IsActive, int? FeeDueLeadDays = null);
+public sealed record CreateCourseRequest(string Name, string? Description, int? UpcomingNotificationDays = null);
+public sealed record UpdateCourseRequest(string Name, string? Description, bool IsActive, int? UpcomingNotificationDays = null);
 
 public sealed record CreateStaffRequest(string Name, string? Phone, string? Email);
 public sealed record UpdateStaffRequest(string Name, string? Phone, string? Email, bool IsActive);

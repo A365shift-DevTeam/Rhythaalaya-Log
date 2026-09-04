@@ -114,6 +114,11 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                 {student.outstandingBalance > 0 ? (
                   <span className="inline-flex shrink-0 items-center whitespace-nowrap text-xs bg-rose-100 text-[#ef4444] font-semibold px-2.5 py-0.5 rounded-full dark:bg-rose-950/80 dark:text-rose-300">
                     ₹{student.outstandingBalance.toLocaleString('en-IN')} outstanding
+                    {student.upcomingAmount > 0 && <span className="text-[#b45309] dark:text-amber-300"> · ₹{student.upcomingAmount.toLocaleString('en-IN')} upcoming</span>}
+                  </span>
+                ) : student.upcomingAmount > 0 ? (
+                  <span className="inline-flex shrink-0 items-center whitespace-nowrap text-xs bg-amber-50 text-[#b45309] font-semibold px-2.5 py-0.5 rounded-full dark:bg-amber-950/40 dark:text-amber-300">
+                    ₹{student.upcomingAmount.toLocaleString('en-IN')} upcoming
                   </span>
                 ) : student.hasUpcomingDues ? (
                   <span className="inline-flex shrink-0 items-center whitespace-nowrap text-xs bg-amber-50 text-[#b45309] font-semibold px-2.5 py-0.5 rounded-full dark:bg-amber-950/40 dark:text-amber-300">Payment upcoming</span>

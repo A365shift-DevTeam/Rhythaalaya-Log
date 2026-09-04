@@ -51,8 +51,9 @@ public sealed class FeeDueGenerator(AppDbContext db)
         }
         var settings = await GetSettingsAsync(ct);
         var today = BillingSchedule.TodayInTimeZone(settings.TimeZone);
-        // "Upcoming" horizon = academy-wide default (7 unless changed in the DB).
-        var horizon = today.AddDays(settings.FeeDueLeadDays);
+        // "Upcoming" horizon: a due is generated (as Upcoming) once today is within the course's
+        // notice window before its due date; the academy-wide lead days are the fallback.
+        var horizon = today.AddDays(await UpcomingNotificationDaysAsync(enrollment.CourseId, settings, ct));
 
         // All plans for the course, resolved per due date by effective window — IsActive is a UI
         // flag only, so a future-dated plan never opens a billing gap.
@@ -394,6 +395,20 @@ public sealed class FeeDueGenerator(AppDbContext db)
     {
         var settings = await GetSettingsAsync(ct);
         return BillingSchedule.TodayInTimeZone(settings.TimeZone);
+    }
+
+    private readonly Dictionary<Guid, int?> _courseNoticeDays = [];
+
+    /// <summary>Course override (1–30) when set, otherwise <see cref="OrganizationSettings.FeeDueLeadDays"/>.</summary>
+    private async Task<int> UpcomingNotificationDaysAsync(Guid courseId, OrganizationSettings settings, CancellationToken ct)
+    {
+        if (!_courseNoticeDays.TryGetValue(courseId, out var courseDays))
+        {
+            courseDays = await db.Courses.AsNoTracking().Where(x => x.Id == courseId)
+                .Select(x => x.UpcomingNotificationDays).SingleOrDefaultAsync(ct);
+            _courseNoticeDays[courseId] = courseDays;
+        }
+        return courseDays ?? settings.FeeDueLeadDays;
     }
 
     private async Task<OrganizationSettings> GetSettingsAsync(CancellationToken ct) =>

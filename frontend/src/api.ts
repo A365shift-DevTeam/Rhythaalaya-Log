@@ -126,9 +126,9 @@ export const api = {
 
   // Courses
   courses: (token: string) => request<any[]>('/courses', {}, token).then(rows => rows.map(mapCourse)),
-  createCourse: (token: string, body: { name: string; description?: string }) =>
+  createCourse: (token: string, body: { name: string; description?: string; upcomingNotificationDays?: number | null }) =>
     request<any>('/courses', { method: 'POST', body: JSON.stringify(body) }, token).then(mapCourse),
-  updateCourse: (token: string, id: string, body: { name: string; description?: string; isActive: boolean }) =>
+  updateCourse: (token: string, id: string, body: { name: string; description?: string; isActive: boolean; upcomingNotificationDays?: number | null }) =>
     request<any>('/courses/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapCourse),
   archiveCourse: (token: string, id: string) => request<void>('/courses/' + id, { method: 'DELETE' }, token),
 
@@ -390,7 +390,7 @@ export const api = {
 function mapCourse(x: any): Course {
   return {
     id: x.id, name: x.name, description: x.description || undefined, isActive: x.isActive, batchCount: x.batchCount,
-    feeDueLeadDays: x.feeDueLeadDays ?? undefined
+    upcomingNotificationDays: x.upcomingNotificationDays ?? null
   };
 }
 function mapStaff(x: any): Staff {
@@ -421,6 +421,7 @@ function mapStudent(x: any): Student {
     email: x.email || undefined, joinDate: x.joinDate, isActive: x.isActive, outstandingBalance: x.outstandingBalance,
     hasBillableDues: x.hasBillableDues ?? false,
     hasUpcomingDues: x.hasUpcomingDues ?? false,
+    upcomingAmount: x.upcomingAmount ?? 0,
     overallAttendance: x.attendancePercentage, wonCount: x.wonCount ?? 0, participatedCount: x.participatedCount ?? 0,
     concessionPercent: x.concessionPercent ?? 0, concessionReason: x.concessionReason || undefined,
     enrollments: (x.enrollments || []).map((e: any) => ({

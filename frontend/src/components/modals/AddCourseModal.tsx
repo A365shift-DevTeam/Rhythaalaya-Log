@@ -59,6 +59,25 @@ function FirstBillDateField({ id, value, onChange, frequency, min, isNewPlan }: 
   );
 }
 
+/** Select options for the per-course Upcoming notice: academy default, then 1–30 days before the due date. */
+const NOTICE_DEFAULT = 'default';
+const NOTICE_OPTIONS = [
+  { value: NOTICE_DEFAULT, label: 'Academy default' },
+  ...Array.from({ length: 30 }, (_, i) => i + 1).map((n) => ({ value: String(n), label: n === 1 ? '1 day' : `${n} days` })),
+];
+
+function UpcomingNoticeField({ id, value, onChange }: { id: string; value: number | null; onChange: (v: number | null) => void }) {
+  return (
+    <div className="rounded-2xl border border-[#dbdbdb] p-3.5 dark:border-[#243244]">
+      <label htmlFor={id} className="block text-sm font-bold text-[#212121] dark:text-white">Upcoming fee notice</label>
+      <p className="mt-0.5 mb-2.5 text-xs text-[#808080] dark:text-[#94a3b8]">Show upcoming fees this many days before the due date.</p>
+      <SimpleSelect id={id} value={value === null ? NOTICE_DEFAULT : String(value)}
+        onValueChange={(next) => onChange(next === NOTICE_DEFAULT ? null : Number(next))}
+        options={NOTICE_OPTIONS} />
+    </div>
+  );
+}
+
 export interface NewCourseFee {
   name: string;
   amount: number;
@@ -71,7 +90,8 @@ interface AddCourseModalProps {
   onClose: () => void;
   editingCourse?: Course | null;
   feeStructures: FeeStructure[];
-  onSave: (name: string, description: string, isActive: boolean, fee: NewCourseFee | null) => Promise<void>;
+  onSave: (name: string, description: string, isActive: boolean, fee: NewCourseFee | null,
+    upcomingNotificationDays: number | null) => Promise<void>;
   onArchive?: (courseId: string) => Promise<void>;
   onAddFeeStructure: (payload: {
     courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string;
@@ -96,6 +116,8 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   const [feeFrequency, setFeeFrequency] = useState<FeeFrequency>('Monthly');
   // The date the first bill is dated. Recurring bills fall on the same day, one period apart.
   const [feeStartDate, setFeeStartDate] = useState(todayIso());
+  // Days before the due date a fee shows as Upcoming; null = academy default.
+  const [noticeDays, setNoticeDays] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState('');
@@ -130,6 +152,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setFeeAmount('');
     setFeeFrequency('Monthly');
     setFeeStartDate(todayIso());
+    setNoticeDays(editingCourse?.upcomingNotificationDays ?? null);
     setError('');
     setPlanFormOpen(false);
     setShowHistory(false);
@@ -185,7 +208,8 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setError('');
     try {
       await onSave(name.trim(), description.trim(), isActive,
-        wantsFee ? { name: feeName.trim(), amount: parsedAmount, frequency: feeFrequency, dueDate: resolvedFeeDate } : null);
+        wantsFee ? { name: feeName.trim(), amount: parsedAmount, frequency: feeFrequency, dueDate: resolvedFeeDate } : null,
+        noticeDays);
       onClose();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not save the course.');
@@ -347,6 +371,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                     You can add a fee plan later from the course's page. Students won't be billed until then.
                   </p>
                 )}
+                <UpcomingNoticeField id="course-upcoming-notice" value={noticeDays} onChange={setNoticeDays} />
               </>
             )}
 
@@ -440,6 +465,9 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                   </div>
                 )}
               </div>
+            )}
+            {editingCourse && (
+              <UpcomingNoticeField id="course-upcoming-notice" value={noticeDays} onChange={setNoticeDays} />
             )}
           </div>
 

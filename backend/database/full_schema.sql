@@ -1001,5 +1001,20 @@ BEGIN
     VALUES ('20260901093624_CourseFeeDueLeadDays', '9.0.1');
     END IF;
 END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260904061042_CourseUpcomingNotificationDays') THEN
+    ALTER TABLE "Courses" RENAME COLUMN "FeeDueLeadDays" TO "UpcomingNotificationDays";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260904061042_CourseUpcomingNotificationDays') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260904061042_CourseUpcomingNotificationDays', '9.0.1');
+    END IF;
+END $EF$;
 COMMIT;
 

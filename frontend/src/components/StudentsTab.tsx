@@ -14,6 +14,13 @@ interface StudentsTabProps {
 }
 
 const activeEnrollments = (student: Student) => student.enrollments.filter((e) => e.status === 'Active');
+// Fee tag helpers. The tag shows current + upcoming money together, but only outstandingBalance is
+// collectible: Record Fee eligibility never looks at upcomingAmount.
+const hasUpcoming = (student: Student) => student.upcomingAmount > 0 || student.hasUpcomingDues;
+const feeTagAmount = (student: Student) => student.outstandingBalance + student.upcomingAmount;
+const upcomingTitle = (student: Student) => student.upcomingAmount > 0
+  ? `₹${student.outstandingBalance.toLocaleString('en-IN')} due now · ₹${student.upcomingAmount.toLocaleString('en-IN')} upcoming`
+  : undefined;
 
 const courseNames = (student: Student) =>
   activeEnrollments(student).map((e) => `${e.courseName} ${e.batchName}`).join(', ') || 'Not enrolled';
@@ -330,14 +337,15 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                         <div className="flex items-center gap-2">
                           <h3 className="truncate font-heading text-sm font-bold text-[#212121] dark:text-white">{student.name}</h3>
                           {isPending ? (
-                            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#ef4444] dark:text-rose-300">
+                            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#ef4444] dark:text-rose-300"
+                              title={upcomingTitle(student)}>
                               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ef4444]" />
-                              ₹{student.outstandingBalance.toLocaleString('en-IN')}
+                              ₹{feeTagAmount(student).toLocaleString('en-IN')}
                             </span>
-                          ) : student.hasUpcomingDues ? (
+                          ) : hasUpcoming(student) ? (
                             <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#b45309] dark:text-amber-300">
                               <span className="h-1.5 w-1.5 rounded-full bg-[#f59e0b]" />
-                              Upcoming
+                              Upcoming{student.upcomingAmount > 0 && ` ₹${student.upcomingAmount.toLocaleString('en-IN')}`}
                             </span>
                           ) : student.hasBillableDues ? (
                             <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#22c55e] dark:text-emerald-300">
@@ -427,14 +435,15 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#808080] dark:text-[#94a3b8] font-medium">Fee Status:</span>
                       {isPending ? (
-                        <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-[#ef4444] dark:text-rose-300 text-xs font-bold">
+                        <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-[#ef4444] dark:text-rose-300 text-xs font-bold"
+                          title={upcomingTitle(student)}>
                           <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] animate-pulse"></span>
-                          Pending (₹{student.outstandingBalance.toLocaleString('en-IN')})
+                          Pending (₹{feeTagAmount(student).toLocaleString('en-IN')})
                         </span>
-                      ) : student.hasUpcomingDues ? (
+                      ) : hasUpcoming(student) ? (
                         <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-[#b45309] dark:text-amber-300 text-xs font-bold">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]"></span>
-                          Upcoming
+                          Upcoming{student.upcomingAmount > 0 && ` ₹${student.upcomingAmount.toLocaleString('en-IN')}`}
                         </span>
                       ) : student.hasBillableDues ? (
                         <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-[#22c55e] dark:text-emerald-300 text-xs font-bold">
@@ -555,14 +564,15 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                       </td>
                       <td className="p-4">
                         {isPending ? (
-                          <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-[#ef4444] dark:text-rose-300 text-xs font-bold">
+                          <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-[#ef4444] dark:text-rose-300 text-xs font-bold"
+                            title={upcomingTitle(student)}>
                             <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]"></span>
-                            ₹{student.outstandingBalance.toLocaleString('en-IN')}
+                            ₹{feeTagAmount(student).toLocaleString('en-IN')}
                           </span>
-                        ) : student.hasUpcomingDues ? (
+                        ) : hasUpcoming(student) ? (
                           <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-[#b45309] dark:text-amber-300 text-xs font-bold">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]"></span>
-                            Upcoming
+                            Upcoming{student.upcomingAmount > 0 && ` ₹${student.upcomingAmount.toLocaleString('en-IN')}`}
                           </span>
                         ) : student.hasBillableDues ? (
                           <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-[#22c55e] dark:text-emerald-300 text-xs font-bold">

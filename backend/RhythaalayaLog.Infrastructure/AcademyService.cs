@@ -10,11 +10,11 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 {
     public async Task<IReadOnlyList<CourseDto>> GetCoursesAsync(CancellationToken ct) =>
         await db.Courses.AsNoTracking().OrderBy(x => x.Name)
-            .Select(x => new CourseDto(x.Id, x.Name, x.Description, x.IsActive, x.Batches.Count(b => b.IsActive), x.FeeDueLeadDays))
+            .Select(x => new CourseDto(x.Id, x.Name, x.Description, x.IsActive, x.Batches.Count(b => b.IsActive), x.UpcomingNotificationDays))
             .ToListAsync(ct);
 
-    /// <summary>Clamps a per-course lead-days value to 0–90; null stays null (falls back to the academy default).</summary>
-    private static int? ClampLeadDays(int? value) => value is null ? null : Math.Clamp(value.Value, 0, 90);
+    /// <summary>Clamps a per-course Upcoming notice to 1–30 days; null stays null (falls back to the academy default).</summary>
+    internal static int? ClampUpcomingNotificationDays(int? value) => value is null ? null : Math.Clamp(value.Value, 1, 30);
 
     public async Task<CourseDto> CreateCourseAsync(CreateCourseRequest request, CancellationToken ct)
     {
@@ -26,11 +26,11 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         var course = new Course
         {
             TenantId = RequireTenant(), Name = name, Description = Clean(request.Description),
-            FeeDueLeadDays = ClampLeadDays(request.FeeDueLeadDays)
+            UpcomingNotificationDays = ClampUpcomingNotificationDays(request.UpcomingNotificationDays)
         };
         db.Courses.Add(course);
         await db.SaveChangesAsync(ct);
-        return new CourseDto(course.Id, course.Name, course.Description, true, 0, course.FeeDueLeadDays);
+        return new CourseDto(course.Id, course.Name, course.Description, true, 0, course.UpcomingNotificationDays);
     }
 
     public async Task<CourseDto> UpdateCourseAsync(Guid id, UpdateCourseRequest request, CancellationToken ct)
@@ -44,10 +44,10 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         course.Name = name;
         course.Description = Clean(request.Description);
         course.IsActive = request.IsActive;
-        course.FeeDueLeadDays = ClampLeadDays(request.FeeDueLeadDays);
+        course.UpcomingNotificationDays = ClampUpcomingNotificationDays(request.UpcomingNotificationDays);
         await db.SaveChangesAsync(ct);
         var batchCount = await db.Batches.CountAsync(x => x.CourseId == id && x.IsActive, ct);
-        return new CourseDto(course.Id, course.Name, course.Description, course.IsActive, batchCount, course.FeeDueLeadDays);
+        return new CourseDto(course.Id, course.Name, course.Description, course.IsActive, batchCount, course.UpcomingNotificationDays);
     }
 
     public async Task ArchiveCourseAsync(Guid id, CancellationToken ct)
@@ -547,9 +547,19 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             .Where(x => studentIds.Contains(x.StudentId)
                 && x.Status != FeeDueStatus.Cancelled && x.Status != FeeDueStatus.Upcoming)
             .Select(x => x.StudentId).Distinct().ToListAsync(ct)).ToHashSet();
-        var upcomingStudentIds = (await db.FeeDues.AsNoTracking()
+        // Upcoming money is informational: unpaid balance of not-yet-due dues, never mixed into
+        // OutstandingBalance (see FeeBalanceCalculator) — "not yet due" must never read as owed.
+        var upcomingRows = await db.FeeDues.AsNoTracking()
             .Where(x => studentIds.Contains(x.StudentId) && x.Status == FeeDueStatus.Upcoming)
-            .Select(x => x.StudentId).Distinct().ToListAsync(ct)).ToHashSet();
+            .Select(x => new { x.Id, x.StudentId, x.NetAmount }).ToListAsync(ct);
+        var upcomingStudentIds = upcomingRows.Select(x => x.StudentId).ToHashSet();
+        var upcomingDueIds = upcomingRows.Select(x => x.Id).ToList();
+        var upcomingPaid = upcomingDueIds.Count == 0 ? new Dictionary<Guid, decimal>() : await db.FeePaymentAllocations.AsNoTracking()
+            .Where(x => upcomingDueIds.Contains(x.FeeDueId))
+            .GroupBy(x => x.FeeDueId).Select(g => new { g.Key, Sum = g.Sum(x => x.Amount) })
+            .ToDictionaryAsync(x => x.Key, x => x.Sum, ct);
+        var upcomingAmounts = upcomingRows.GroupBy(x => x.StudentId).ToDictionary(g => g.Key,
+            g => g.Sum(d => Math.Max(0m, d.NetAmount - upcomingPaid.GetValueOrDefault(d.Id))));
         return students.Select(student =>
         {
             var records = student.Enrollments.SelectMany(x => x.AttendanceRecords).ToList();
@@ -565,7 +575,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
                 student.ParentName, student.Address, student.Phone, student.Email, student.JoinDate, student.IsActive,
                 studentBalances.GetValueOrDefault(student.Id), attendancePercentage, wonCount, participatedCount, enrollments,
                 student.ConcessionPercent, student.ConcessionReason, billedStudentIds.Contains(student.Id),
-                upcomingStudentIds.Contains(student.Id));
+                upcomingStudentIds.Contains(student.Id), upcomingAmounts.GetValueOrDefault(student.Id));
         }).ToList();
     }
 

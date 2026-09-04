@@ -272,12 +272,13 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
     return updated;
   };
 
-  const handleSaveCourse = async (name: string, description: string, isActive: boolean, fee: NewCourseFee | null) => {
+  const handleSaveCourse = async (name: string, description: string, isActive: boolean, fee: NewCourseFee | null,
+    upcomingNotificationDays: number | null) => {
     if (editingCourse) {
-      const updated = await api.updateCourse(session.token, editingCourse.id, { name, description, isActive });
+      const updated = await api.updateCourse(session.token, editingCourse.id, { name, description, isActive, upcomingNotificationDays });
       setCourses((prev) => prev.map((c) => c.id === updated.id ? updated : c));
     } else {
-      const created = await api.createCourse(session.token, { name, description });
+      const created = await api.createCourse(session.token, { name, description, upcomingNotificationDays });
       setCourses((prev) => [...prev, created]);
       if (fee) {
         await handleAddFeeStructure({
@@ -494,6 +495,7 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
             onRestoreCourse={async (course) => {
               await api.updateCourse(session.token, course.id, {
                 name: course.name, description: course.description || undefined, isActive: true,
+                upcomingNotificationDays: course.upcomingNotificationDays ?? null,
               });
               await reload();
             }}

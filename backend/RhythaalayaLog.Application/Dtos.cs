@@ -3,7 +3,8 @@ using RhythaalayaLog.Domain;
 namespace RhythaalayaLog.Application;
 
 public sealed record CourseDto(Guid Id, string Name, string? Description, bool IsActive, int BatchCount,
-    int? FeeDueLeadDays = null);
+    // Days before the due date a fee shows as Upcoming (1–30); null = academy default.
+    int? UpcomingNotificationDays = null);
 public sealed record StaffDto(Guid Id, string Name, string? Phone, string? Email, bool IsActive, int BatchCount);
 public sealed record BatchDto(Guid Id, string Name, Guid CourseId, string CourseName, Guid StaffId, string StaffName,
     IReadOnlyList<DayOfWeek> Days, TimeOnly StartTime, TimeOnly EndTime, DateOnly StartDate, DateOnly? EndDate,
@@ -24,7 +25,10 @@ public sealed record StudentDto(Guid Id, string StudentNumber, string Name, Date
     bool HasBillableDues = false,
     // True when at least one not-yet-due (Upcoming) due exists: lets the UI show
     // "Payment upcoming" instead of "No dues" for a student with a scheduled bill.
-    bool HasUpcomingDues = false);
+    bool HasUpcomingDues = false,
+    // Unpaid balance of not-yet-due (Upcoming) dues. Informational only: it is never part of
+    // OutstandingBalance, finance totals, or Record Fee eligibility.
+    decimal UpcomingAmount = 0);
 
 public sealed record StudentAchievementDto(Guid Id, Guid StudentId, string Title, AchievementCategory Category,
     string? Level, DateOnly EventDate, string? Note, string FileName, string ContentType, int FileSizeBytes,

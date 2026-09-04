@@ -122,8 +122,11 @@ public sealed class Course : ITenantOwned
     public Guid TenantId { get; set; }
     public required string Name { get; set; }
     public string? Description { get; set; }
-    /// <summary>Per-course "Upcoming" horizon (0–90 days). Null falls back to <see cref="OrganizationSettings.FeeDueLeadDays"/>.</summary>
-    public int? FeeDueLeadDays { get; set; }
+    /// <summary>
+    /// Per-course "Upcoming" notice: how many days before its due date a fee shows as Upcoming
+    /// (1–30). Null falls back to the academy-wide <see cref="OrganizationSettings.FeeDueLeadDays"/>.
+    /// </summary>
+    public int? UpcomingNotificationDays { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<Batch> Batches { get; set; } = [];

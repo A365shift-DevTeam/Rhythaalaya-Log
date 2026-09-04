@@ -24,8 +24,8 @@ export interface Course {
   description?: string;
   isActive: boolean;
   batchCount: number;
-  /** Per-course "Upcoming" horizon in days; undefined = use the academy default. */
-  feeDueLeadDays?: number;
+  /** Days before the due date a fee shows as Upcoming (1–30); null/undefined = academy default. */
+  upcomingNotificationDays?: number | null;
 }
 
 export interface Staff {
@@ -94,6 +94,8 @@ export interface Student {
   hasBillableDues: boolean;
   /** True when a not-yet-due (Upcoming) bill exists — the UI shows "Payment upcoming" instead of "No dues". */
   hasUpcomingDues: boolean;
+  /** Unpaid balance of not-yet-due (Upcoming) bills. Informational only — never part of outstandingBalance. */
+  upcomingAmount: number;
   overallAttendance: number;
   wonCount: number;
   participatedCount: number;
