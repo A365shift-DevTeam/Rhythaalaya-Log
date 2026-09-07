@@ -28,7 +28,9 @@ public sealed class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExce
                 errorLog.Write(context, exception);
             }
             await Results.Problem(statusCode: status,
-                title: status == 500 ? "An unexpected error occurred." : exception.Message,
+                title: status == 500 ? "An unexpected error occurred."
+                    : exception is DbUpdateException ? "That change clashes with existing data (a duplicate name, or a value that is too long)."
+                    : exception.Message,
                 extensions: new Dictionary<string, object?> { ["traceId"] = context.TraceIdentifier })
                 .ExecuteAsync(context);
         }

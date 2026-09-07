@@ -1,4 +1,5 @@
 import { Button } from '../ui/button';
+import { formatDate } from '../../lib/dates';
 import { JisIcon } from '../JisIcon';
 import React, { useEffect, useMemo, useState } from 'react';
 import { FeeDue, FeePayment, FeeStructure, PAYMENT_METHOD_LABELS, PaymentMethod, Student } from '../../types';
@@ -82,7 +83,8 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
           .filter((due) => due.status !== 'Paid' && due.status !== 'Cancelled')
           .sort((a, b) => (a.status === 'Overdue' ? -1 : b.status === 'Overdue' ? 1 : 0) || a.dueDate.localeCompare(b.dueDate));
         setDues(outstanding);
-        const total = outstanding.reduce((sum, due) => sum + due.balanceAmount, 0);
+        // Suggest what has fallen due; bills that are listed but not yet due are shown separately.
+        const total = outstanding.filter((due) => due.status !== 'Upcoming').reduce((sum, due) => sum + due.balanceAmount, 0);
         if (total > 0) {
           setAmount(String(total));
         } else {
@@ -97,8 +99,18 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
   if (!isOpen) return null;
 
   const selectedStudent = eligibleStudents.find((student) => student.id === selectedStudentId);
-  const totalOutstanding = dues.reduce((sum, due) => sum + due.balanceAmount, 0);
-  const suggestedCourseFee = totalOutstanding === 0 ? courseFeeTotal(selectedStudent, feeStructures) : 0;
+  const totalOutstanding = dues.filter((due) => due.status !== 'Upcoming').reduce((sum, due) => sum + due.balanceAmount, 0);
+  const totalUpcoming = dues.filter((due) => due.status === 'Upcoming').reduce((sum, due) => sum + due.balanceAmount, 0);
+  const suggestedCourseFee = totalOutstanding === 0 && totalUpcoming === 0 ? courseFeeTotal(selectedStudent, feeStructures) : 0;
+  const enteredAmount = Number(amount);
+  const amountError = !amount.trim() || !Number.isFinite(enteredAmount) ? 'Enter the amount received.'
+    : enteredAmount <= 0 ? 'Amount must be more than ₹0.'
+    : Math.round(enteredAmount * 100) !== enteredAmount * 100 ? 'Amount can have at most two decimal places (paise).'
+    : '';
+  // Anything above what has fallen due settles listed upcoming bills first; the rest stays as credit.
+  const extra = !amountError ? Math.max(0, enteredAmount - totalOutstanding) : 0;
+  const extraToUpcoming = Math.min(extra, totalUpcoming);
+  const extraToCredit = extra - extraToUpcoming;
 
   const filteredStudents = query.trim()
     ? eligibleStudents.filter((student) => {
@@ -120,7 +132,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
     event.preventDefault();
     const paymentAmount = Number(amount);
     if (!selectedStudent) { setError('Select a student.'); return; }
-    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) { setError('Enter a valid payment amount.'); return; }
+    if (amountError) { setError(amountError); return; }
 
     setSubmitting(true);
     setError('');
@@ -155,7 +167,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
           </Button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 font-sans text-sm">
+        <form onSubmit={handleSubmit} noValidate className="space-y-5 font-sans text-sm">
           {/* Step 1: student */}
           <div>
             <span className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#808080] dark:text-[#94a3b8]">
@@ -230,7 +242,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
                         {due.status}
                       </span>
                       <span className="truncate text-xs text-[#808080] dark:text-[#94a3b8]">
-                        {due.title || due.courseName} · due {new Date(due.dueDate).toLocaleDateString('en-IN')}
+                        {due.title || due.courseName} · due {formatDate(due.dueDate)}
                       </span>
                     </div>
                     <span className="shrink-0 text-xs font-bold tabular-nums text-[#212121] dark:text-white">
@@ -265,14 +277,28 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
                   )}
                 </div>
                 <input id="fee-amount" type="number" required min="0.01" step="0.01" value={amount} disabled={submitting}
-                  onChange={(event) => setAmount(event.target.value)}
+                  aria-invalid={Boolean(amount) && Boolean(amountError)} aria-describedby="fee-amount-hint"
+                  onChange={(event) => { setAmount(event.target.value); setError(''); }}
                   placeholder="Enter amount"
                   className="w-full min-h-12 p-3 text-lg font-bold bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-[#212121] dark:text-white outline-none focus:border-[#3fc073] focus:ring-4 focus:ring-[#3fc073]/15 disabled:opacity-60" />
-                {totalOutstanding > 0 && (
-                  <div className="mt-1 text-xs text-[#808080]">
-                    Total outstanding: <span className="font-semibold text-[#ef4444]">₹{totalOutstanding.toLocaleString('en-IN')}</span>
-                  </div>
-                )}
+                <div id="fee-amount-hint" className="mt-1 space-y-0.5 text-xs text-[#808080]">
+                  {(totalOutstanding > 0 || totalUpcoming > 0) && (
+                    <div>
+                      Due now: <span className={`font-semibold ${totalOutstanding > 0 ? 'text-[#ef4444]' : 'text-[#3fc073]'}`}>₹{totalOutstanding.toLocaleString('en-IN')}</span>
+                      {totalUpcoming > 0 && (
+                        <> · Upcoming (not yet due): <span className="font-semibold text-[#0284c7]">₹{totalUpcoming.toLocaleString('en-IN')}</span></>
+                      )}
+                    </div>
+                  )}
+                  {amount && amountError && <div className="font-semibold text-[#ef4444]">{amountError}</div>}
+                  {extra > 0 && (
+                    <div className="font-semibold text-[#b45309] dark:text-amber-300">
+                      ₹{extra.toLocaleString('en-IN')} more than what is due now
+                      {extraToUpcoming > 0 && <> — ₹{extraToUpcoming.toLocaleString('en-IN')} pays the upcoming bill early</>}
+                      {extraToCredit > 0 && <>{extraToUpcoming > 0 ? ' and' : ' —'} ₹{extraToCredit.toLocaleString('en-IN')} stays on account as credit</>}.
+                    </div>
+                  )}
+                </div>
                 {totalOutstanding === 0 && suggestedCourseFee > 0 && (
                   <div className="mt-1 text-xs text-[#808080]">
                     No due generated yet — suggested from course fee: <span className="font-semibold text-[#3fc073]">₹{suggestedCourseFee.toLocaleString('en-IN')}</span>
@@ -308,7 +334,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
             <Button type="button" onClick={onClose} disabled={submitting} className="min-h-11 px-4 py-2 rounded-2xl text-xs font-semibold text-[#575757] hover:bg-[#f0f0f0] dark:hover:bg-[#172435] disabled:opacity-50">
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting || !selectedStudentId} className="btn-brand min-h-11 px-5 py-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+            <Button type="submit" disabled={submitting || !selectedStudentId || Boolean(amountError)} className="btn-brand min-h-11 px-5 py-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
               <JisIcon className="text-[16px]">{submitting ? 'progress_activity' : 'check'}</JisIcon>
               <span>{submitting ? 'Recording…' : amount ? `Confirm ₹${Number(amount).toLocaleString('en-IN')}` : 'Confirm payment'}</span>
             </Button>

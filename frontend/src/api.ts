@@ -3,6 +3,7 @@ import { Achievement, AchievementCategory, BatchFinance, BatchFinanceRow, Batch,
   FeeStructure, LateEnrollmentBillingPolicy, OrgSettings, PaymentMethod, Receipt, Staff, Student, StudentLedger,
   Transaction } from './types';
 import { DEFAULT_WHATSAPP_TEMPLATE } from './whatsappTemplate';
+import { formatDate } from './lib/dates';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5101/api').replace(/\/$/, '');
 const SESSION_KEY = 'rhythaalaya_session';
@@ -298,15 +299,15 @@ export const api = {
       '&to=' + encodeURIComponent(toIso), {}, token)
       .then(result => result.transactions.map(mapTransaction));
   },
-  createTransaction: (token: string, item: { title: string; type: 'income' | 'expense'; amount: number; category: string }) =>
+  createTransaction: (token: string, item: { title: string; type: 'income' | 'expense'; amount: number; category: string; occurredAt?: string | null }) =>
     request<any>('/finance/transactions', { method: 'POST', body: JSON.stringify({
       title: item.title, type: item.type === 'income' ? 'Income' : 'Expense',
-      amount: item.amount, category: item.category, occurredAt: null
+      amount: item.amount, category: item.category, occurredAt: item.occurredAt ?? null
     }) }, token).then(mapTransaction),
-  updateTransaction: (token: string, id: string, item: { title: string; type: 'income' | 'expense'; amount: number; category: string }) =>
+  updateTransaction: (token: string, id: string, item: { title: string; type: 'income' | 'expense'; amount: number; category: string; occurredAt?: string | null }) =>
     request<any>('/finance/transactions/' + id, { method: 'PUT', body: JSON.stringify({
       title: item.title, type: item.type === 'income' ? 'Income' : 'Expense',
-      amount: item.amount, category: item.category, occurredAt: null
+      amount: item.amount, category: item.category, occurredAt: item.occurredAt ?? null
     }) }, token).then(mapTransaction),
   deleteTransaction: (token: string, id: string) => request<void>('/finance/transactions/' + id, { method: 'DELETE' }, token),
 
@@ -424,6 +425,7 @@ function mapStudent(x: any): Student {
     hasBillableDues: x.hasBillableDues ?? false,
     hasUpcomingDues: x.hasUpcomingDues ?? false,
     upcomingAmount: x.upcomingAmount ?? 0,
+    overdueAmount: x.overdueAmount ?? 0,
     overallAttendance: x.attendancePercentage, wonCount: x.wonCount ?? 0, participatedCount: x.participatedCount ?? 0,
     concessionPercent: x.concessionPercent ?? 0, concessionReason: x.concessionReason || undefined,
     enrollments: (x.enrollments || []).map((e: any) => ({
@@ -541,7 +543,7 @@ function mapReceipt(x: any): Receipt {
 function mapTransaction(x: any): Transaction {
   const occurred = new Date(x.occurredAt);
   return { id: x.id, title: x.title, type: String(x.type).toLowerCase() as 'income' | 'expense',
-    amount: x.amount, category: x.category, date: occurred.toLocaleDateString(),
+    amount: x.amount, category: x.category, date: formatDate(occurred),
     occurredAt: x.occurredAt, feePaymentId: x.feePaymentId || undefined,
     time: occurred.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
 }

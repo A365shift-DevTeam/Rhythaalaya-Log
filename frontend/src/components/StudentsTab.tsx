@@ -17,6 +17,14 @@ const activeEnrollments = (student: Student) => student.enrollments.filter((e) =
 // Fee tag helpers. The tag shows current + upcoming money together, but only outstandingBalance is
 // collectible: Record Fee eligibility never looks at upcomingAmount.
 const hasUpcoming = (student: Student) => student.upcomingAmount > 0 || student.hasUpcomingDues;
+const isOverdue = (student: Student) => (student.overdueAmount ?? 0) > 0;
+type FeeFilter = 'All' | 'Paid' | 'Pending' | 'Overdue' | 'Upcoming';
+// Every bucket a student belongs to; "Pending" is anything owed now (overdue included).
+const feeBuckets = (student: Student): FeeFilter[] => [
+  ...(student.outstandingBalance > 0 ? ['Pending' as const] : ['Paid' as const]),
+  ...(isOverdue(student) ? ['Overdue' as const] : []),
+  ...(hasUpcoming(student) ? ['Upcoming' as const] : []),
+];
 const feeTagAmount = (student: Student) => student.outstandingBalance + student.upcomingAmount;
 const upcomingTitle = (student: Student) => student.upcomingAmount > 0
   ? `₹${student.outstandingBalance.toLocaleString('en-IN')} due now · ₹${student.upcomingAmount.toLocaleString('en-IN')} upcoming`
@@ -33,7 +41,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
   onSendMessage,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterFeeStatus, setFilterFeeStatus] = useState<'All' | 'Paid' | 'Pending'>('All');
+  const [filterFeeStatus, setFilterFeeStatus] = useState<FeeFilter>('All');
   const [filterCourse, setFilterCourse] = useState('All');
   const [filterBatch, setFilterBatch] = useState('All');
   const [sortBy, setSortBy] = useState<'name' | 'attendance'>('name');
@@ -69,8 +77,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
         courseNames(s).toLowerCase().includes(searchQuery.toLowerCase()) ||
         s.studentNumber.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const feeStatus = s.outstandingBalance > 0 ? 'Pending' : 'Paid';
-      const matchesStatus = filterFeeStatus === 'All' ? true : feeStatus === filterFeeStatus;
+      const matchesStatus = filterFeeStatus === 'All' ? true : feeBuckets(s).includes(filterFeeStatus);
 
       const matchesCourse =
         filterCourse === 'All' || activeEnrollments(s).some((e) => e.courseName === filterCourse);
@@ -194,7 +201,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
             <label htmlFor="student-filter-fee" className="sr-only">Filter by fee status</label>
             <JisIcon
               className={`absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[16px] ${
-                filterFeeStatus === 'Paid' ? 'text-white' : filterFeeStatus === 'Pending' ? 'text-white' : 'text-[#9e9e9e]'
+                filterFeeStatus === 'All' ? 'text-[#9e9e9e]' : 'text-white'
               }`}
             >
               payments
@@ -202,18 +209,22 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
             <SimpleSelect
               id="student-filter-fee"
               value={filterFeeStatus}
-              onValueChange={(value) => setFilterFeeStatus(value as 'All' | 'Paid' | 'Pending')}
+              onValueChange={(value) => setFilterFeeStatus(value as FeeFilter)}
               className={`w-auto min-h-10 pl-9 py-1.5 rounded-full font-sans text-xs font-bold transition-all focus:ring-4 focus:ring-[#3fc073]/15 ${
                 filterFeeStatus === 'Paid'
                   ? 'bg-[#22c55e] border-[#22c55e] text-white'
-                  : filterFeeStatus === 'Pending'
+                  : filterFeeStatus === 'Pending' || filterFeeStatus === 'Overdue'
                     ? 'bg-[#ef4444] border-[#ef4444] text-white'
-                    : 'bg-[#f0f0f0] dark:bg-[#111c2b] border-[#dbdbdb] dark:border-[#243244] text-[#575757] dark:text-[#cbd5e1]'
+                    : filterFeeStatus === 'Upcoming'
+                      ? 'bg-[#f59e0b] border-[#f59e0b] text-white'
+                      : 'bg-[#f0f0f0] dark:bg-[#111c2b] border-[#dbdbdb] dark:border-[#243244] text-[#575757] dark:text-[#cbd5e1]'
               }`}
               options={[
                 { value: 'All', label: 'All fees' },
                 { value: 'Paid', label: 'Paid' },
                 { value: 'Pending', label: 'Pending' },
+                { value: 'Overdue', label: 'Overdue' },
+                { value: 'Upcoming', label: 'Upcoming' },
               ]}
             />
           </div>
@@ -340,7 +351,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                             <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#ef4444] dark:text-rose-300"
                               title={upcomingTitle(student)}>
                               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ef4444]" />
-                              ₹{feeTagAmount(student).toLocaleString('en-IN')}
+                              {isOverdue(student) ? 'Overdue ' : ''}₹{feeTagAmount(student).toLocaleString('en-IN')}
                             </span>
                           ) : hasUpcoming(student) ? (
                             <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#b45309] dark:text-amber-300">
@@ -438,7 +449,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                         <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-[#ef4444] dark:text-rose-300 text-xs font-bold"
                           title={upcomingTitle(student)}>
                           <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] animate-pulse"></span>
-                          Pending (₹{feeTagAmount(student).toLocaleString('en-IN')})
+                          {isOverdue(student) ? 'Overdue' : 'Pending'} (₹{feeTagAmount(student).toLocaleString('en-IN')})
                         </span>
                       ) : hasUpcoming(student) ? (
                         <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-[#b45309] dark:text-amber-300 text-xs font-bold">
@@ -567,7 +578,7 @@ export const StudentsTab: React.FC<StudentsTabProps> = ({
                           <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-[#ef4444] dark:text-rose-300 text-xs font-bold"
                             title={upcomingTitle(student)}>
                             <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]"></span>
-                            ₹{feeTagAmount(student).toLocaleString('en-IN')}
+                            {isOverdue(student) ? 'Overdue ' : ''}₹{feeTagAmount(student).toLocaleString('en-IN')}
                           </span>
                         ) : hasUpcoming(student) ? (
                           <span className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-[#b45309] dark:text-amber-300 text-xs font-bold">

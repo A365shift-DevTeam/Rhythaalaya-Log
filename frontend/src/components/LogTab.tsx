@@ -199,6 +199,7 @@ export const LogTab: React.FC<LogTabProps> = ({
 
   const handleSubmitAttendance = async () => {
     if (!selectedBatchId || activeRoster.length === 0 || saving) return;
+    if (selectedDate > todayIso) { toast.error('Attendance cannot be taken for a future date.'); return; }
     setSaving(true);
     const entries = activeRoster.map((entry) => ({ enrollmentId: entry.enrollmentId, status: attendance[entry.enrollmentId] || 'P' }));
     try {
@@ -251,6 +252,7 @@ export const LogTab: React.FC<LogTabProps> = ({
               <input
                 type="date"
                 value={selectedDate}
+                max={todayIso}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 onClick={(e) => {
                   try {
@@ -640,11 +642,12 @@ export const LogTab: React.FC<LogTabProps> = ({
                 <Button
                   type="button"
                   onClick={handleSubmitAttendance}
-                  disabled={roster.length === 0 || saving}
+                  disabled={roster.length === 0 || saving || selectedDate > todayIso}
+                  title={selectedDate > todayIso ? 'Attendance cannot be taken for a future date' : undefined}
                   className="w-full mt-2 bg-white text-[#35a160] font-sans text-xs font-bold uppercase tracking-wider py-3.5 rounded-2xl hover:bg-[#f4fbf7] transition-all shadow-md active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   <JisIcon className="text-[18px]">{saving ? 'progress_activity' : 'cloud_upload'}</JisIcon>
-                  <span>{saving ? 'Saving…' : 'Submit Attendance Log'}</span>
+                  <span>{saving ? 'Saving…' : 'Save attendance'}</span>
                 </Button>
               </div>
             </div>
@@ -672,7 +675,7 @@ export const LogTab: React.FC<LogTabProps> = ({
                   className="btn-brand min-h-11 px-4 py-2 rounded-2xl text-xs font-bold shrink-0 shadow-lg flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
                 >
                   <JisIcon className="text-[18px]">{saving ? 'progress_activity' : 'check_circle'}</JisIcon>
-                  <span>{saving ? 'Saving…' : 'Submit'}</span>
+                  <span>{saving ? 'Saving…' : 'Save'}</span>
                 </Button>
               </div>
             </div>

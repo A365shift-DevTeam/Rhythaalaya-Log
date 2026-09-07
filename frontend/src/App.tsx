@@ -223,7 +223,7 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
     return payment;
   };
 
-  const handleSaveTransaction = async (fields: { title: string; type: 'income' | 'expense'; amount: number; category: string }) => {
+  const handleSaveTransaction = async (fields: { title: string; type: 'income' | 'expense'; amount: number; category: string; occurredAt?: string | null }) => {
     if (editingTransaction) {
       const updated = await api.updateTransaction(session.token, editingTransaction.id, fields);
       setTransactions((prev) => prev.map((t) => t.id === updated.id ? updated : t));

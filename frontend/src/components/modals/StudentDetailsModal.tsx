@@ -6,6 +6,7 @@ import { Achievement, FeeDue, FeePayment, LedgerEntry, PAYMENT_METHOD_LABELS, St
 import { api } from '../../api';
 import { useDialogLifecycle } from './useDialogLifecycle';
 import { confirmAction } from '../../lib/confirm';
+import { formatDate } from '../../lib/dates';
 import { AddAchievementModal } from './AddAchievementModal';
 
 const ACHIEVEMENT_ICONS: Record<Achievement['category'], string> = {
@@ -39,12 +40,10 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   const [achievementError, setAchievementError] = useState('');
   const [tab, setTab] = useState<DetailsTab>('details');
 
-  useEffect(() => {
-    if (!isOpen || !student) return;
-    setTab('details');
-    setAchievementError('');
+  const loadStudent = React.useCallback(() => {
+    if (!student) return Promise.resolve();
     setLoading(true);
-    Promise.all([
+    return Promise.all([
       api.studentLedger(token, student.id), api.studentDues(token, student.id),
       api.studentPayments(token, student.id), api.achievements(token, student.id),
     ])
@@ -53,7 +52,29 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
       })
       .catch(() => { setLedger(null); setDues([]); setPayments([]); setAchievements([]); })
       .finally(() => setLoading(false));
-  }, [isOpen, student, token]);
+  }, [student, token]);
+
+  useEffect(() => {
+    if (!isOpen || !student) return;
+    setTab('details');
+    setAchievementError('');
+    void loadStudent();
+  }, [isOpen, student, token, loadStudent]);
+
+  // A refund issues a credit note against one receipt; the fee card reloads so the money shows
+  // as given back, and the students list refreshes its balances.
+  const handleRefund = async (payment: FeePayment, amount: number, reason: string) => {
+    if (!student) return;
+    if (!(await confirmAction({
+      title: `Refund ${inr(amount)} to ${student.name}?`,
+      text: `A credit note will be issued against receipt ${payment.receiptNumber}. This cannot be undone.`,
+      confirmText: 'Give refund',
+      tone: 'destructive',
+    }))) return;
+    await api.refundPayment(token, payment.id, { amount, remarks: reason.trim() || undefined });
+    await loadStudent();
+    onAchievementsChanged();
+  };
 
   const handleViewCertificate = async (achievement: Achievement) => {
     if (!student) return;
@@ -191,8 +212,8 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
           {tab === 'details' && (
             <>
               <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 sm:gap-4">
-                <InfoTile label="Joined" value={student.joinDate ? new Date(student.joinDate).toLocaleDateString('en-IN') : 'Not provided'} />
-                <InfoTile label="Date of birth" value={student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString('en-IN') : 'Not provided'} />
+                <InfoTile label="Joined" value={formatDate(student.joinDate, 'Not provided')} />
+                <InfoTile label="Date of birth" value={formatDate(student.dateOfBirth, 'Not provided')} />
                 <InfoTile label="Parent / guardian" value={student.parentName || 'Not provided'} />
                 <InfoTile label="Phone" value={student.phone || 'Not provided'} />
                 <InfoTile label="Email" value={student.email || 'Not provided'} />
@@ -223,7 +244,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
             ) : !ledger ? (
               <p className="text-xs text-[#808080]">Couldn’t load the fee ledger.</p>
             ) : (
-              <FeeHistoryPanel ledger={ledger} dues={dues} payments={payments} hasUpcomingDues={student.hasUpcomingDues} />
+              <FeeHistoryPanel ledger={ledger} dues={dues} payments={payments} hasUpcomingDues={student.hasUpcomingDues} onRefund={handleRefund} />
             )
           )}
 
@@ -243,7 +264,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                         <div className="min-w-0">
                           <div className="truncate font-bold text-[#212121] dark:text-white">{achievement.title}</div>
                           <div className="truncate text-[#808080] dark:text-[#94a3b8]">
-                            {achievement.category}{achievement.level ? ` · ${achievement.level}` : ''} · {new Date(achievement.eventDate).toLocaleDateString('en-IN')}
+                            {achievement.category}{achievement.level ? ` · ${achievement.level}` : ''} · {formatDate(achievement.eventDate)}
                           </div>
                         </div>
                       </div>
@@ -344,10 +365,38 @@ const STAMP: Record<Stamp, { text: string; ink: string }> = {
  * calendar, not a ledger. Receipts follow as counterfoil stubs. The debit/credit statement stays
  * behind a toggle for the accountant.
  */
-function FeeHistoryPanel({ ledger, dues, payments, hasUpcomingDues }: {
+function FeeHistoryPanel({ ledger, dues, payments, hasUpcomingDues, onRefund }: {
   ledger: StudentLedger; dues: FeeDue[]; payments: FeePayment[]; hasUpcomingDues: boolean;
+  onRefund: (payment: FeePayment, amount: number, reason: string) => Promise<void>;
 }) {
   const [showStatement, setShowStatement] = useState(false);
+  const [refundFor, setRefundFor] = useState<string | null>(null);
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundReason, setRefundReason] = useState('');
+  const [refundError, setRefundError] = useState('');
+  const [refunding, setRefunding] = useState(false);
+  // What is still refundable on a receipt: its amount less the credit notes already raised against it.
+  const refundableOn = (p: FeePayment) => p.amount + payments
+    .filter((r) => r.refundOfPaymentId === p.id).reduce((t, r) => t + r.amount, 0);
+  const openRefund = (p: FeePayment) => {
+    setRefundFor(p.id); setRefundAmount(String(refundableOn(p))); setRefundReason(''); setRefundError('');
+  };
+  const submitRefund = async (p: FeePayment) => {
+    const value = Number(refundAmount);
+    const max = refundableOn(p);
+    if (!Number.isFinite(value) || value <= 0) { setRefundError('Enter an amount more than ₹0.'); return; }
+    if (Math.round(value * 100) !== value * 100) { setRefundError('Amount can have at most two decimal places (paise).'); return; }
+    if (value > max) { setRefundError(`Only ${inr(max)} of this receipt can still be refunded.`); return; }
+    setRefunding(true); setRefundError('');
+    try {
+      await onRefund(p, value, refundReason);
+      setRefundFor(null);
+    } catch (requestError) {
+      setRefundError(requestError instanceof Error ? requestError.message : 'Refund could not be recorded.');
+    } finally {
+      setRefunding(false);
+    }
+  };
   const stripRef = React.useRef<HTMLDivElement>(null);
   const { summary } = ledger;
   const received = summary.totalPaid - summary.totalRefunded;
@@ -504,6 +553,53 @@ function FeeHistoryPanel({ ledger, dues, payments, hasUpcomingDues }: {
                     </div>
                   )}
                   {p.remarks && <div className="mt-1 text-[#808080] dark:text-[#94a3b8]">{p.remarks}</div>}
+                  {refund && p.refundOfPaymentId && (
+                    <div className="mt-1 text-[#808080] dark:text-[#94a3b8]">
+                      Against receipt <span className="font-mono">{payments.find((o) => o.id === p.refundOfPaymentId)?.receiptNumber || '—'}</span>
+                    </div>
+                  )}
+                  {!refund && refundableOn(p) > 0 && refundFor !== p.id && (
+                    <Button type="button" onClick={() => openRefund(p)}
+                      className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-[#808080] hover:text-[#b91c1c] dark:hover:text-rose-300">
+                      <JisIcon className="text-[14px]">undo</JisIcon>
+                      Refund{refundableOn(p) < p.amount ? ` (${inr(refundableOn(p))} left)` : ''}
+                    </Button>
+                  )}
+                  {!refund && refundFor === p.id && (
+                    <form className="mt-2 space-y-2 rounded-2xl border border-[#f3c5c5] bg-rose-50/60 p-2.5 dark:border-rose-900/50 dark:bg-rose-950/20"
+                      onSubmit={(event) => { event.preventDefault(); void submitRefund(p); }}>
+                      <div className="grid gap-2 sm:grid-cols-[9rem_1fr]">
+                        <label className="block">
+                          <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wider text-[#808080]">Refund (₹)</span>
+                          <input type="number" min="0.01" step="0.01" max={refundableOn(p)} value={refundAmount} disabled={refunding}
+                            onChange={(event) => { setRefundAmount(event.target.value); setRefundError(''); }}
+                            aria-label="Refund amount"
+                            className="w-full rounded-xl border border-[#dbdbdb] bg-white px-2.5 py-1.5 text-sm font-bold text-[#212121] outline-none focus:border-[#ef4444] focus:ring-2 focus:ring-[#ef4444]/15 dark:border-[#243244] dark:bg-[#0b1422] dark:text-white" />
+                        </label>
+                        <label className="block">
+                          <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wider text-[#808080]">Reason</span>
+                          <input type="text" value={refundReason} disabled={refunding} maxLength={200}
+                            onChange={(event) => setRefundReason(event.target.value)} placeholder="e.g. Left the course"
+                            aria-label="Refund reason"
+                            className="w-full rounded-xl border border-[#dbdbdb] bg-white px-2.5 py-1.5 text-sm text-[#212121] outline-none focus:border-[#ef4444] focus:ring-2 focus:ring-[#ef4444]/15 dark:border-[#243244] dark:bg-[#0b1422] dark:text-white" />
+                        </label>
+                      </div>
+                      <p className="text-[11px] text-[#808080] dark:text-[#94a3b8]">
+                        Money is taken from unused credit first, then pulled back from the bills this receipt paid.
+                      </p>
+                      {refundError && <div role="alert" className="text-[11px] font-bold text-[#ef4444]">{refundError}</div>}
+                      <div className="flex justify-end gap-2">
+                        <Button type="button" onClick={() => setRefundFor(null)} disabled={refunding}
+                          className="min-h-9 rounded-xl px-3 text-xs font-semibold text-[#575757] hover:bg-white dark:text-[#cbd5e1] dark:hover:bg-[#172435]">
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={refunding}
+                          className="min-h-9 rounded-xl bg-[#ef4444] px-3.5 text-xs font-bold text-white hover:bg-[#dc2626] disabled:opacity-50">
+                          {refunding ? 'Refunding…' : `Give refund ${Number(refundAmount) > 0 ? inr(Number(refundAmount)) : ''}`}
+                        </Button>
+                      </div>
+                    </form>
+                  )}
                 </div>
               );
             })}
