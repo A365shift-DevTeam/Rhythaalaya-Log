@@ -42,7 +42,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
   const [query, setQuery] = useState('');
   const [dues, setDues] = useState<FeeDue[]>([]);
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState<PaymentMethod>('Cash');
+  const [method, setMethod] = useState<PaymentMethod>('Upi');
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -59,7 +59,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
     setQuery('');
     const suggested = initial?.outstandingBalance || courseFeeTotal(initial, feeStructures);
     setAmount(suggested > 0 ? String(suggested) : '');
-    setMethod('Cash');
+    setMethod('Upi');
     setRemarks('');
     setError('');
     setSubmitting(false);

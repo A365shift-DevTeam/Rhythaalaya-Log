@@ -79,7 +79,7 @@ function FirstBillDateField({ id, value, onChange, frequency, min, isNewPlan }: 
 const NOTICE_DEFAULT = 'default';
 const NOTICE_OPTIONS = [
   { value: NOTICE_DEFAULT, label: 'Academy default' },
-  ...Array.from({ length: 30 }, (_, i) => i + 1).map((n) => ({ value: String(n), label: n === 1 ? '1 day' : `${n} days` })),
+  ...Array.from({ length: 30 }, (_, i) => i + 1).map((n) => ({ value: String(n), label: n === 1 ? '1 day before' : `${n} days before` })),
 ];
 
 function UpcomingNoticeField({ id, value, onChange }: { id: string; value: number | null; onChange: (v: number | null) => void }) {
