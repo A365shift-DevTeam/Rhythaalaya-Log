@@ -1,8 +1,7 @@
 import { Button } from '../ui/button';
 import { JisIcon } from '../JisIcon';
 import React, { useEffect, useRef, useState } from 'react';
-import { Batch, FeeStructure, LateEnrollmentBillingPolicy, Student } from '../../types';
-import { POLICY_OPTIONS } from '../FinancialSettings';
+import { Batch, FeeStructure, Student } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
 import { todayIsoDate as todayIso } from '../../lib/schedule';
 
@@ -22,8 +21,6 @@ interface AddStudentModalProps {
   editingStudent?: Student | null;
   batches: Batch[];
   feeStructures: FeeStructure[];
-  /** Org-wide late-enrollment billing setting; the wizard pre-selects it. */
-  defaultBillingPolicy: LateEnrollmentBillingPolicy;
 }
 
 export const AddStudentModal: React.FC<AddStudentModalProps> = ({
@@ -34,7 +31,6 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   editingStudent,
   batches,
   feeStructures,
-  defaultBillingPolicy,
 }) => {
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -43,7 +39,6 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
-  const [billingPolicy, setBillingPolicy] = useState<LateEnrollmentBillingPolicy>(defaultBillingPolicy);
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   // Typed fee per batch, for courses whose plan sets the fee per student. Keyed by batch id.
   const [feeAmounts, setFeeAmounts] = useState<Record<string, string>>({});
@@ -117,7 +112,6 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       setSelectedBatchIds([]);
       setFeeAmounts({});
     }
-    setBillingPolicy(defaultBillingPolicy);
     setStep(0);
     hasNavigatedRef.current = false;
     setError('');
@@ -163,7 +157,8 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       if (editingStudent) {
         await onUpdateStudent(editingStudent.id, payload, selectedBatchIds, resolvedFeeAmounts);
       } else {
-        await onAddStudent({ ...payload, lateBillingPolicy: billingPolicy }, selectedBatchIds, resolvedFeeAmounts);
+        // No per-student override: every enrolment follows the academy's mid-period-join setting.
+        await onAddStudent({ ...payload, lateBillingPolicy: null }, selectedBatchIds, resolvedFeeAmounts);
       }
       onClose();
     } catch (requestError) {
@@ -360,8 +355,6 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     </fieldset>
   );
 
-  // Per-student late-enrollment billing choice, pre-selected to the org-wide setting. Only for
-  // new students: enrollments made from the edit form keep following the org default.
   // Selected batches whose course fee plan starts after the student's join date — the student
   // won't be billed for the gap, which surprises admins if we don't say so.
   const laterBillingCourses = joinDate
@@ -375,35 +368,18 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
         .filter((x): x is { name: string; date: string } => x !== null)
     : [];
 
-  const billingPolicyPicker = (
-    <fieldset className="mt-5">
-      <legend className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">First bill for a mid-period join</legend>
-      <p className="mb-2.5 text-xs text-[#808080] dark:text-[#94a3b8]">
-        Only applies when the student joins <em>after</em> the course's billing date, partway through a period they'd be charged for.
-      </p>
+  // The mid-period-join rule is an academy-wide setting (Financial settings), not a per-student
+  // choice: offering it here at every enrolment only invited second-guessing. The note stays,
+  // because a partial first bill still surprises people who aren't expecting one.
+  const partialFirstBillNote = laterBillingCourses.length === 0 ? null : (
+    <div className="mt-5 space-y-2">
       {laterBillingCourses.map((c) => (
-        <p key={c.name} className="mb-2 flex items-start gap-1.5 rounded-2xl bg-amber-50 px-3 py-2 text-xs font-semibold text-[#b45309] dark:bg-amber-950/40 dark:text-amber-300">
+        <p key={c.name} className="flex items-start gap-1.5 rounded-2xl bg-amber-50 px-3 py-2 text-xs font-semibold text-[#b45309] dark:bg-amber-950/40 dark:text-amber-300">
           <JisIcon className="shrink-0 text-[15px]">info</JisIcon>
-          <span>The <strong>{c.name}</strong> billing cycle runs from {fmtDate(c.date)}. This student joins earlier, so the days from joining up to that date are billed as a first, partial period under the late-joiner rule chosen below.</span>
+          <span>The <strong>{c.name}</strong> billing cycle runs from {fmtDate(c.date)}. This student joins earlier, so the days from joining up to that date are billed as a first, partial period.</span>
         </p>
       ))}
-      <div className="space-y-2">
-        {POLICY_OPTIONS.map((option) => (
-          <label key={option.value} className={`flex min-h-12 cursor-pointer items-start gap-2.5 rounded-2xl border px-3.5 py-2.5 transition-all ${billingPolicy === option.value
-            ? 'border-[#3fc073] bg-[#e9f7ee] dark:border-[#3fc073] dark:bg-[#3fc073]/15'
-            : 'border-[#dbdbdb] dark:border-[#243244] bg-[#f0f0f0] dark:bg-[#0b1422]'}`}>
-            <input type="radio" name="student-billing-policy" checked={billingPolicy === option.value}
-              onChange={() => setBillingPolicy(option.value)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#3fc073]" />
-            <span className="min-w-0">
-              <span className="block text-xs font-bold text-[#212121] dark:text-white">
-                {option.label}{option.value === defaultBillingPolicy ? ' · academy default' : ''}
-              </span>
-              <span className="block text-xs text-[#808080] dark:text-[#94a3b8]">{option.description}</span>
-            </span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
+    </div>
   );
 
   const errorBanner = error
@@ -478,7 +454,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                   <StepHeading headingRef={panelHeadingRef} title="Enroll in batches" hint="Select every batch this student should attend. Optional." />
                   {batchPicker}
                   {perStudentFeeFields}
-                  {billingPolicyPicker}
+                  {partialFirstBillNote}
                 </section>
               )}
 
@@ -510,10 +486,6 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                             emptyText="Not set — no bills yet" />
                         </React.Fragment>
                       ))}
-                      <ReviewRow
-                        label="Late enrollment billing"
-                        value={POLICY_OPTIONS.find((option) => option.value === billingPolicy)?.label || billingPolicy}
-                      />
                     </ReviewGroup>
                   </div>
                 </section>

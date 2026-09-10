@@ -578,7 +578,6 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
         onUpdateStudent={handleUpdateStudent}
         batches={batches}
         feeStructures={feeStructures}
-        defaultBillingPolicy={settings.lateEnrollmentBillingPolicy}
       />
 
       <RecordFeeModal
