@@ -96,6 +96,8 @@ export interface Student {
   hasUpcomingDues: boolean;
   /** Unpaid balance of not-yet-due (Upcoming) bills. Informational only — never part of outstandingBalance. */
   upcomingAmount: number;
+  /** Unpaid balance of bills past their due date (and grace). Part of outstandingBalance. */
+  overdueAmount: number;
   overallAttendance: number;
   wonCount: number;
   participatedCount: number;

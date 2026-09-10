@@ -1,4 +1,5 @@
 import { Button } from './ui/button';
+import { formatDate } from '../lib/dates';
 import { JisIcon } from './JisIcon';
 import { MobileSpeedDial } from './MobileSpeedDial';
 import { SimpleSelect } from './ui/select';
@@ -126,7 +127,9 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
       .catch(() => { if (!ignore) setRangeRows(null); })
       .finally(() => { if (!ignore) setRangeLoading(false); });
     return () => { ignore = true; };
-  }, [token, range.from, range.to]);
+    // allTransactions changes whenever an entry is added, edited or deleted: refetch the window
+    // so the list and totals reflect it without a reload.
+  }, [token, range.from, range.to, allTransactions]);
   const transactions = rangeRows ?? allTransactions;
   // Upcoming dues are visible but not yet payable, so they don't count as pending money
   const totalDuePending = outstandingDues
@@ -504,7 +507,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                               {group.worstStatus}
                             </span>
                             <span className="font-sans text-xs text-[#808080] dark:text-[#94a3b8]">
-                              {group.dues.length} {group.dues.length === 1 ? 'due' : 'dues'} · oldest {new Date(group.dues[0].dueDate).toLocaleDateString('en-IN')}
+                              {group.dues.length} {group.dues.length === 1 ? 'due' : 'dues'} · oldest {formatDate(group.dues[0].dueDate)}
                             </span>
                             <JisIcon className="text-[16px] text-[#9e9e9e]">{expanded ? 'expand_less' : 'expand_more'}</JisIcon>
                           </div>
@@ -533,7 +536,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                                 {due.status}
                               </span>
                               <span className="font-sans text-xs text-[#808080] dark:text-[#94a3b8]">
-                                {due.title || due.courseName} · due {new Date(due.dueDate).toLocaleDateString('en-IN')}
+                                {due.title || due.courseName} · due {formatDate(due.dueDate)}
                               </span>
                             </div>
                             <div className="flex shrink-0 items-center gap-2">

@@ -175,7 +175,7 @@ export const AdjustDueModal: React.FC<AdjustDueModalProps> = ({ isOpen, onClose,
           {mode === 'Cancel' ? (
             alreadyPaid > 0 && (
               <div className="rounded-2xl bg-amber-50 p-3 text-xs font-semibold text-[#b45309] dark:bg-amber-950/40 dark:text-amber-300">
-                ₹{alreadyPaid.toLocaleString('en-IN')} is already allocated to this due. Refund or reallocate it first — cancellation will be refused otherwise.
+                ₹{alreadyPaid.toLocaleString('en-IN')} has already been paid on this due. Cancelling releases that money to the student's credit, where it settles any other bill that is due or can be refunded.
               </div>
             )
           ) : (

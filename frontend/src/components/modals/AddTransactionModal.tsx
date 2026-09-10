@@ -1,4 +1,5 @@
 import { Button } from '../ui/button';
+import { todayIso } from '../../lib/dates';
 import { JisIcon } from '../JisIcon';
 import React, { useEffect, useState } from 'react';
 import { Transaction } from '../../types';
@@ -11,6 +12,8 @@ export interface TransactionFields {
   type: 'income' | 'expense';
   amount: number;
   category: string;
+  /** ISO instant; the calendar day the money moved (never in the future). */
+  occurredAt?: string | null;
 }
 
 interface AddTransactionModalProps {
@@ -35,38 +38,56 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [title, setTitle] = useState('');
   const [type, setType] = useState<'income' | 'expense'>('income');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState(incomeCategories[0] || 'Other Income');
+  const [category, setCategory] = useState('Other Income');
+  const [entryDate, setEntryDate] = useState(todayIso());
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const dialogRef = useDialogLifecycle(isOpen, onClose);
 
-  const availableCategories = type === 'income' ? incomeCategories : expenseCategories;
+  // "Student Fees" income only comes from fee receipts; a manual entry there would be counted twice.
+  const manualIncomeCategories = incomeCategories.filter((c) => c.trim().toLowerCase() !== 'student fees');
+  const categoriesFor = (kind: 'income' | 'expense') => kind === 'income' ? manualIncomeCategories : expenseCategories;
+  // An entry saved under a category that was later removed from settings still shows (and keeps)
+  // its own category instead of silently switching to another one.
+  const availableCategories = category && !categoriesFor(type).includes(category)
+    ? [category, ...categoriesFor(type)] : categoriesFor(type);
 
   useEffect(() => {
     if (!isOpen) return;
+    const kind = editingTransaction?.type || 'income';
     setTitle(editingTransaction?.title || '');
-    setType(editingTransaction?.type || 'income');
+    setType(kind);
     setAmount(editingTransaction ? String(editingTransaction.amount) : '');
-    setCategory(editingTransaction?.category || incomeCategories[0] || 'Other Income');
+    setCategory(editingTransaction?.category || categoriesFor(kind)[0] || (kind === 'income' ? 'Other Income' : 'Other Expense'));
+    setEntryDate(editingTransaction?.occurredAt ? editingTransaction.occurredAt.slice(0, 10) : todayIso());
     setError('');
   }, [isOpen, editingTransaction]);
 
-  useEffect(() => {
-    if (!isOpen || editingTransaction) return;
-    setCategory(availableCategories[0] || (type === 'income' ? 'Other Income' : 'Other Expense'));
-  }, [type, isOpen]);
+  // Switching the entry type moves the category to that type's first option; done in the
+  // handler (not an effect) so it can never race the values seeded for an entry being edited.
+  const changeType = (kind: 'income' | 'expense') => {
+    setType(kind);
+    setCategory(categoriesFor(kind)[0] || (kind === 'income' ? 'Other Income' : 'Other Expense'));
+  };
 
   if (!isOpen) return null;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const parsedAmount = Number(amount);
-    if (!title.trim() || !Number.isFinite(parsedAmount) || parsedAmount <= 0) return;
+    if (!title.trim()) { setError('Enter a title for the entry.'); return; }
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) { setError('Amount must be more than ₹0.'); return; }
+    if (Math.round(parsedAmount * 100) !== parsedAmount * 100) { setError('Amount can have at most two decimal places (paise).'); return; }
+    if (!category.trim()) { setError('Pick a category.'); return; }
+    if (!entryDate) { setError('Pick the date of the entry.'); return; }
+    if (entryDate > todayIso()) { setError('The entry date cannot be in the future.'); return; }
     setSubmitting(true);
     setError('');
     try {
-      await onSave({ title: title.trim(), type, amount: parsedAmount, category });
+      // Midday local time: the calendar day survives any timezone conversion on the way to the server.
+      const occurredAt = new Date(entryDate + 'T12:00:00').toISOString();
+      await onSave({ title: title.trim(), type, amount: parsedAmount, category, occurredAt });
       onClose();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not save the entry.');
@@ -133,7 +154,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               <SimpleSelect
                 id="transaction-type"
                 value={type}
-                onValueChange={(value) => setType(value as 'income' | 'expense')}
+                onValueChange={(value) => changeType(value as 'income' | 'expense')}
                 options={[
                   { value: 'income', label: 'Income (+)' },
                   { value: 'expense', label: 'Expense (-)' },
@@ -159,16 +180,32 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <label htmlFor="transaction-category" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">
-              Category
-            </label>
-            <SimpleSelect
-              id="transaction-category"
-              value={category}
-              onValueChange={setCategory}
-              options={availableCategories.map((item) => ({ value: item, label: item }))}
-            />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="transaction-category" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">
+                Category
+              </label>
+              <SimpleSelect
+                id="transaction-category"
+                value={category}
+                onValueChange={setCategory}
+                options={availableCategories.map((item) => ({ value: item, label: item }))}
+              />
+            </div>
+            <div>
+              <label htmlFor="transaction-date" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1">
+                Date
+              </label>
+              <input
+                type="date"
+                id="transaction-date"
+                required
+                max={todayIso()}
+                value={entryDate}
+                onChange={(e) => { setEntryDate(e.target.value); setError(''); }}
+                className="settings-input"
+              />
+            </div>
           </div>
 
           {error && <div role="alert" className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-[#ef4444] text-xs font-bold">{error}</div>}

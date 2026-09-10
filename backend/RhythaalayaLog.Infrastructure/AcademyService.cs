@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RhythaalayaLog.Application;
@@ -18,14 +19,15 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 
     public async Task<CourseDto> CreateCourseAsync(CreateCourseRequest request, CancellationToken ct)
     {
-        RequireText(request.Name, nameof(request.Name));
+        InputRules.RequireText(request.Name, nameof(request.Name));
         var name = request.Name.Trim();
         // The unique (TenantId, Name) index ignores IsActive, so an archived course counts too.
-        if (await db.Courses.AnyAsync(x => x.Name == name, ct))
+        if (await db.Courses.AnyAsync(x => x.Name.ToLower() == name.ToLower(), ct))
             throw new ConflictException($"A course named “{name}” already exists.");
         var course = new Course
         {
-            TenantId = RequireTenant(), Name = name, Description = Clean(request.Description),
+            TenantId = RequireTenant(), Name = name,
+            Description = InputRules.OptionalText(request.Description, "Description", InputRules.DescriptionLength),
             UpcomingNotificationDays = ClampUpcomingNotificationDays(request.UpcomingNotificationDays)
         };
         db.Courses.Add(course);
@@ -35,14 +37,14 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 
     public async Task<CourseDto> UpdateCourseAsync(Guid id, UpdateCourseRequest request, CancellationToken ct)
     {
-        RequireText(request.Name, nameof(request.Name));
+        InputRules.RequireText(request.Name, nameof(request.Name));
         var course = await db.Courses.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Course));
         var name = request.Name.Trim();
-        if (!string.Equals(name, course.Name, StringComparison.Ordinal)
-            && await db.Courses.AnyAsync(x => x.Name == name && x.Id != id, ct))
+        if (!string.Equals(name, course.Name, StringComparison.OrdinalIgnoreCase)
+            && await db.Courses.AnyAsync(x => x.Name.ToLower() == name.ToLower() && x.Id != id, ct))
             throw new ConflictException($"A course named “{name}” already exists.");
         course.Name = name;
-        course.Description = Clean(request.Description);
+        course.Description = InputRules.OptionalText(request.Description, "Description", InputRules.DescriptionLength);
         course.IsActive = request.IsActive;
         course.UpcomingNotificationDays = ClampUpcomingNotificationDays(request.UpcomingNotificationDays);
         await db.SaveChangesAsync(ct);
@@ -53,6 +55,10 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     public async Task ArchiveCourseAsync(Guid id, CancellationToken ct)
     {
         var course = await db.Courses.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Course));
+        // An archived course must not leave live batches (and their billing) behind it.
+        var liveBatches = await db.Batches.CountAsync(x => x.CourseId == id && x.IsActive, ct);
+        if (liveBatches > 0)
+            throw new ConflictException($"This course still has {liveBatches} active batch{(liveBatches == 1 ? "" : "es")}. Archive those batches first.");
         course.IsActive = false;
         await db.SaveChangesAsync(ct);
     }
@@ -64,8 +70,8 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 
     public async Task<StaffDto> CreateStaffAsync(CreateStaffRequest request, CancellationToken ct)
     {
-        RequireText(request.Name, nameof(request.Name));
-        var staff = new Staff { TenantId = RequireTenant(), Name = request.Name.Trim(), Phone = Clean(request.Phone), Email = Clean(request.Email) };
+        InputRules.RequireText(request.Name, nameof(request.Name));
+        var staff = new Staff { TenantId = RequireTenant(), Name = request.Name.Trim(), Phone = InputRules.Phone(request.Phone), Email = InputRules.Email(request.Email) };
         db.Staff.Add(staff);
         await db.SaveChangesAsync(ct);
         return new StaffDto(staff.Id, staff.Name, staff.Phone, staff.Email, true, 0);
@@ -73,11 +79,11 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 
     public async Task<StaffDto> UpdateStaffAsync(Guid id, UpdateStaffRequest request, CancellationToken ct)
     {
-        RequireText(request.Name, nameof(request.Name));
+        InputRules.RequireText(request.Name, nameof(request.Name));
         var staff = await db.Staff.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Staff));
         staff.Name = request.Name.Trim();
-        staff.Phone = Clean(request.Phone);
-        staff.Email = Clean(request.Email);
+        staff.Phone = InputRules.Phone(request.Phone);
+        staff.Email = InputRules.Email(request.Email);
         staff.IsActive = request.IsActive;
         await db.SaveChangesAsync(ct);
         var batchCount = await db.Batches.CountAsync(x => x.StaffId == id && x.IsActive, ct);
@@ -87,6 +93,9 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     public async Task ArchiveStaffAsync(Guid id, CancellationToken ct)
     {
         var staff = await db.Staff.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Staff));
+        var liveBatches = await db.Batches.CountAsync(x => x.StaffId == id && x.IsActive, ct);
+        if (liveBatches > 0)
+            throw new ConflictException($"This staff member still teaches {liveBatches} active batch{(liveBatches == 1 ? "" : "es")}. Reassign those batches first.");
         staff.IsActive = false;
         await db.SaveChangesAsync(ct);
     }
@@ -182,6 +191,17 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         return await GetBatchAsync(batchId, ct);
     }
 
+    // Does a class actually happen on this date: the recurring pattern, minus sessions that were
+    // moved away or cancelled, plus sessions that were moved here.
+    private async Task<bool> ClassMeetsOnAsync(Batch batch, DateOnly date, CancellationToken ct)
+    {
+        var overrides = await db.BatchSessionOverrides.AsNoTracking()
+            .Where(x => x.BatchId == batch.Id && (x.OriginalDate == date || x.NewDate == date)).ToListAsync(ct);
+        if (overrides.Any(x => x.NewDate == date)) return true;
+        if (overrides.Any(x => x.OriginalDate == date)) return false;
+        return MeetsPattern(batch, date);
+    }
+
     // The batch's recurring pattern covers this date: right weekday, inside the run window.
     // Ignores one-off overrides — those are layered on top by the attendance log.
     private static bool MeetsPattern(Batch batch, DateOnly date)
@@ -202,6 +222,11 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     public async Task ArchiveBatchAsync(Guid id, CancellationToken ct)
     {
         var batch = await db.Batches.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Batch));
+        // Active enrollments keep generating bills; the admin decides per student whether they
+        // completed or withdrew (which changes what is owed) before the batch is archived.
+        var liveEnrollments = await db.Enrollments.CountAsync(x => x.BatchId == id && x.Status == EnrollmentStatus.Active, ct);
+        if (liveEnrollments > 0)
+            throw new ConflictException($"{liveEnrollments} student{(liveEnrollments == 1 ? " is" : "s are")} still enrolled in this batch. Mark them completed or withdrawn first.");
         batch.IsActive = false;
         await db.SaveChangesAsync(ct);
     }
@@ -231,7 +256,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 
     public async Task<StudentDto> CreateStudentAsync(CreateStudentRequest request, CancellationToken ct)
     {
-        RequireText(request.Name, nameof(request.Name));
+        InputRules.RequireText(request.Name, nameof(request.Name));
         var tenantId = RequireTenant();
         var now = DateTimeOffset.UtcNow;
         var subscription = await db.TenantSubscriptions.AsNoTracking().Include(x => x.Plan)
@@ -251,15 +276,20 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         if (batches.Count != batchIds.Count) throw new AppValidationException(nameof(request.BatchIds));
 
         ValidateConcession(request.ConcessionPercent);
-        var joinDate = request.JoinDate ?? await dueGenerator.TodayForTenantAsync(ct);
+        var today = await dueGenerator.TodayForTenantAsync(ct);
+        ValidateDateOfBirth(request.DateOfBirth, today);
+        var joinDate = request.JoinDate ?? today;
         var student = new Student
         {
             TenantId = tenantId,
             StudentNumber = string.Concat("STU", DateTime.UtcNow.Year, Guid.NewGuid().ToString()[..8]).ToUpperInvariant(),
-            Name = request.Name.Trim(), DateOfBirth = request.DateOfBirth, ParentName = Clean(request.ParentName),
-            Phone = Clean(request.Phone), Email = Clean(request.Email), Address = Clean(request.Address),
+            Name = request.Name.Trim(), DateOfBirth = request.DateOfBirth,
+            ParentName = InputRules.OptionalText(request.ParentName, "Parent name", InputRules.NameLength),
+            Phone = InputRules.Phone(request.Phone), Email = InputRules.Email(request.Email),
+            Address = InputRules.OptionalText(request.Address, "Address", InputRules.AddressLength),
             JoinDate = joinDate,
-            ConcessionPercent = request.ConcessionPercent, ConcessionReason = Clean(request.ConcessionReason)
+            ConcessionPercent = request.ConcessionPercent,
+            ConcessionReason = InputRules.OptionalText(request.ConcessionReason, "Concession reason", InputRules.ReasonLength)
         };
         db.Students.Add(student);
         var enrollments = batches.Select(batch => new Enrollment
@@ -276,19 +306,27 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 
     public async Task<StudentDto> UpdateStudentAsync(Guid id, UpdateStudentRequest request, CancellationToken ct)
     {
-        RequireText(request.Name, nameof(request.Name));
+        InputRules.RequireText(request.Name, nameof(request.Name));
         ValidateConcession(request.ConcessionPercent);
         var student = await db.Students.FindAsync([id], ct) ?? throw new NotFoundException(nameof(Student));
+        ValidateDateOfBirth(request.DateOfBirth, await dueGenerator.TodayForTenantAsync(ct));
+        var joinDate = request.JoinDate ?? student.JoinDate;
+        // The join date is the earliest day the student is with the academy; an enrolment (and
+        // its billing) dated before it would silently contradict the record.
+        var earliestEnrollment = await db.Enrollments.Where(x => x.StudentId == id)
+            .Select(x => (DateOnly?)x.EnrolledOn).MinAsync(ct);
+        if (earliestEnrollment is { } first && joinDate > first)
+            throw new AppValidationException($"Join date cannot be after the student's first enrolment on {first.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}.");
         student.Name = request.Name.Trim();
         student.DateOfBirth = request.DateOfBirth;
-        student.ParentName = Clean(request.ParentName);
-        student.Phone = Clean(request.Phone);
-        student.Email = Clean(request.Email);
-        student.Address = Clean(request.Address);
-        student.JoinDate = request.JoinDate ?? student.JoinDate;
+        student.ParentName = InputRules.OptionalText(request.ParentName, "Parent name", InputRules.NameLength);
+        student.Phone = InputRules.Phone(request.Phone);
+        student.Email = InputRules.Email(request.Email);
+        student.Address = InputRules.OptionalText(request.Address, "Address", InputRules.AddressLength);
+        student.JoinDate = joinDate;
         student.IsActive = request.IsActive;
         student.ConcessionPercent = request.ConcessionPercent;
-        student.ConcessionReason = Clean(request.ConcessionReason);
+        student.ConcessionReason = InputRules.OptionalText(request.ConcessionReason, "Concession reason", InputRules.ReasonLength);
         await db.SaveChangesAsync(ct);
         // Always re-align the concession discount on live unpaid dues after a save — it's
         // idempotent (no-op when already in sync), and gating it on "did the percent change"
@@ -366,7 +404,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     public async Task<StudentAchievementDto> CreateAchievementAsync(Guid studentId, CreateAchievementRequest request,
         Stream fileStream, string fileName, string contentType, long fileLength, CancellationToken ct)
     {
-        RequireText(request.Title, nameof(request.Title));
+        InputRules.RequireText(request.Title, nameof(request.Title));
         var tenantId = RequireTenant();
         if (!await db.Students.AnyAsync(x => x.Id == studentId, ct)) throw new NotFoundException(nameof(Student));
         if (fileLength <= 0) throw new AppValidationException("A certificate file is required.");
@@ -443,6 +481,14 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     public async Task<AttendanceLogDto> SubmitAttendanceAsync(SubmitAttendanceRequest request, CancellationToken ct)
     {
         if (request.Entries.Count == 0) throw new AppValidationException(nameof(request.Entries));
+        var batch = await db.Batches.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.BatchId, ct)
+            ?? throw new NotFoundException(nameof(Batch));
+        if (request.Date > await dueGenerator.TodayForTenantAsync(ct))
+            throw new AppValidationException("Attendance cannot be taken for a future date.");
+        if (!await ClassMeetsOnAsync(batch, request.Date, ct))
+            throw new AppValidationException(request.Date < batch.StartDate
+                ? $"This batch only started on {batch.StartDate.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}."
+                : $"{batch.Name} does not have a class on {request.Date.ToString("ddd, d MMM yyyy", CultureInfo.InvariantCulture)}.");
         var ids = request.Entries.Select(x => x.EnrollmentId).ToList();
         if (ids.Distinct().Count() != ids.Count) throw new AppValidationException(nameof(request.Entries));
         // Archived students are read-only history: attendance can no longer be taken for them.
@@ -482,7 +528,9 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         // Receivables are money owed, whoever owes it: an archived student's balance still counts.
         var studentIds = await db.Students.Select(x => x.Id).ToListAsync(ct);
         var outstanding = (await balances.ByStudentAsync(studentIds, ct)).Values.Sum();
-        var collected = await db.Transactions.Where(x => x.Type == TransactionType.Income
+        // "Fees collected" is fee receipts only (net of refunds, which are negative rows); manual
+        // income entries such as hall rent belong to the finance page, not to fee collection.
+        var collected = await db.Transactions.Where(x => x.Type == TransactionType.Income && x.FeePaymentId != null
             && x.OccurredAt >= from && x.OccurredAt < to).SumAsync(x => x.Amount, ct);
         var attendance = await db.AttendanceRecords.Where(x => x.Date == date).ToListAsync(ct);
         var percentage = attendance.Count == 0 ? 0 : Math.Round((decimal)attendance.Count(x =>
@@ -572,6 +620,17 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             .ToDictionaryAsync(x => x.Key, x => x.Sum, ct);
         var upcomingAmounts = upcomingRows.GroupBy(x => x.StudentId).ToDictionary(g => g.Key,
             g => g.Sum(d => Math.Max(0m, d.NetAmount - upcomingPaid.GetValueOrDefault(d.Id))));
+        // Overdue money is the slice of OutstandingBalance that is past its date (and grace).
+        var overdueRows = await db.FeeDues.AsNoTracking()
+            .Where(x => studentIds.Contains(x.StudentId) && x.Status == FeeDueStatus.Overdue)
+            .Select(x => new { x.Id, x.StudentId, x.NetAmount }).ToListAsync(ct);
+        var overdueDueIds = overdueRows.Select(x => x.Id).ToList();
+        var overduePaid = overdueDueIds.Count == 0 ? new Dictionary<Guid, decimal>() : await db.FeePaymentAllocations.AsNoTracking()
+            .Where(x => overdueDueIds.Contains(x.FeeDueId))
+            .GroupBy(x => x.FeeDueId).Select(g => new { g.Key, Sum = g.Sum(x => x.Amount) })
+            .ToDictionaryAsync(x => x.Key, x => x.Sum, ct);
+        var overdueAmounts = overdueRows.GroupBy(x => x.StudentId).ToDictionary(g => g.Key,
+            g => g.Sum(d => Math.Max(0m, d.NetAmount - overduePaid.GetValueOrDefault(d.Id))));
         return students.Select(student =>
         {
             var records = student.Enrollments.SelectMany(x => x.AttendanceRecords).ToList();
@@ -587,7 +646,8 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
                 student.ParentName, student.Address, student.Phone, student.Email, student.JoinDate, student.IsActive,
                 studentBalances.GetValueOrDefault(student.Id), attendancePercentage, wonCount, participatedCount, enrollments,
                 student.ConcessionPercent, student.ConcessionReason, billedStudentIds.Contains(student.Id),
-                upcomingStudentIds.Contains(student.Id), upcomingAmounts.GetValueOrDefault(student.Id));
+                upcomingStudentIds.Contains(student.Id), upcomingAmounts.GetValueOrDefault(student.Id),
+                overdueAmounts.GetValueOrDefault(student.Id));
         }).ToList();
     }
 
@@ -656,10 +716,13 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     private async Task ValidateBatchAsync(string name, Guid courseId, Guid staffId, IReadOnlyList<DayOfWeek> days,
         TimeOnly startTime, TimeOnly endTime, DateOnly startDate, DateOnly? endDate, CancellationToken ct, Guid? excludingId = null)
     {
-        RequireText(name, nameof(name));
+        InputRules.RequireText(name, nameof(name));
         if (days.Count == 0) throw new AppValidationException("Pick at least one class day.");
         if (startTime >= endTime) throw new AppValidationException("The end time must be after the start time.");
         if (endDate.HasValue && endDate.Value < startDate) throw new AppValidationException("The end date must be after the start date.");
+        var today = await dueGenerator.TodayForTenantAsync(ct);
+        if (startDate.Year < 2000 || startDate > today.AddYears(2))
+            throw new AppValidationException("The start date looks wrong — it must be from 2000 onwards and no more than two years ahead.");
         var course = await db.Courses.AsNoTracking()
             .Where(x => x.Id == courseId).Select(x => new { x.Name, x.IsActive }).FirstOrDefaultAsync(ct);
         if (course is null)
@@ -693,7 +756,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
 
     private static void ValidateSettings(UpdateSettingsRequest request)
     {
-        RequireText(request.Name, nameof(request.Name));
+        InputRules.RequireText(request.Name, nameof(request.Name));
         RequireText(request.Type, nameof(request.Type));
         RequireText(request.ThemeColor, nameof(request.ThemeColor));
         RequireText(request.Currency, nameof(request.Currency));
@@ -724,6 +787,13 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
     private static void ValidateConcession(decimal percent)
     {
         if (percent is < 0 or > 100) throw new AppValidationException("Concession must be between 0 and 100 percent.");
+    }
+
+    private static void ValidateDateOfBirth(DateOnly? dateOfBirth, DateOnly today)
+    {
+        if (dateOfBirth is null) return;
+        if (dateOfBirth > today) throw new AppValidationException("Date of birth cannot be in the future.");
+        if (dateOfBirth < today.AddYears(-120)) throw new AppValidationException("Date of birth looks wrong.");
     }
 
     private static void RequireText(string? value, string field)

@@ -135,6 +135,11 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     if (!name.trim()) { setError('Student name is required.'); return; }
     const concession = Number(concessionPercent) || 0;
     if (concession < 0 || concession > 100) { setError('Concession must be between 0 and 100 percent.'); return; }
+    const phoneDigits = phone.replace(/\D/g, '').length;
+    if (phone.trim() && (!/^\+?[0-9][0-9\s\-().]*$/.test(phone.trim()) || phoneDigits < 7 || phoneDigits > 15)) {
+      setError('Enter a valid phone number (7–15 digits; +, spaces and dashes are fine).'); return;
+    }
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Enter a valid email address (like name@example.com).'); return; }
     setSubmitting(true);
     setError('');
     try {
@@ -173,6 +178,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
 
   const goToStep = (targetStep: number) => {
     hasNavigatedRef.current = true;
+    setError(''); // a message about the previous step must not follow the admin to the next one
     setStep(targetStep);
   };
   const canLeaveFirstStep = name.trim() !== '' && joinDate !== '';
@@ -332,7 +338,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       {laterBillingCourses.map((c) => (
         <p key={c.name} className="mb-2 flex items-start gap-1.5 rounded-2xl bg-amber-50 px-3 py-2 text-xs font-semibold text-[#b45309] dark:bg-amber-950/40 dark:text-amber-300">
           <JisIcon className="shrink-0 text-[15px]">info</JisIcon>
-          <span>Billing for <strong>{c.name}</strong> starts {fmtDate(c.date)} — this student joins before that and isn't charged for the earlier period.</span>
+          <span>The <strong>{c.name}</strong> billing cycle runs from {fmtDate(c.date)}. This student joins earlier, so the days from joining up to that date are billed as a first, partial period under the late-joiner rule chosen below.</span>
         </p>
       ))}
       <div className="space-y-2">

@@ -10,6 +10,7 @@ namespace RhythaalayaLog.Infrastructure;
 public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext, FeeDueGenerator dueGenerator,
     IRowLocker rowLocker) : IFinanceService
 {
+    internal const string FeeIncomeCategory = "Student Fees";
     private static readonly string[] DefaultFeeHeads =
         ["Tuition Fee", "Registration Fee", "Material Fee", "Exam Fee", "Transport Fee", "Other Fee"];
 
@@ -73,7 +74,7 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
     public async Task<FeeStructureDto> CreateFeeStructureAsync(CreateFeeStructureRequest request, CancellationToken ct)
     {
         RequireText(request.Name, nameof(request.Name));
-        if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
+        RequireMoney(request.Amount, nameof(request.Amount));
         if (request.EffectiveTo.HasValue && request.EffectiveTo.Value < request.EffectiveFrom)
             throw new AppValidationException(nameof(request.EffectiveTo));
         if (!await db.Courses.AnyAsync(x => x.Id == request.CourseId && x.IsActive, ct))
@@ -160,7 +161,7 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
 
     public async Task<FeePaymentDto> RecordFeePaymentAsync(RecordFeePaymentRequest request, CancellationToken ct)
     {
-        if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
+        RequireMoney(request.Amount, nameof(request.Amount));
         var tenantId = RequireTenant();
         var userId = RequireUser();
         var idempotencyKey = Clean(request.IdempotencyKey);
@@ -178,6 +179,11 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
             ?? throw new NotFoundException(nameof(Student));
         var paymentDate = (request.PaymentDate ?? BusinessClock.UtcNow).ToUniversalTime();
         await EnsureSettingsExistAsync(ct);
+        // A receipt can be back-dated (money collected earlier, entered now) but never post-dated:
+        // a payment dated after the academy's business day would change a later period's totals.
+        var timeZone = await db.OrganizationSettings.AsNoTracking().Select(x => x.TimeZone).FirstAsync(ct);
+        if (BillingSchedule.ToLocalDate(timeZone, paymentDate) > BusinessClock.TodayIn(timeZone))
+            throw new AppValidationException("Payment date cannot be in the future.");
 
         // One atomic unit: receipt number, payment, allocations, ledger entry, and status updates
         // commit together or not at all. Lock order everywhere: settings → payment → dues.
@@ -240,7 +246,7 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
                 payment.Transaction = new FinancialTransaction
                 {
                     TenantId = tenantId, Title = string.Concat("Fee payment - ", student.Name), Type = TransactionType.Income,
-                    Amount = request.Amount, Category = "Student Fees", OccurredAt = paymentDate, FeePayment = payment
+                    Amount = request.Amount, Category = FeeIncomeCategory, OccurredAt = paymentDate, FeePayment = payment
                 };
                 await db.SaveChangesAsync(ct);
 
@@ -278,7 +284,8 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
                 .SumAsync(x => (decimal?)-x.Amount, ct) ?? 0;
             var refundable = original.Amount - alreadyRefunded;
             var amount = request.Amount ?? refundable;
-            if (amount <= 0 || amount > refundable) throw new AppValidationException(nameof(request.Amount));
+            RequireMoney(amount, nameof(request.Amount));
+            if (amount > refundable) throw new AppValidationException("Refund cannot exceed the amount still refundable on this receipt.");
 
             var refund = new FeePayment
             {
@@ -427,7 +434,7 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
     {
         RequireTenant();
         RequireText(request.Title, nameof(request.Title));
-        if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
+        RequireMoney(request.Amount, nameof(request.Amount));
         var enrollment = await db.Enrollments.AsNoTracking()
             .SingleOrDefaultAsync(x => x.Id == request.EnrollmentId && x.StudentId == request.StudentId, ct)
             ?? throw new AppValidationException(nameof(request.EnrollmentId));
@@ -446,7 +453,7 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
     {
         RequireTenant();
         RequireText(request.Title, nameof(request.Title));
-        if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
+        RequireMoney(request.Amount, nameof(request.Amount));
         if (!await db.Batches.AnyAsync(x => x.Id == request.BatchId, ct))
             throw new AppValidationException(nameof(request.BatchId));
         var enrollments = await db.Enrollments.AsNoTracking()
@@ -551,7 +558,8 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
     {
         RequireText(request.Title, nameof(request.Title));
         RequireText(request.Category, nameof(request.Category));
-        if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
+        RequireMoney(request.Amount, nameof(request.Amount));
+        RejectFeeIncomeCategory(request.Type, request.Category);
         var item = new FinancialTransaction
         {
             TenantId = RequireTenant(), Title = request.Title.Trim(), Type = request.Type, Amount = request.Amount,
@@ -566,7 +574,8 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
     {
         RequireText(request.Title, nameof(request.Title));
         RequireText(request.Category, nameof(request.Category));
-        if (request.Amount <= 0) throw new AppValidationException(nameof(request.Amount));
+        RequireMoney(request.Amount, nameof(request.Amount));
+        RejectFeeIncomeCategory(request.Type, request.Category);
         var item = await db.Transactions.FindAsync([id], ct) ?? throw new NotFoundException(nameof(FinancialTransaction));
         if (item.FeePaymentId is not null)
             throw new ConflictException("This entry was generated from a fee payment — refund the payment instead of editing it directly.");
@@ -588,7 +597,7 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
         await db.SaveChangesAsync(ct);
     }
 
-    private IQueryable<FeeDue> DueQuery() => db.FeeDues.AsNoTracking().Include(x => x.Student)
+    private IQueryable<FeeDue> DueQuery() => db.FeeDues.AsNoTracking().Include(x => x.Student).Include(x => x.FeeStructure)
         .Include(x => x.Enrollment).ThenInclude(x => x.Batch).ThenInclude(x => x.Course);
 
     private async Task<FeeDueDto> GetDueAsync(Guid dueId, CancellationToken ct)
@@ -609,7 +618,7 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
             var paid = paidMap.GetValueOrDefault(x.Id);
             return new FeeDueDto(x.Id, x.StudentId, x.Student.Name, x.EnrollmentId, x.Enrollment.BatchId,
                 x.Enrollment.Batch.Name, x.Enrollment.Batch.Course.Name, x.FeeStructureId, x.DueDate, x.Amount,
-                x.DiscountAmount, x.NetAmount, paid, x.NetAmount - paid, x.Status, x.Title, x.CancelledAt, x.CancelReason,
+                x.DiscountAmount, x.NetAmount, paid, x.NetAmount - paid, x.Status, x.Title ?? x.FeeStructure?.Name, x.CancelledAt, x.CancelReason,
                 x.PeriodStart, x.PeriodEnd);
         }).ToList();
     }
@@ -709,6 +718,16 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
     private static void RequireText(string? value, string field)
     {
         if (string.IsNullOrWhiteSpace(value)) throw new AppValidationException(field);
+    }
+
+    /// <summary>Money must be positive, in whole paise (₹0.001 would round to a ₹0.00 receipt) and plausible.</summary>
+    private static void RequireMoney(decimal amount, string field) => InputRules.Money(amount, field);
+
+    /// <summary>Fee receipts are the only source of "Student Fees" income; a manual entry would be counted twice.</summary>
+    private static void RejectFeeIncomeCategory(TransactionType type, string category)
+    {
+        if (type == TransactionType.Income && string.Equals(category.Trim(), FeeIncomeCategory, StringComparison.OrdinalIgnoreCase))
+            throw new AppValidationException("Student fee income is recorded through fee receipts, not as a manual entry.");
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

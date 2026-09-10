@@ -28,7 +28,10 @@ public sealed record StudentDto(Guid Id, string StudentNumber, string Name, Date
     bool HasUpcomingDues = false,
     // Unpaid balance of not-yet-due (Upcoming) dues. Informational only: it is never part of
     // OutstandingBalance, finance totals, or Record Fee eligibility.
-    decimal UpcomingAmount = 0);
+    decimal UpcomingAmount = 0,
+    // Unpaid balance of dues past their due date (and grace). Part of OutstandingBalance; lets the
+    // list say "Overdue" rather than "Pending" and filter on it.
+    decimal OverdueAmount = 0);
 
 public sealed record StudentAchievementDto(Guid Id, Guid StudentId, string Title, AchievementCategory Category,
     string? Level, DateOnly EventDate, string? Note, string FileName, string ContentType, int FileSizeBytes,
