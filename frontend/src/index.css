@@ -136,6 +136,7 @@ input[type="number"] {
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
+  --color-info: #379fc8;
 
   /* Neutral aliases */
   --color-mint-50: #f4fbf7;

@@ -1,15 +1,39 @@
+import { Badge } from './ui/badge';
+import { BatchStudentsModal } from './modals/BatchStudentsModal';
 import { Button } from './ui/button';
 import { JisIcon } from './JisIcon';
 import { MobileSpeedDial } from './MobileSpeedDial';
 import React, { useMemo, useState } from 'react';
-import { Batch, Course, Staff, WEEKDAY_SHORT } from '../types';
+import { Batch, Course, Staff, Student, WEEKDAY_SHORT } from '../types';
 import { SimpleSelect } from './ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table';
+
+type BatchView = 'cards' | 'table';
+const VIEW_STORAGE_KEY = 'rhythaalaya_batch_view';
+
+/** The last view the user chose, remembered across sessions. Falls back to cards. */
+function storedBatchView(): BatchView {
+  try {
+    return localStorage.getItem(VIEW_STORAGE_KEY) === 'table' ? 'table' : 'cards';
+  } catch {
+    return 'cards';
+  }
+}
 
 interface BatchesTabProps {
   batches: Batch[];
   courses: Course[];
   staff: Staff[];
+  students: Student[];
   canManage: boolean;
+  onViewStudent: (student: Student) => void;
   onOpenAddBatch: () => void;
   onEditBatch: (batch: Batch) => void;
   onOpenAddCourse: () => void;
@@ -33,7 +57,9 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
   batches,
   courses,
   staff,
+  students,
   canManage,
+  onViewStudent,
   onOpenAddBatch,
   onEditBatch,
   onOpenAddCourse,
@@ -47,6 +73,14 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
   const [courseFilter, setCourseFilter] = useState('All');
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  // The batch whose roster is open. Null closes the panel.
+  const [viewingBatch, setViewingBatch] = useState<Batch | null>(null);
+  const [view, setView] = useState<BatchView>(storedBatchView);
+
+  const pickView = (next: BatchView) => {
+    setView(next);
+    try { localStorage.setItem(VIEW_STORAGE_KEY, next); } catch { /* private mode: keep the session choice only */ }
+  };
 
   // Archived courses and batches live only in the Archive section below, never in the main lists.
   const activeCourses = useMemo(() => courses.filter((c) => c.isActive), [courses]);
@@ -244,6 +278,38 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
                   ...activeCourses.map((course) => ({ value: course.name, label: course.name })),
                 ]}
               />
+
+              {/* Cards or table, remembered for next time. Phones always get the compact list. */}
+              <div className="hidden shrink-0 rounded-2xl bg-[#f0f0f0] p-1 sm:flex dark:bg-[#111c2b]" role="group" aria-label="Batch view">
+                <Button
+                  type="button"
+                  onClick={() => pickView('cards')}
+                  aria-label="Card view"
+                  aria-pressed={view === 'cards'}
+                  title="Card view"
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-xl transition-all ${
+                    view === 'cards'
+                      ? 'bg-white text-[#3fc073] shadow-xs dark:bg-[#0b1422]'
+                      : 'text-[#808080] hover:text-[#212121] dark:hover:text-white'
+                  }`}
+                >
+                  <JisIcon className="text-[18px]">grid_view</JisIcon>
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => pickView('table')}
+                  aria-label="Table view"
+                  aria-pressed={view === 'table'}
+                  title="Table view"
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-xl transition-all ${
+                    view === 'table'
+                      ? 'bg-white text-[#3fc073] shadow-xs dark:bg-[#0b1422]'
+                      : 'text-[#808080] hover:text-[#212121] dark:hover:text-white'
+                  }`}
+                >
+                  <JisIcon className="text-[18px]">format_list_bulleted</JisIcon>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -271,15 +337,79 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
             {/* Mobile: compact list — tap a row to edit */}
             <div className="sm:hidden border-t border-[#dbdbdb]/60 dark:border-[#243244] divide-y divide-[#dbdbdb]/60 dark:divide-[#243244]">
               {filteredBatches.map((batch) => (
-                <BatchRow key={batch.id} batch={batch} canManage={canManage} onEdit={onEditBatch} />
+                <BatchRow key={batch.id} batch={batch} canManage={canManage} onEdit={onEditBatch} onView={setViewingBatch} />
               ))}
             </div>
-            {/* Desktop / tablet: full cards */}
-            <div className="hidden sm:grid p-3.5 sm:p-5 md:p-6 sm:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
-              {filteredBatches.map((batch) => (
-                <BatchCard key={batch.id} batch={batch} canManage={canManage} onEdit={onEditBatch} />
-              ))}
-            </div>
+            {/* Desktop / tablet: cards or table, whichever the user picked */}
+            {view === 'cards' ? (
+              <div className="hidden sm:grid p-3.5 sm:p-5 md:p-6 sm:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
+                {filteredBatches.map((batch) => (
+                  <BatchCard key={batch.id} batch={batch} canManage={canManage} onEdit={onEditBatch} onView={setViewingBatch} />
+                ))}
+              </div>
+            ) : (
+              <div className="hidden px-2 pb-2 sm:block sm:px-4 md:px-5">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent dark:hover:bg-transparent">
+                      <TableHead>Batch</TableHead>
+                      <TableHead>Course</TableHead>
+                      <TableHead>Schedule</TableHead>
+                      <TableHead>Staff</TableHead>
+                      <TableHead className="text-right">Students</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBatches.map((batch) => (
+                      <TableRow key={batch.id}>
+                        <TableCell className="font-sans text-sm font-bold text-[#212121] dark:text-white">
+                          {batch.name}
+                        </TableCell>
+                        <TableCell className="font-sans text-sm font-semibold text-[#3fc073]">{batch.courseName}</TableCell>
+                        <TableCell className="font-sans text-sm whitespace-nowrap text-[#575757] dark:text-[#cbd5e1]">
+                          {formatDays(batch.days)} · {formatTime(batch.startTime)}–{formatTime(batch.endTime)}
+                        </TableCell>
+                        <TableCell className="font-sans text-sm text-[#575757] dark:text-[#cbd5e1]">{batch.staffName}</TableCell>
+                        <TableCell className="text-right font-sans text-sm font-bold tabular-nums text-[#212121] dark:text-white">
+                          {batch.enrolledCount}
+                        </TableCell>
+                        <TableCell>
+                          <Badge size="sm" variant={batch.isActive ? 'success' : 'secondary'}>
+                            {batch.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              type="button"
+                              onClick={() => setViewingBatch(batch)}
+                              aria-label={`View students in ${batch.name}`}
+                              title="View students"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-[#9e9e9e] transition-colors hover:bg-[#e9f7ee] hover:text-[#3fc073] active:scale-95 dark:hover:bg-[#172435] dark:hover:text-[#b3e6c7]"
+                            >
+                              <JisIcon className="text-[17px]">groups</JisIcon>
+                            </Button>
+                            {canManage && (
+                              <Button
+                                type="button"
+                                onClick={() => onEditBatch(batch)}
+                                aria-label={`Edit ${batch.name}`}
+                                title="Edit batch"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-[#9e9e9e] transition-colors hover:bg-[#e9f7ee] hover:text-[#3fc073] active:scale-95 dark:hover:bg-[#172435] dark:hover:text-[#b3e6c7]"
+                              >
+                                <JisIcon className="text-[17px]">edit</JisIcon>
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </>
         )}
       </section>
@@ -352,6 +482,15 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
         </section>
       )}
 
+      {/* Viewing a batch opens its roster; picking a student there hands off to student details. */}
+      <BatchStudentsModal
+        isOpen={viewingBatch !== null}
+        onClose={() => setViewingBatch(null)}
+        batch={viewingBatch}
+        students={students}
+        onViewStudent={(student) => { setViewingBatch(null); onViewStudent(student); }}
+      />
+
       {/* Mobile quick-add: the three add actions live behind one floating button */}
       {canManage && (
         <MobileSpeedDial
@@ -367,7 +506,9 @@ export const BatchesTab: React.FC<BatchesTabProps> = ({
   );
 };
 
-function BatchCard({ batch, canManage, onEdit }: { batch: Batch; canManage: boolean; onEdit: (batch: Batch) => void; key?: React.Key }) {
+function BatchCard({ batch, canManage, onEdit, onView }: {
+  batch: Batch; canManage: boolean; onEdit: (batch: Batch) => void; onView: (batch: Batch) => void; key?: React.Key;
+}) {
   return (
     <article className="premium-card-interactive group p-4 sm:p-5 flex flex-col justify-between">
       <div>
@@ -419,18 +560,27 @@ function BatchCard({ batch, canManage, onEdit }: { batch: Batch; canManage: bool
         </div>
       </div>
 
-      <div className="mt-4 pt-3 border-t border-[#dbdbdb]/60 dark:border-[#243244] flex items-center justify-between">
-        <div className="text-xs text-[#808080] font-medium">Enrollment</div>
+      <div className="mt-4 pt-3 border-t border-[#dbdbdb]/60 dark:border-[#243244] flex items-center justify-between gap-2">
         <div className="inline-flex shrink-0 items-center whitespace-nowrap gap-1.5 rounded-full bg-[#e9f7ee] dark:bg-[#3fc073]/20 text-[#35a160] dark:text-[#b3e6c7] px-2.5 py-0.5 text-xs font-bold">
           <JisIcon className="text-[15px]">groups</JisIcon>
           {batch.enrolledCount} student{batch.enrolledCount === 1 ? '' : 's'}
         </div>
+        <Button
+          type="button"
+          onClick={() => onView(batch)}
+          aria-label={`View students in ${batch.name}`}
+          className="min-h-9 shrink-0 rounded-2xl border border-[#dbdbdb] bg-white px-3 text-xs font-bold text-[#3fc073] transition-colors hover:bg-[#e9f7ee] active:scale-95 dark:border-[#243244] dark:bg-[#0b1422] dark:text-[#b3e6c7] dark:hover:bg-[#3fc073]/20"
+        >
+          View students
+        </Button>
       </div>
     </article>
   );
 }
 
-function BatchRow({ batch, canManage, onEdit }: { batch: Batch; canManage: boolean; onEdit: (batch: Batch) => void; key?: React.Key }) {
+function BatchRow({ batch, canManage, onEdit, onView }: {
+  batch: Batch; canManage: boolean; onEdit: (batch: Batch) => void; onView: (batch: Batch) => void; key?: React.Key;
+}) {
   const schedule = `${formatDays(batch.days)} · ${formatTime(batch.startTime)}–${formatTime(batch.endTime)}`;
   const body = (
     <>
@@ -458,20 +608,31 @@ function BatchRow({ batch, canManage, onEdit }: { batch: Batch; canManage: boole
     </>
   );
 
-  if (canManage) {
-    return (
+  // The row is a container, not a button: tapping the body opens the roster and admins get a
+  // separate edit control. Wrapping the whole row in a button would nest one button in another.
+  return (
+    <div className="flex items-center gap-1 px-3.5 py-2.5">
       <button
         type="button"
-        onClick={() => onEdit(batch)}
-        aria-label={`Edit ${batch.name}`}
-        className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-opacity active:opacity-60"
+        onClick={() => onView(batch)}
+        aria-label={`View students in ${batch.name}`}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left transition-opacity active:opacity-60"
       >
         {body}
         <JisIcon className="shrink-0 text-[18px] text-[#c2c2c2] dark:text-[#64748b]">chevron_right</JisIcon>
       </button>
-    );
-  }
-  return <div className="flex items-center gap-3 px-3.5 py-2.5">{body}</div>;
+      {canManage && (
+        <Button
+          type="button"
+          onClick={() => onEdit(batch)}
+          aria-label={`Edit ${batch.name}`}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[#9e9e9e] transition-colors hover:bg-[#e9f7ee] hover:text-[#3fc073] dark:hover:bg-[#172435]"
+        >
+          <JisIcon className="text-[18px]">edit</JisIcon>
+        </Button>
+      )}
+    </div>
+  );
 }
 
 function BatchInfo({ icon, label, value }: { icon: string; label: string; value: string }) {

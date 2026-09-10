@@ -47,6 +47,7 @@ import { StudentDetailsModal } from './components/modals/StudentDetailsModal';
 import { FeeReceiptModal } from './components/modals/FeeReceiptModal';
 import { NotificationCenter } from './components/NotificationCenter';
 import { Toaster } from './components/ui/toaster';
+import { toast } from './lib/toast';
 
 const HomeTab = React.lazy(() =>
   import('./components/HomeTab').then((module) => ({ default: module.HomeTab }))
@@ -114,8 +115,10 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
       ]);
       setStudents(studentRows); setBatches(batchRows); setCourses(courseRows); setStaff(staffRows);
       setFeeStructures(structureRows);
+      // Bills that have not reached their due date are not shown anywhere in the app, so they
+      // never enter this list.
       setOutstandingDues(dueRows.filter((due) => due.status === 'Pending' || due.status === 'Partial'
-        || due.status === 'Overdue' || due.status === 'Upcoming'));
+        || due.status === 'Overdue'));
       setTransactions(transactionRows); setSettings(org);
       setLoadError('');
     } catch (error) {
@@ -247,6 +250,17 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
   const handleDeleteTransaction = async (transactionId: string) => {
     await api.deleteTransaction(session.token, transactionId);
     setTransactions((prev) => prev.filter((t) => t.id !== transactionId));
+  };
+
+  // A finance row that came from a fee collection can be reopened as its printable receipt.
+  const openReceiptForPayment = async (paymentId: string) => {
+    try {
+      const receipt = await api.receipt(session.token, paymentId);
+      setLastReceipt(receipt);
+      setIsReceiptOpen(true);
+    } catch {
+      toast.error('Could not load that receipt');
+    }
   };
 
   const handleSaveBatch = async (payload: {
@@ -496,7 +510,9 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
             batches={batches}
             courses={courses}
             staff={staff}
+            students={students}
             canManage={isAdmin}
+            onViewStudent={openStudentDetails}
             onOpenAddBatch={() => { setEditingBatch(null); setIsAddBatchOpen(true); }}
             onEditBatch={(batch) => { setEditingBatch(batch); setIsAddBatchOpen(true); }}
             onOpenAddCourse={() => { setEditingCourse(null); setIsAddCourseOpen(true); }}
@@ -523,16 +539,15 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
 
         {currentTab === 'finance' && (
           <FinanceTab
-            students={students}
             transactions={transactions}
-            outstandingDues={outstandingDues}
             token={session.token}
             canManage={isAdmin}
             darkMode={darkMode}
             onOpenRecordFee={openRecordFee}
-            onOpenWhatsAppAll={() => openWhatsApp(undefined)}
             onOpenAddTransaction={openAddTransaction}
             onEditTransaction={openEditTransaction}
+            onDeleteTransaction={handleDeleteTransaction}
+            onOpenReceipt={openReceiptForPayment}
             onOpenAddCharge={() => setIsAddChargeOpen(true)}
           />
         )}
@@ -544,6 +559,7 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
             token={session.token}
             onOpenAddStudent={openAddStudent}
             isAdmin={isAdmin}
+            onOpenWhatsApp={openWhatsApp}
             onAddSessionOverride={handleAddBatchSessionOverride}
             onRemoveSessionOverride={handleRemoveBatchSessionOverride}
           />

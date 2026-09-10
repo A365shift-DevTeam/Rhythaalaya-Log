@@ -79,8 +79,10 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
     api.studentDues(token, selectedStudentId)
       .then((rows) => {
         if (ignore) return;
+        // Bills that have not reached their due date are not collectible and are not shown
+        // anywhere in the app, so they are left out of this list and its totals.
         const outstanding = rows
-          .filter((due) => due.status !== 'Paid' && due.status !== 'Cancelled')
+          .filter((due) => due.status !== 'Paid' && due.status !== 'Cancelled' && due.status !== 'Upcoming')
           .sort((a, b) => (a.status === 'Overdue' ? -1 : b.status === 'Overdue' ? 1 : 0) || a.dueDate.localeCompare(b.dueDate));
         // Loaded for the dues list and the totals shown under the amount field only —
         // the amount itself is never filled in from them.
@@ -93,18 +95,16 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
   if (!isOpen) return null;
 
   const selectedStudent = eligibleStudents.find((student) => student.id === selectedStudentId);
-  const totalOutstanding = dues.filter((due) => due.status !== 'Upcoming').reduce((sum, due) => sum + due.balanceAmount, 0);
-  const totalUpcoming = dues.filter((due) => due.status === 'Upcoming').reduce((sum, due) => sum + due.balanceAmount, 0);
-  const suggestedCourseFee = totalOutstanding === 0 && totalUpcoming === 0 ? courseFeeTotal(selectedStudent, feeStructures) : 0;
+  const totalOutstanding = dues.reduce((sum, due) => sum + due.balanceAmount, 0);
+  const suggestedCourseFee = totalOutstanding === 0 ? courseFeeTotal(selectedStudent, feeStructures) : 0;
   const enteredAmount = Number(amount);
   const amountError = !amount.trim() || !Number.isFinite(enteredAmount) ? 'Enter the amount received.'
     : enteredAmount <= 0 ? 'Amount must be more than ₹0.'
     : Math.round(enteredAmount * 100) !== enteredAmount * 100 ? 'Amount can have at most two decimal places (paise).'
     : '';
-  // Anything above what has fallen due settles listed upcoming bills first; the rest stays as credit.
+  // Anything above what has fallen due stays on the student's account as credit and is applied
+  // to later bills as they come due.
   const extra = !amountError ? Math.max(0, enteredAmount - totalOutstanding) : 0;
-  const extraToUpcoming = Math.min(extra, totalUpcoming);
-  const extraToCredit = extra - extraToUpcoming;
 
   const filteredStudents = query.trim()
     ? eligibleStudents.filter((student) => {
@@ -230,7 +230,6 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
                       <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                         due.status === 'Overdue' ? 'bg-rose-100 text-[#ef4444] dark:bg-rose-950/80 dark:text-rose-300'
                         : due.status === 'Partial' ? 'bg-amber-100 text-[#f59e0b] dark:bg-amber-950/80 dark:text-amber-300'
-                        : due.status === 'Upcoming' ? 'bg-sky-100 text-[#0284c7] dark:bg-sky-950/80 dark:text-sky-300'
                         : 'bg-[#f0f0f0] text-[#6b6b6b] dark:bg-[#111c2b] dark:text-[#cbd5e1]'}`}>
                         {due.status}
                       </span>
@@ -263,20 +262,15 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
                   placeholder="Enter amount"
                   className="w-full min-h-12 p-3 text-lg font-bold bg-[#f0f0f0] dark:bg-[#111c2b] border border-[#dbdbdb] dark:border-[#243244] rounded-2xl text-[#212121] dark:text-white outline-none focus:border-[#3fc073] focus:ring-4 focus:ring-[#3fc073]/15 disabled:opacity-60" />
                 <div id="fee-amount-hint" className="mt-1 space-y-0.5 text-xs text-[#808080]">
-                  {(totalOutstanding > 0 || totalUpcoming > 0) && (
+                  {totalOutstanding > 0 && (
                     <div>
-                      Due now: <span className={`font-semibold ${totalOutstanding > 0 ? 'text-[#ef4444]' : 'text-[#3fc073]'}`}>₹{totalOutstanding.toLocaleString('en-IN')}</span>
-                      {totalUpcoming > 0 && (
-                        <> · Upcoming (not yet due): <span className="font-semibold text-[#0284c7]">₹{totalUpcoming.toLocaleString('en-IN')}</span></>
-                      )}
+                      Due now: <span className="font-semibold text-[#ef4444]">₹{totalOutstanding.toLocaleString('en-IN')}</span>
                     </div>
                   )}
                   {amount && amountError && <div className="font-semibold text-[#ef4444]">{amountError}</div>}
                   {extra > 0 && (
                     <div className="font-semibold text-[#b45309] dark:text-amber-300">
-                      ₹{extra.toLocaleString('en-IN')} more than what is due now
-                      {extraToUpcoming > 0 && <> — ₹{extraToUpcoming.toLocaleString('en-IN')} pays the upcoming bill early</>}
-                      {extraToCredit > 0 && <>{extraToUpcoming > 0 ? ' and' : ' —'} ₹{extraToCredit.toLocaleString('en-IN')} stays on account as credit</>}.
+                      ₹{extra.toLocaleString('en-IN')} more than what is due now — it stays on account as credit.
                     </div>
                   )}
                 </div>

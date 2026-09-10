@@ -311,7 +311,6 @@ export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, onClose,
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#3fc073]/40 bg-[#e9f7ee]/60 px-3.5 py-2.5 dark:border-[#3fc073]/30 dark:bg-[#3fc073]/10">
               <span className="text-xs font-semibold text-[#35a160] dark:text-[#b3e6c7]">
                 {targetCount} {targetCount === 1 ? 'student' : 'students'} × ₹{chargeAmount.toLocaleString('en-IN')}
-                {dueDate > todayIso() ? ' · upcoming' : ''}
               </span>
               <span className="text-sm font-bold tabular-nums text-[#212121] dark:text-white">
                 ₹{totalAmount.toLocaleString('en-IN')} total

@@ -79,8 +79,8 @@ export function FinancialSettings({ settings, setSettings }: FinancialSettingsPr
         <SectionHeading id="billing-rules-title" icon="event_repeat" title="Billing Rules"
           description="How bills appear before and after their due date, and how refunds are numbered." />
         <div className="premium-card grid gap-4 p-4 sm:grid-cols-3 sm:p-5">
-          <Field label="Upcoming notice (days)" id="fee-lead-days"
-            hint="Default for courses without their own notice: a bill shows as Upcoming this many days before its due date.">
+          <Field label="Bill lead time (days)" id="fee-lead-days"
+            hint="How far ahead a bill is prepared. It stays hidden from students and staff until its due date.">
             <input id="fee-lead-days" type="number" min={0} max={90} value={settings.feeDueLeadDays}
               onChange={(event) => setSettings((previous) => ({ ...previous, feeDueLeadDays: Math.min(90, Math.max(0, Number(event.target.value) || 0)) }))}
               className="settings-input" />

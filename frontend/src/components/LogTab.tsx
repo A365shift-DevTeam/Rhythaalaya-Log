@@ -1,6 +1,9 @@
+import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { feeStanding } from '../lib/feeStatus';
 import { JisIcon } from './JisIcon';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { WhatsAppIcon } from './WhatsAppIcon';
 import { RescheduleClassModal } from './modals/RescheduleClassModal';
 import { toast } from '../lib/toast';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -17,6 +20,8 @@ interface LogTabProps {
   token: string;
   onOpenAddStudent: () => void;
   isAdmin: boolean;
+  /** Opens the WhatsApp composer for one student, from their attendance row. */
+  onOpenWhatsApp: (student?: Student) => void;
   onAddSessionOverride: (batchId: string, body: {
     originalDate: string; newDate: string | null; reason: string | null;
   }) => Promise<Batch>;
@@ -37,8 +42,14 @@ interface RosterEntry {
 type RollCallStatus = Extract<AttendanceStatus, 'P' | 'A'>;
 
 export const LogTab: React.FC<LogTabProps> = ({
-  batches, token, onOpenAddStudent, isAdmin, onAddSessionOverride, onRemoveSessionOverride,
+  students, batches, token, onOpenAddStudent, isAdmin, onOpenWhatsApp,
+  onAddSessionOverride, onRemoveSessionOverride,
 }) => {
+  // The roll call carries only enrollment data, so fee standing and phone number are read off
+  // the student list the app shell already holds.
+  const studentsById = useMemo(
+    () => new Map(students.map((s) => [s.id, s])), [students]);
+
   const [selectedDate, setSelectedDate] = useState<string>(todayIsoDate());
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [roster, setRoster] = useState<RosterEntry[]>([]);
@@ -529,6 +540,8 @@ export const LogTab: React.FC<LogTabProps> = ({
                     const currentStatus = attendance[entry.enrollmentId] || 'P';
                     const isPresent = currentStatus === 'P';
                     const initials = entry.studentName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+                    const student = studentsById.get(entry.studentId);
+                    const fees = student ? feeStanding(student) : null;
 
                     // Removed student: faded, read-only history row — shows their track record
                     // (days attended) and this date's saved status, with no toggle.
@@ -577,18 +590,38 @@ export const LogTab: React.FC<LogTabProps> = ({
                             <div className="font-sans text-sm font-bold text-[#212121] dark:text-white truncate">
                               {entry.studentName}
                             </div>
-                            <div className="text-xs font-semibold text-[#9e9e9e] sm:hidden">
-                              {isPresent ? (
-                                <span className="text-[#22c55e] font-bold">Present</span>
-                              ) : (
-                                <span className="text-[#ef4444] font-bold">Absent</span>
+                            {/* Below the name on phones, where the right-hand cluster has no room */}
+                            <div className="mt-0.5 flex items-center gap-1.5 sm:hidden">
+                              <span className={`text-xs font-bold ${isPresent ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+                                {isPresent ? 'Present' : 'Absent'}
+                              </span>
+                              {fees && (
+                                <Badge size="sm" variant={fees.variant} title={fees.full}>{fees.label}</Badge>
                               )}
                             </div>
                           </div>
                         </div>
 
-                        {/* Attendance Toggle Control */}
-                        <div className="flex items-center gap-3 shrink-0">
+                        {/* Fee standing, message, then the attendance toggle */}
+                        <div className="flex items-center gap-2 shrink-0 sm:gap-3">
+                          {fees && (
+                            <Badge size="lg" variant={fees.variant} title={fees.full} className="hidden sm:inline-flex">
+                              {fees.label}
+                            </Badge>
+                          )}
+
+                          {student && (
+                            <Button
+                              type="button"
+                              onClick={() => onOpenWhatsApp(student)}
+                              aria-label={`Send a WhatsApp message to ${entry.studentName}`}
+                              title={student.phone ? `Message ${student.phone}` : 'No phone number on file'}
+                              className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#dbdbdb] bg-white transition-colors hover:border-[#25D366]/50 hover:bg-[#25D366]/10 active:scale-95 dark:border-[#243244] dark:bg-[#0b1422] dark:hover:bg-[#25D366]/15"
+                            >
+                              <WhatsAppIcon className="text-[18px]" />
+                            </Button>
+                          )}
+
                           <span
                             className={`hidden sm:inline-block min-w-16 text-right font-sans text-xs font-bold transition-colors ${
                               isPresent ? 'text-[#22c55e]' : 'text-[#ef4444]'

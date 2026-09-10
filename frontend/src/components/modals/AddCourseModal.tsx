@@ -158,15 +158,31 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   const [planSubmitting, setPlanSubmitting] = useState(false);
   const [planError, setPlanError] = useState('');
   const [planActive, setPlanActive] = useState(true);
+  // Set once the admin edits the cycle date, so a price change stops auto-advancing it for them.
+  const [feeStartTouched, setFeeStartTouched] = useState(false);
 
   const courseFeeStructures = editingCourse ? feeStructures.filter((f) => f.courseId === editingCourse.id) : [];
 
   // The admin picks the exact first-bill date; the engine bills from there on the plan's cadence.
   const isFirstPlan = !editingCourse || courseFeeStructures.length === 0;
-  const resolvedFeeDate = feeStartDate;
   const activePlan = courseFeeStructures.find((f) => f.isActive);
-  // A superseding (price-change) plan must begin after the current one.
-  const minStartDate = !isFirstPlan && activePlan ? addDaysToIso(activePlan.effectiveFrom.slice(0, 10), 1) : undefined;
+  const planStartIso = activePlan ? activePlan.effectiveFrom.slice(0, 10) : '';
+
+  // Price, cadence and billing mode cannot change for bills already raised, so a change to any
+  // of them supersedes the current plan from a later date instead of editing it in place.
+  const priceOrCadenceChanged = !!activePlan && (
+    (billingMode === 'Fixed' && (Number(feeAmount) || 0) !== activePlan.amount)
+    || feeFrequency !== activePlan.frequency
+    || billingMode !== activePlan.billingMode
+  );
+  // Such a change moves the start on to the next cycle by itself, unless the admin picked a date.
+  const resolvedFeeDate = priceOrCadenceChanged && !feeStartTouched && activePlan
+    ? addPeriodsIso(planStartIso, feeFrequency, 1)
+    : feeStartDate;
+  // A superseding plan must begin after the current one; merely moving the cycle may land on it.
+  const minStartDate = !isFirstPlan && activePlan
+    ? (priceOrCadenceChanged ? addDaysToIso(planStartIso, 1) : planStartIso)
+    : undefined;
   const pastPlans = [...courseFeeStructures.filter((f) => !f.isActive)]
     .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
 
@@ -182,18 +198,16 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setFeeFrequency('Monthly');
     setBillingMode('Fixed');
     setFeeStartDate(todayIso());
+    setFeeStartTouched(false);
     setError('');
     setPlanFormOpen(false);
     setShowHistory(false);
     setPlanError('');
   }, [isOpen, editingCourse]);
 
-  // True when saving the plan form would create a NEW forward-dated plan rather than edit in place:
-  // there's no plan yet, or the amount, frequency or billing mode has been changed.
-  const planFormCreatesNew = !activePlan
-    || (billingMode === 'Fixed' && (Number(feeAmount) || 0) !== activePlan.amount)
-    || feeFrequency !== activePlan.frequency
-    || billingMode !== activePlan.billingMode;
+  // True when saving the plan form would create a NEW forward-dated plan rather than edit in
+  // place: there's no plan yet, the price or cadence changed, or the cycle date was moved.
+  const planFormCreatesNew = !activePlan || priceOrCadenceChanged || resolvedFeeDate !== planStartIso;
   // Only a fixed plan carries a price; the others take theirs per student or bill nothing.
   const needsAmount = billingMode === 'Fixed';
 
@@ -259,8 +273,10 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     const freq = activePlan?.frequency ?? 'Monthly';
     setFeeFrequency(freq);
     setBillingMode(activePlan?.billingMode ?? 'Fixed');
-    // A price change supersedes the current plan, so default the start one period ahead of it.
-    setFeeStartDate(activePlan ? addPeriodsIso(activePlan.effectiveFrom.slice(0, 10), freq, 1) : todayIso());
+    // Open on the plan's own cycle date so nothing reads as changed. Changing the price advances
+    // it a period automatically; changing it by hand is what moves the cycle.
+    setFeeStartDate(activePlan ? activePlan.effectiveFrom.slice(0, 10) : todayIso());
+    setFeeStartTouched(false);
     setPlanActive(activePlan?.isActive ?? true);
     setPlanError('');
     setPlanFormOpen(true);
@@ -453,8 +469,8 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                   <div className="mt-2.5 space-y-2.5" onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void handlePlanSubmit(); } }}>
                     <p className="text-xs text-[#808080] dark:text-[#94a3b8]">
                       {planFormCreatesNew
-                        ? `Starts a new plan on ${fmtDate(resolvedFeeDate)}. The current plan ends the day before — past bills keep their price.`
-                        : 'Editing this plan. Change the amount or frequency to start a new priced plan instead.'}
+                        ? `Starts a new plan on ${fmtDate(resolvedFeeDate)}. The current plan ends the day before — past bills keep their price and cycle.`
+                        : 'Editing this plan. Change the amount, frequency or billing cycle date to start a new plan from that date instead.'}
                     </p>
                     <div>
                       <label className={labelClass}>Fee name</label>
@@ -475,10 +491,10 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                           options={(Object.keys(FEE_FREQUENCY_LABELS) as FeeFrequency[]).map((f) => ({ value: f, label: FEE_FREQUENCY_LABELS[f] }))} />
                       </div>
                     </div>
-                    {planFormCreatesNew ? (
-                      <FirstBillDateField id="plan-fee-start" value={feeStartDate} onChange={setFeeStartDate}
-                        frequency={feeFrequency} min={minStartDate} isNewPlan={!isFirstPlan} />
-                    ) : (
+                    <FirstBillDateField id="plan-fee-start" value={resolvedFeeDate}
+                      onChange={(value) => { setFeeStartDate(value); setFeeStartTouched(true); }}
+                      frequency={feeFrequency} min={minStartDate} isNewPlan={priceOrCadenceChanged} />
+                    {!planFormCreatesNew && (
                       <label className="flex items-center gap-2 text-xs font-semibold text-[#575757] dark:text-[#cbd5e1] cursor-pointer">
                         <input type="checkbox" checked={planActive} onChange={(event) => setPlanActive(event.target.checked)} className="h-3.5 w-3.5 accent-[#3fc073] rounded" />
                         Plan is active

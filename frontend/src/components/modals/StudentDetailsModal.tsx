@@ -48,7 +48,10 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
       api.studentPayments(token, student.id), api.achievements(token, student.id),
     ])
       .then(([ledgerData, dueRows, paymentRows, achievementRows]) => {
-        setLedger(ledgerData); setDues(dueRows); setPayments(paymentRows); setAchievements(achievementRows);
+        setLedger(ledgerData);
+        // A bill that has not reached its due date is not shown anywhere in the app.
+        setDues(dueRows.filter((due) => due.status !== 'Upcoming'));
+        setPayments(paymentRows); setAchievements(achievementRows);
       })
       .catch(() => { setLedger(null); setDues([]); setPayments([]); setAchievements([]); })
       .finally(() => setLoading(false));
@@ -142,14 +145,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                 {student.outstandingBalance > 0 ? (
                   <span className="inline-flex shrink-0 items-center whitespace-nowrap text-xs bg-rose-100 text-[#ef4444] font-semibold px-2.5 py-0.5 rounded-full dark:bg-rose-950/80 dark:text-rose-300">
                     ₹{student.outstandingBalance.toLocaleString('en-IN')} outstanding
-                    {student.upcomingAmount > 0 && <span className="text-[#b45309] dark:text-amber-300"> · ₹{student.upcomingAmount.toLocaleString('en-IN')} upcoming</span>}
                   </span>
-                ) : student.upcomingAmount > 0 ? (
-                  <span className="inline-flex shrink-0 items-center whitespace-nowrap text-xs bg-amber-50 text-[#b45309] font-semibold px-2.5 py-0.5 rounded-full dark:bg-amber-950/40 dark:text-amber-300">
-                    ₹{student.upcomingAmount.toLocaleString('en-IN')} upcoming
-                  </span>
-                ) : student.hasUpcomingDues ? (
-                  <span className="inline-flex shrink-0 items-center whitespace-nowrap text-xs bg-amber-50 text-[#b45309] font-semibold px-2.5 py-0.5 rounded-full dark:bg-amber-950/40 dark:text-amber-300">Payment upcoming</span>
                 ) : student.hasBillableDues ? (
                   <span className="text-xs bg-emerald-100 text-[#22c55e] font-semibold px-2.5 py-0.5 rounded-full dark:bg-emerald-950/80 dark:text-emerald-300">Fully paid</span>
                 ) : (
@@ -472,7 +468,7 @@ function FeeHistoryPanel({ ledger, dues, payments, hasUpcomingDues, onRefund }: 
       {/* The strip: one stamped tile per bill */}
       {bills.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#c2c2c2] px-4 py-6 text-center text-xs text-[#808080] dark:border-[#243244] dark:text-[#94a3b8]">
-          {hasUpcomingDues ? 'The first bill has not come due yet. It will appear here on its due date.' : 'No bills yet. Add the student to a batch with a fee plan to start billing.'}
+          {hasUpcomingDues ? 'Nothing due yet. The first bill appears here on its due date.' : 'No bills yet. Add the student to a batch with a fee plan to start billing.'}
         </div>
       ) : (
         <div ref={stripRef} className="fee-strip -mx-1 flex gap-2.5 overflow-x-auto px-1 pb-2 pt-1" role="list" aria-label="Bills">
@@ -638,7 +634,7 @@ function FeeLedgerPanel({ ledger, hasUpcomingDues }: { ledger: StudentLedger; ha
         || summary.totalFines > 0 || summary.totalWrittenOff > 0 || summary.reservedCredit > 0) && (
         <div className="flex flex-wrap gap-1.5">
           {summary.overdue > 0 && <SummaryChip label="Overdue" value={inr(summary.overdue)} tone="danger" />}
-          {summary.reservedCredit > 0 && <SummaryChip label="Reserved for upcoming" value={inr(summary.reservedCredit)} tone="muted" />}
+          {summary.reservedCredit > 0 && <SummaryChip label="Reserved for later bills" value={inr(summary.reservedCredit)} tone="muted" />}
           {summary.totalFines > 0 && <SummaryChip label="Fines" value={inr(summary.totalFines)} tone="danger" />}
           {summary.totalAdjustments > 0 && <SummaryChip label="Adjustments" value={inr(summary.totalAdjustments)} tone="muted" />}
           {summary.totalWrittenOff > 0 && <SummaryChip label="Written off" value={inr(summary.totalWrittenOff)} tone="muted" />}
@@ -648,7 +644,7 @@ function FeeLedgerPanel({ ledger, hasUpcomingDues }: { ledger: StudentLedger; ha
 
       {entries.length === 0 ? (
         <p className="text-xs text-[#808080]">
-          {hasUpcomingDues ? 'No fees due yet — the next bill hasn’t reached its due date.' : 'Nothing billed yet.'}
+          {hasUpcomingDues ? 'Nothing due yet. The next bill appears here on its due date.' : 'Nothing billed yet.'}
         </p>
       ) : (
         <>
