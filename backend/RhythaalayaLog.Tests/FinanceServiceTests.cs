@@ -194,7 +194,7 @@ public sealed class FinanceServiceTests
         using var _1 = h;
 
         var future = await h.Finance.CreateCustomFeeDueAsync(
-            new CreateCustomFeeDueRequest(h.Student.Id, enrollment.Id, "Exam fee", 400m, Today.AddDays(10)), default);
+            new CreateCustomFeeDueRequest(h.Student.Id, enrollment.Id, "Exam fee", 400m, TestHarness.NotYetBilled(10)), default);
 
         Assert.Equal("Exam fee", future.Title);
         Assert.Null(future.FeeStructureId);

@@ -17,8 +17,10 @@ namespace RhythaalayaLog.Infrastructure;
 /// (no month-end drift); a frequency change re-anchors where the last billed period ended, so
 /// periods stay contiguous with neither gap nor overlap.</item>
 /// <item>A due dated inside the course's Upcoming notice window (or the academy lead days) is
-/// generated as Upcoming. Advance credit is applied only when a due arrives, never to Upcoming
-/// dues, so credit stays visible until it is actually consumed.</item>
+/// generated ahead of time; the current billing month is always inside the horizon. It is Upcoming
+/// only while its billing month is still in the future, and turns Pending on the 1st of that month
+/// whatever day the due date falls on. Advance credit is applied only when a due arrives, never to
+/// Upcoming dues, so credit stays visible until it is actually consumed.</item>
 /// <item>Unpaid dues become Overdue only once the academy's grace days after the due date have passed.</item>
 /// </list>
 /// All calendar arithmetic uses the tenant's local business date via <see cref="BusinessClock"/>.
@@ -73,6 +75,11 @@ public sealed class FeeDueGenerator(AppDbContext db)
         // "Upcoming" horizon: a due is generated (as Upcoming) once today is within the course's
         // notice window before its due date; the academy-wide lead days are the fallback.
         var horizon = today.AddDays(await UpcomingNotificationDaysAsync(enrollment.CourseId, settings, ct));
+        // Everything dated in the current billing month must exist by the 1st, since that is when
+        // it becomes pending. A short notice window would otherwise leave it ungenerated until
+        // days into the month, and there would be nothing to turn pending.
+        var billingMonthEnd = BillingSchedule.EndOfMonth(today);
+        if (horizon < billingMonthEnd) horizon = billingMonthEnd;
         if (billingEnd is { } end && end < horizon) horizon = end;
         if (horizon < billingStart) return;
 
@@ -83,10 +90,39 @@ public sealed class FeeDueGenerator(AppDbContext db)
 
         var policy = enrollment.LateBillingPolicy ?? settings.LateEnrollmentBillingPolicy;
         foreach (var oneTime in structures.Where(x => x.Frequency == FeeFrequency.OneTime))
-            await EnsureOneTimeAsync(enrollment, oneTime, billingStart, today, horizon, ct);
+        {
+            if (BillableAmount(oneTime, enrollment) is null) continue;
+            await EnsureOneTimeAsync(enrollment, oneTime, PlanBillingStart(oneTime, enrollment, billingStart), today, horizon, ct);
+        }
         foreach (var lineage in structures.Where(x => x.Frequency != FeeFrequency.OneTime).GroupBy(x => x.FeeHeadId))
-            await EnsureLineageAsync(enrollment, lineage.ToList(), billingStart, today, horizon, policy, ct);
+        {
+            var plans = lineage.ToList();
+            if (plans.All(x => BillableAmount(x, enrollment) is null)) continue;
+            await EnsureLineageAsync(enrollment, plans, PlanBillingStart(plans[0], enrollment, billingStart),
+                today, horizon, policy, ct);
+        }
     }
+
+    /// <summary>
+    /// What this enrollment owes on this plan, or null when there is nothing to bill: an Unbilled
+    /// plan, or a per-student plan whose price has not been agreed yet.
+    /// </summary>
+    internal static decimal? BillableAmount(FeeStructure structure, Enrollment enrollment) => structure.BillingMode switch
+    {
+        FeeBillingMode.Unbilled => null,
+        FeeBillingMode.PerStudent => enrollment.FeeAmountOverride,
+        _ => structure.Amount
+    };
+
+    /// <summary>
+    /// The earliest day this plan may bill this enrollment. A per-student plan starts no earlier
+    /// than the day its amount was agreed: without that floor, entering a price months into an
+    /// enrollment would raise every unpriced period at once, all of them instantly overdue.
+    /// </summary>
+    internal static DateOnly PlanBillingStart(FeeStructure structure, Enrollment enrollment, DateOnly billingStart) =>
+        structure.BillingMode == FeeBillingMode.PerStudent && enrollment.FeeAmountSetOn is { } setOn && setOn > billingStart
+            ? setOn
+            : billingStart;
 
     /// <summary>A one-time plan is charged once, dated on its own effective date (or the billing start, if later).</summary>
     private async Task EnsureOneTimeAsync(Enrollment enrollment, FeeStructure structure, DateOnly billingStart,
@@ -227,6 +263,14 @@ public sealed class FeeDueGenerator(AppDbContext db)
     private async Task CreateDueAsync(Enrollment enrollment, FeeStructure structure, DateOnly dueDate, DateOnly today,
         DateOnly periodStart, DateOnly periodEnd, DateOnly? prorateFrom, CancellationToken ct)
     {
+        // Unbilled plans, and per-student plans with no agreed price, raise nothing.
+        if (BillableAmount(structure, enrollment) is not { } amount) return;
+        // Nor does a per-student plan bill any period that closed before its price was agreed.
+        // The lineage walker keeps advancing past a skipped due, so this only drops the bill, and
+        // it also catches a course switched to per-student pricing partway through its history —
+        // there the walker resumes from the last fixed-price due, bypassing PlanBillingStart.
+        if (structure.BillingMode == FeeBillingMode.PerStudent
+            && enrollment.FeeAmountSetOn is { } setOn && dueDate < setOn) return;
         var exists = await db.FeeDues.AnyAsync(x => x.EnrollmentId == enrollment.Id
             && x.FeeStructureId == structure.Id && x.DueDate == dueDate, ct);
         if (exists) return;
@@ -236,18 +280,19 @@ public sealed class FeeDueGenerator(AppDbContext db)
             TenantId = enrollment.TenantId, StudentId = enrollment.StudentId, EnrollmentId = enrollment.Id,
             FeeStructureId = structure.Id, FeeHeadId = structure.FeeHeadId, DueDate = dueDate,
             PeriodStart = periodStart, PeriodEnd = periodEnd,
-            Amount = structure.Amount, DiscountAmount = 0, NetAmount = structure.Amount,
-            Status = dueDate > today ? FeeDueStatus.Upcoming : FeeDueStatus.Pending
+            Amount = amount, DiscountAmount = 0, NetAmount = amount,
+            // Pending as soon as its billing month has started, not only on the due date itself.
+            Status = dueDate > BillingSchedule.EndOfMonth(today) ? FeeDueStatus.Upcoming : FeeDueStatus.Pending
         };
 
         if (prorateFrom is { } enrolledOn)
         {
-            var reduction = BillingSchedule.ProrationReduction(structure.Amount, periodStart, enrolledOn, structure.Frequency);
+            var reduction = BillingSchedule.ProrationReduction(amount, periodStart, enrolledOn, structure.Frequency);
             if (reduction > 0)
             {
                 var periodDays = BillingSchedule.PeriodDays(periodStart, structure.Frequency);
                 var billedDays = periodDays - (enrolledOn.DayNumber - periodStart.DayNumber);
-                due.NetAmount = structure.Amount - reduction;
+                due.NetAmount = amount - reduction;
                 due.Adjustments.Add(new FeeAdjustment
                 {
                     TenantId = enrollment.TenantId, Type = FeeAdjustmentType.Proration, Amount = reduction,
@@ -469,30 +514,35 @@ public sealed class FeeDueGenerator(AppDbContext db)
     }
 
     /// <summary>
-    /// Full coverage always wins as Paid. A future-dated due stays Upcoming even when partly covered
-    /// (the upcoming view keeps meaning "not yet due"). Overdue rule: an unpaid due is Overdue when
-    /// today is later than DueDate + FeeOverdueGraceDays; with the default of 0 grace days that is
-    /// the day after the due date (the academy's rule before grace days existed).
+    /// Full coverage always wins as Paid. A bill belongs to its billing month and is payable from
+    /// the 1st of it, so a due dated the 10th is already Pending on the 1st; only a due dated in a
+    /// later month stays Upcoming, even when partly covered (the upcoming view keeps meaning "not
+    /// billed yet"). Overdue rule: an unpaid due is Overdue when today is later than DueDate +
+    /// FeeOverdueGraceDays; with the default of 0 grace days that is the day after the due date
+    /// (the academy's rule before grace days existed).
     /// </summary>
     internal static FeeDueStatus ComputeStatus(FeeDue due, decimal paid, DateOnly today, int graceDays) =>
         paid >= due.NetAmount ? FeeDueStatus.Paid
-        : due.DueDate > today ? FeeDueStatus.Upcoming
+        : due.DueDate > BillingSchedule.EndOfMonth(today) ? FeeDueStatus.Upcoming
         : due.DueDate.AddDays(graceDays) < today ? FeeDueStatus.Overdue
         : paid > 0 ? FeeDueStatus.Partial
         : FeeDueStatus.Pending;
 
     /// <summary>
-    /// Applies date-driven transitions in bulk: Upcoming rows whose due date has arrived draw down
-    /// advance credit and become Pending/Partial/Paid, and rows past their grace period become Overdue.
+    /// Applies date-driven transitions in bulk: Upcoming rows whose billing month has arrived draw
+    /// down advance credit and become Pending/Partial/Paid, and rows past their grace period become
+    /// Overdue. On the 1st this is what turns the whole month's dues pending in one sweep.
     /// </summary>
     public async Task RefreshDateDrivenStatusesAsync(Guid? studentId, CancellationToken ct)
     {
         var settings = await GetSettingsAsync(ct);
         var today = BusinessClock.TodayIn(settings.TimeZone);
         var overdueBefore = today.AddDays(-settings.FeeOverdueGraceDays);
+        // Computed here, not in the predicate: the provider has to translate a plain comparison.
+        var billingMonthEnd = BillingSchedule.EndOfMonth(today);
         var query = db.FeeDues.Where(x =>
             (x.DueDate < overdueBefore && (x.Status == FeeDueStatus.Pending || x.Status == FeeDueStatus.Partial))
-            || (x.DueDate <= today && x.Status == FeeDueStatus.Upcoming));
+            || (x.DueDate <= billingMonthEnd && x.Status == FeeDueStatus.Upcoming));
         if (studentId.HasValue) query = query.Where(x => x.StudentId == studentId.Value);
         var dues = await query.ToListAsync(ct);
         if (dues.Count == 0) return;

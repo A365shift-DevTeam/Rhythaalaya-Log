@@ -81,8 +81,10 @@ public sealed class FinanceAuditTests
     public async Task FIN001_PartiallyAllocatedPayment_ThenFullRefund_LeavesNoCredit()
     {
         using var h = new TestHarness();
-        h.AddStructure(1000m, FeeFrequency.Monthly, Today.AddDays(-20)); // one bill so far; the next is outside the 7-day notice
-        var enrollment = h.Enroll(Today.AddDays(-20));
+        // Anchored on the 1st: one bill this month, and the next falls in the following month,
+        // so it is beyond the horizon and not generated yet.
+        h.AddStructure(1000m, FeeFrequency.Monthly, TestHarness.MonthStart);
+        var enrollment = h.Enroll(TestHarness.MonthStart);
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
         var first = h.DuesFor(enrollment.Id)[0];
 
@@ -363,7 +365,9 @@ public sealed class FinanceAuditTests
     public async Task FIN005_WithdrawalOnOrAfterDueDate_LeavesThatDueOwed()
     {
         using var h = new TestHarness(leadDays: 7);
-        h.AddStructure(1000m, FeeFrequency.Monthly, Today.AddDays(-20));
+        // One-time so exactly one due exists: a recurring plan would also bill the rest of this
+        // month, which is generated up front now that the whole month is payable from the 1st.
+        h.AddStructure(1000m, FeeFrequency.OneTime, Today.AddDays(-20));
         var enrollment = h.Enroll(Today.AddDays(-20));
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
         var due = Assert.Single(h.DuesFor(enrollment.Id));
@@ -372,7 +376,7 @@ public sealed class FinanceAuditTests
         Assert.NotEqual(FeeDueStatus.Cancelled, h.DuesFor(enrollment.Id)[0].Status); // exit on the due date: period was started
 
         using var later = new TestHarness(leadDays: 7);
-        later.AddStructure(1000m, FeeFrequency.Monthly, Today.AddDays(-20));
+        later.AddStructure(1000m, FeeFrequency.OneTime, Today.AddDays(-20));
         var e2 = later.Enroll(Today.AddDays(-20));
         await later.Generator.EnsureForStudentAsync(later.Student.Id, default);
         await later.Academy.EndEnrollmentAsync(e2.Id, new EndEnrollmentRequest(EnrollmentStatus.Withdrawn, Today), default);
@@ -436,7 +440,8 @@ public sealed class FinanceAuditTests
     public async Task FIN006_ArchivedStudentBalance_StaysInReceivables()
     {
         using var h = new TestHarness(leadDays: 7);
-        h.AddStructure(5000m, FeeFrequency.Monthly, Today.AddDays(-20));
+        // One-time: a single overdue bill of 5,000, with no further dues generated for this month.
+        h.AddStructure(5000m, FeeFrequency.OneTime, Today.AddDays(-20));
         h.Enroll(Today.AddDays(-20));
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
         Assert.Equal(5000m, (await h.Reporting.GetFinanceDashboardAsync(new FinanceDashboardQuery(), default)).TotalPending);
@@ -552,10 +557,10 @@ public sealed class FinanceAuditTests
     public async Task FIN010_ExistingCredit_StaysAvailable_UntilAFutureBillArrives()
     {
         // SETUP: ₹5,000 on account before any bill exists; then a future bill is generated.
-        using var h = new TestHarness(leadDays: 20);
-        var enrollment = h.Enroll(Today);
+        using var h = new TestHarness(leadDays: TestHarness.DaysToMonthEnd + 20);
+        var dueDate = TestHarness.NotYetBilled(10); // next month, so the bill has genuinely not arrived
+        var enrollment = h.Enroll(dueDate); // joins on the cycle date: no earlier period to bill
         await h.Finance.RecordFeePaymentAsync(Payment(h.Student.Id, 5000m), default);
-        var dueDate = Today.AddDays(10);
         h.AddStructure(2000m, FeeFrequency.Monthly, dueDate);
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
         var upcoming = Assert.Single(h.DuesFor(enrollment.Id));
@@ -577,10 +582,10 @@ public sealed class FinanceAuditTests
     [Fact]
     public async Task FIN010_PaymentWhileAFutureBillIsListed_SettlesItEarly_RemainderIsCredit()
     {
-        // SETUP: current ₹2,000 (due today) and upcoming ₹2,000 (due in 10 days).
-        using var h = new TestHarness(leadDays: 20);
-        h.AddStructure(2000m, FeeFrequency.Monthly, Today.AddDays(-20));
-        var enrollment = h.Enroll(Today.AddDays(-20));
+        // SETUP: this month's ₹2,000 (already payable) and next month's ₹2,000 (still Upcoming).
+        using var h = new TestHarness(leadDays: TestHarness.DaysToMonthEnd + 5);
+        h.AddStructure(2000m, FeeFrequency.Monthly, TestHarness.MonthStart);
+        var enrollment = h.Enroll(TestHarness.MonthStart);
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
         var dues = h.DuesFor(enrollment.Id);
         Assert.Equal(2, dues.Count);
@@ -601,9 +606,9 @@ public sealed class FinanceAuditTests
     [Fact]
     public async Task FIN010_ExplicitPrepaymentOfUpcomingDue_IsReportedAsReservedCredit()
     {
-        using var h = new TestHarness(leadDays: 20);
-        h.AddStructure(2000m, FeeFrequency.Monthly, Today.AddDays(10));
-        var enrollment = h.Enroll(Today);
+        using var h = new TestHarness(leadDays: TestHarness.DaysToMonthEnd + 20);
+        h.AddStructure(2000m, FeeFrequency.Monthly, TestHarness.NotYetBilled(10));
+        var enrollment = h.Enroll(TestHarness.NotYetBilled(10)); // joins on the cycle date: no earlier period to bill
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
         var upcoming = Assert.Single(h.DuesFor(enrollment.Id));
 
@@ -631,9 +636,9 @@ public sealed class FinanceAuditTests
     [Fact]
     public async Task FIN011_CancellingUpcomingDue_ReleasesItsCredit_WithoutRefund()
     {
-        using var h = new TestHarness(leadDays: 20);
-        h.AddStructure(2000m, FeeFrequency.Monthly, Today.AddDays(10));
-        var enrollment = h.Enroll(Today);
+        using var h = new TestHarness(leadDays: TestHarness.DaysToMonthEnd + 20);
+        h.AddStructure(2000m, FeeFrequency.Monthly, TestHarness.NotYetBilled(10));
+        var enrollment = h.Enroll(TestHarness.NotYetBilled(10)); // joins on the cycle date: no earlier period to bill
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
         var upcoming = Assert.Single(h.DuesFor(enrollment.Id));
         await h.Finance.RecordFeePaymentAsync(Payment(h.Student.Id, 2000m, upcoming.Id), default);

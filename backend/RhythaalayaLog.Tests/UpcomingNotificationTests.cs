@@ -7,13 +7,19 @@ using Xunit;
 namespace RhythaalayaLog.Tests;
 
 /// <summary>
-/// Per-course "Upcoming fee notice": a due is generated as Upcoming once today is within the
-/// course's notice window (1–30 days) before its due date; null falls back to the academy-wide
-/// FeeDueLeadDays. UpcomingAmount is informational and never leaks into OutstandingBalance.
+/// Per-course "Upcoming fee notice": a due is generated once today is within the course's notice
+/// window (1–30 days) before its due date; null falls back to the academy-wide FeeDueLeadDays.
+/// The current billing month is always generated regardless of the window, because every due
+/// dated inside it turns Pending on the 1st. So a generated due is Upcoming only while its due
+/// date is past the end of this month. UpcomingAmount is informational and never leaks into
+/// OutstandingBalance.
 /// </summary>
 public sealed class UpcomingNotificationTests
 {
     private static readonly DateOnly Today = TestHarness.Today;
+
+    /// <summary>Notice window that reaches exactly <paramref name="days"/> past the end of this month.</summary>
+    private static int NoticeReachingPastMonthEnd(int days) => TestHarness.DaysToMonthEnd + days;
 
     private static AcademyService Service(TestHarness h) => new(h.Db,
         new FixedTenantContext { TenantId = h.TenantId, UserId = h.UserId, Role = UserRole.TenantAdmin },
@@ -23,22 +29,27 @@ public sealed class UpcomingNotificationTests
     private static void PlanDueIn(TestHarness h, int daysAhead, Course? course = null) =>
         h.AddStructure(2000m, FeeFrequency.Monthly, Today.AddDays(daysAhead), course: course);
 
+    /// <summary>A monthly plan whose next due lands <paramref name="days"/> past the end of this month.</summary>
+    private static void PlanDueAfterMonthEnd(TestHarness h, int days, Course? course = null) =>
+        h.AddStructure(2000m, FeeFrequency.Monthly, TestHarness.NotYetBilled(days), course: course);
+
     // --- Generator: notice window resolution ---------------------------------------------------
 
     [Theory]
     [InlineData(1)]
     [InlineData(7)]
     [InlineData(30)]
-    public async Task DueInsideNoticeWindow_IsGeneratedAsUpcoming(int noticeDays)
+    public async Task DueInsideNoticeWindow_IsGeneratedAsUpcoming(int daysPastMonthEnd)
     {
+        var noticeDays = NoticeReachingPastMonthEnd(daysPastMonthEnd);
         using var h = new TestHarness(leadDays: 0, courseNoticeDays: noticeDays);
-        PlanDueIn(h, noticeDays); // today = DueDate - noticeDays: first day of the window
-        var enrollment = h.Enroll(Today.AddDays(noticeDays)); // joins on the cycle date, so nothing is owed before it
+        PlanDueAfterMonthEnd(h, daysPastMonthEnd); // today = DueDate - noticeDays: first day of the window
+        var enrollment = h.Enroll(TestHarness.NotYetBilled(daysPastMonthEnd)); // joins on the cycle date, so nothing is owed before it
 
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
 
         var due = Assert.Single(h.DuesFor(enrollment.Id));
-        Assert.Equal(Today.AddDays(noticeDays), due.DueDate);
+        Assert.Equal(TestHarness.NotYetBilled(daysPastMonthEnd), due.DueDate);
         Assert.Equal(FeeDueStatus.Upcoming, due.Status);
     }
 
@@ -46,11 +57,12 @@ public sealed class UpcomingNotificationTests
     [InlineData(1)]
     [InlineData(7)]
     [InlineData(30)]
-    public async Task DueOneDayBeyondNoticeWindow_IsNotGeneratedYet(int noticeDays)
+    public async Task DueOneDayBeyondNoticeWindow_IsNotGeneratedYet(int daysPastMonthEnd)
     {
+        var noticeDays = NoticeReachingPastMonthEnd(daysPastMonthEnd);
         using var h = new TestHarness(leadDays: 90, courseNoticeDays: noticeDays); // academy window is wider: course must win
-        PlanDueIn(h, noticeDays + 1);
-        var enrollment = h.Enroll(Today.AddDays(noticeDays + 1)); // joins on the cycle date
+        PlanDueAfterMonthEnd(h, daysPastMonthEnd + 1);
+        var enrollment = h.Enroll(TestHarness.NotYetBilled(daysPastMonthEnd + 1)); // joins on the cycle date
 
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
 
@@ -69,20 +81,36 @@ public sealed class UpcomingNotificationTests
         Assert.Equal(FeeDueStatus.Pending, Assert.Single(h.DuesFor(enrollment.Id)).Status);
     }
 
+    /// <summary>The rule this module exists for: the whole billing month is payable from the 1st.</summary>
+    [Fact]
+    public async Task DueLaterThisMonth_IsPendingNotUpcoming()
+    {
+        if (TestHarness.DaysToMonthEnd == 0) return; // today is the last day: no "later this month" exists
+        using var h = new TestHarness(courseNoticeDays: 1); // notice window far too short to reach the due date
+        PlanDueIn(h, TestHarness.DaysToMonthEnd);
+        var enrollment = h.Enroll(Today.AddDays(TestHarness.DaysToMonthEnd));
+
+        await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
+
+        var due = Assert.Single(h.DuesFor(enrollment.Id));
+        Assert.Equal(TestHarness.MonthEnd, due.DueDate);
+        Assert.Equal(FeeDueStatus.Pending, due.Status);
+    }
+
     [Fact]
     public async Task NullCourseSetting_FallsBackToAcademyLeadDays()
     {
-        using var h = new TestHarness(leadDays: 7, courseNoticeDays: null);
-        PlanDueIn(h, 7);
-        var enrollment = h.Enroll(Today);
+        using var h = new TestHarness(leadDays: NoticeReachingPastMonthEnd(7), courseNoticeDays: null);
+        PlanDueAfterMonthEnd(h, 7);
+        var enrollment = h.Enroll(TestHarness.NotYetBilled(7));
 
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
 
         Assert.Equal(FeeDueStatus.Upcoming, Assert.Single(h.DuesFor(enrollment.Id)).Status);
 
-        using var wider = new TestHarness(leadDays: 7, courseNoticeDays: null);
-        PlanDueIn(wider, 8);
-        var later = wider.Enroll(Today);
+        using var wider = new TestHarness(leadDays: NoticeReachingPastMonthEnd(7), courseNoticeDays: null);
+        PlanDueAfterMonthEnd(wider, 8);
+        var later = wider.Enroll(TestHarness.NotYetBilled(8));
         await wider.Generator.EnsureForStudentAsync(wider.Student.Id, default);
         Assert.Empty(wider.DuesFor(later.Id));
     }
@@ -90,9 +118,9 @@ public sealed class UpcomingNotificationTests
     [Fact]
     public async Task CourseSetting_OverridesAcademyLeadDays()
     {
-        using var h = new TestHarness(leadDays: 7, courseNoticeDays: 15);
-        PlanDueIn(h, 12); // beyond the academy's 7, inside the course's 15
-        var enrollment = h.Enroll(Today);
+        using var h = new TestHarness(leadDays: NoticeReachingPastMonthEnd(7), courseNoticeDays: NoticeReachingPastMonthEnd(15));
+        PlanDueAfterMonthEnd(h, 12); // beyond the academy's window, inside the course's
+        var enrollment = h.Enroll(TestHarness.NotYetBilled(12));
 
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
 
@@ -102,12 +130,12 @@ public sealed class UpcomingNotificationTests
     [Fact]
     public async Task TwoCourses_EachUseTheirOwnNoticeWindow_InOneRun()
     {
-        using var h = new TestHarness(leadDays: 7, courseNoticeDays: 5);
-        var courseB = h.AddCourse("Kathak", noticeDays: 20);
-        PlanDueIn(h, 10);                    // course A (5 days): due in 10 → not yet
-        PlanDueIn(h, 10, course: courseB);   // course B (20 days): due in 10 → Upcoming
-        var enrollmentA = h.Enroll(Today);
-        var enrollmentB = h.Enroll(Today, courseB);
+        using var h = new TestHarness(leadDays: NoticeReachingPastMonthEnd(7), courseNoticeDays: NoticeReachingPastMonthEnd(5));
+        var courseB = h.AddCourse("Kathak", noticeDays: NoticeReachingPastMonthEnd(20));
+        PlanDueAfterMonthEnd(h, 10);                    // course A (5 days past month end): not yet
+        PlanDueAfterMonthEnd(h, 10, course: courseB);   // course B (20 days past month end): Upcoming
+        var enrollmentA = h.Enroll(TestHarness.NotYetBilled(10));
+        var enrollmentB = h.Enroll(TestHarness.NotYetBilled(10), courseB);
 
         await h.Generator.EnsureForTenantAsync(default);
 
@@ -118,9 +146,9 @@ public sealed class UpcomingNotificationTests
     [Fact]
     public async Task ChangingCourseSetting_LeavesExistingDuesUntouched_AppliesToNextRun()
     {
-        using var h = new TestHarness(leadDays: 7, courseNoticeDays: 7);
-        h.AddStructure(2000m, FeeFrequency.Monthly, Today.AddDays(5));
-        var enrollment = h.Enroll(Today);
+        using var h = new TestHarness(leadDays: NoticeReachingPastMonthEnd(7), courseNoticeDays: NoticeReachingPastMonthEnd(7));
+        h.AddStructure(2000m, FeeFrequency.Monthly, TestHarness.NotYetBilled(5));
+        var enrollment = h.Enroll(TestHarness.NotYetBilled(5));
         await h.Generator.EnsureForStudentAsync(h.Student.Id, default);
         var before = Assert.Single(h.DuesFor(enrollment.Id));
 
@@ -171,10 +199,13 @@ public sealed class UpcomingNotificationTests
 
     private static FeeDue AddDue(TestHarness h, Guid enrollmentId, decimal amount, FeeDueStatus status, int daysFromToday)
     {
+        // An Upcoming due has to be dated past this month's end, or the next status refresh
+        // correctly turns it Pending.
+        var dueDate = status == FeeDueStatus.Upcoming ? TestHarness.NotYetBilled(daysFromToday) : Today.AddDays(daysFromToday);
         var due = new FeeDue
         {
             TenantId = h.TenantId, StudentId = h.Student.Id, EnrollmentId = enrollmentId,
-            DueDate = Today.AddDays(daysFromToday), Amount = amount, DiscountAmount = 0, NetAmount = amount, Status = status,
+            DueDate = dueDate, Amount = amount, DiscountAmount = 0, NetAmount = amount, Status = status,
             Title = "Manual"
         };
         h.Db.FeeDues.Add(due);

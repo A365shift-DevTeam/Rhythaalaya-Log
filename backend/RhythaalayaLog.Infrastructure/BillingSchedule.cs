@@ -109,6 +109,14 @@ public static class BillingSchedule
         AddPeriod(periodStart, frequency).DayNumber - periodStart.DayNumber;
 
     /// <summary>
+    /// Last calendar day of the month <paramref name="date"/> falls in. The billing month is the
+    /// unit a bill belongs to: every due dated inside it is payable from the 1st, whatever day of
+    /// the month the due date itself is.
+    /// </summary>
+    public static DateOnly EndOfMonth(DateOnly date) =>
+        new(date.Year, date.Month, DateTime.DaysInMonth(date.Year, date.Month));
+
+    /// <summary>
     /// Converts the current instant to the tenant's local calendar date. Falls back to
     /// Asia/Kolkata when the stored id is unknown, and to UTC as a last resort, so billing
     /// never crashes on a bad timezone value.

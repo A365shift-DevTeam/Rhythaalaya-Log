@@ -292,10 +292,15 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             ConcessionReason = InputRules.OptionalText(request.ConcessionReason, "Concession reason", InputRules.ReasonLength)
         };
         db.Students.Add(student);
+        // A price agreed at enrolment bills from the enrolment date, like any fixed plan would.
+        var feeAmounts = (request.BatchFeeAmounts ?? []).ToDictionary(x => x.BatchId, x => x.Amount);
+        foreach (var amount in feeAmounts.Values) ValidateFeeAmount(amount);
         var enrollments = batches.Select(batch => new Enrollment
         {
             TenantId = tenantId, StudentId = student.Id, BatchId = batch.Id, CourseId = batch.CourseId,
-            EnrolledOn = joinDate, LateBillingPolicy = request.LateBillingPolicy
+            EnrolledOn = joinDate, LateBillingPolicy = request.LateBillingPolicy,
+            FeeAmountOverride = feeAmounts.TryGetValue(batch.Id, out var fee) ? fee : null,
+            FeeAmountSetOn = feeAmounts.ContainsKey(batch.Id) ? joinDate : null
         }).ToList();
         db.Enrollments.AddRange(enrollments);
         // One SaveChanges, so EF wraps the student and every enrollment in a single transaction.
@@ -364,15 +369,52 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
         var alreadyEnrolled = await db.Enrollments.AnyAsync(x => x.StudentId == request.StudentId
             && x.BatchId == request.BatchId && x.Status == EnrollmentStatus.Active, ct);
         if (alreadyEnrolled) throw new ConflictException("The student is already actively enrolled in this batch.");
+        var enrolledOn = request.EnrolledOn ?? await dueGenerator.TodayForTenantAsync(ct);
+        if (request.FeeAmount is { } agreed) ValidateFeeAmount(agreed);
         var enrollment = new Enrollment
         {
             TenantId = RequireTenant(), StudentId = student.Id, BatchId = batch.Id, CourseId = batch.CourseId,
-            EnrolledOn = request.EnrolledOn ?? await dueGenerator.TodayForTenantAsync(ct)
+            EnrolledOn = enrolledOn,
+            FeeAmountOverride = request.FeeAmount,
+            FeeAmountSetOn = request.FeeAmount is null ? null : enrolledOn
         };
         db.Enrollments.Add(enrollment);
         await db.SaveChangesAsync(ct);
         await dueGenerator.EnsureForEnrollmentAsync(enrollment.Id, ct);
         return await GetStudentAsync(student.Id, ct);
+    }
+
+    /// <summary>
+    /// Sets or clears one enrollment's own price. The first time a price is agreed the day is
+    /// stamped, and billing for that plan starts there: pricing a student months into their
+    /// enrolment must not raise a bill for every month nobody had priced. A later change moves
+    /// only future bills; those already raised keep the amount they were raised at.
+    /// </summary>
+    public async Task<StudentDto> SetEnrollmentFeeAmountAsync(Guid enrollmentId, SetEnrollmentFeeAmountRequest request,
+        CancellationToken ct)
+    {
+        var enrollment = await db.Enrollments.FindAsync([enrollmentId], ct) ?? throw new NotFoundException(nameof(Enrollment));
+        if (request.Amount is { } amount)
+        {
+            ValidateFeeAmount(amount);
+            enrollment.FeeAmountSetOn ??= await dueGenerator.TodayForTenantAsync(ct);
+            enrollment.FeeAmountOverride = amount;
+        }
+        else
+        {
+            enrollment.FeeAmountOverride = null;
+            enrollment.FeeAmountSetOn = null;
+        }
+        await db.SaveChangesAsync(ct);
+        await dueGenerator.EnsureForEnrollmentAsync(enrollment.Id, ct);
+        return await GetStudentAsync(enrollment.StudentId, ct);
+    }
+
+    /// <summary>A per-student price is real money: above zero and no finer than paise.</summary>
+    private static void ValidateFeeAmount(decimal amount)
+    {
+        if (amount <= 0 || decimal.Round(amount, 2) != amount)
+            throw new AppValidationException(nameof(SetEnrollmentFeeAmountRequest.Amount));
     }
 
     public async Task<StudentDto> EndEnrollmentAsync(Guid enrollmentId, EndEnrollmentRequest request, CancellationToken ct)
@@ -639,7 +681,7 @@ public sealed class AcademyService(AppDbContext db, ITenantContext tenantContext
             var enrollments = student.Enrollments.OrderByDescending(x => x.EnrolledOn)
                 .Select(enrollment => new EnrollmentSummaryDto(enrollment.Id, enrollment.BatchId, enrollment.Batch.Name,
                     enrollment.CourseId, enrollment.Batch.Course.Name, enrollment.EnrolledOn, enrollment.EndedOn,
-                    enrollment.Status, enrollmentBalances.GetValueOrDefault(enrollment.Id)))
+                    enrollment.Status, enrollmentBalances.GetValueOrDefault(enrollment.Id), enrollment.FeeAmountOverride))
                 .ToList();
             var (wonCount, participatedCount) = achievementCounts.GetValueOrDefault(student.Id);
             return new StudentDto(student.Id, student.StudentNumber, student.Name, student.DateOfBirth,

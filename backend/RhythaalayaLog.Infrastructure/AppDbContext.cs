@@ -128,6 +128,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         enrollment.HasIndex(x => new { x.TenantId, x.StudentId, x.BatchId, x.Status });
         enrollment.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
         enrollment.Property(x => x.LateBillingPolicy).HasConversion<string>().HasMaxLength(16);
+        enrollment.Property(x => x.FeeAmountOverride).HasPrecision(12, 2);
         enrollment.HasOne(x => x.Student).WithMany(x => x.Enrollments).HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
         enrollment.HasOne(x => x.Batch).WithMany(x => x.Enrollments).HasForeignKey(x => x.BatchId).OnDelete(DeleteBehavior.Restrict);
         enrollment.HasOne(x => x.Course).WithMany().HasForeignKey(x => x.CourseId).OnDelete(DeleteBehavior.Restrict);
@@ -153,6 +154,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         var structure = modelBuilder.Entity<FeeStructure>();
         structure.Property(x => x.Name).HasMaxLength(160);
         structure.Property(x => x.Amount).HasPrecision(12, 2);
+        structure.Property(x => x.BillingMode).HasConversion<string>().HasMaxLength(16);
         structure.Property(x => x.Frequency).HasConversion<string>().HasMaxLength(16);
         structure.HasIndex(x => new { x.TenantId, x.CourseId, x.IsActive });
         structure.HasOne(x => x.Course).WithMany(x => x.FeeStructures).HasForeignKey(x => x.CourseId).OnDelete(DeleteBehavior.Restrict);

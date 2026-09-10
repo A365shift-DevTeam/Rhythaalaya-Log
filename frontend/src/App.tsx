@@ -9,6 +9,7 @@ import {
   Staff,
   Transaction,
   FeeDue,
+  FeeBillingMode,
   FeeStructure,
   LateEnrollmentBillingPolicy,
   OrgSettings,
@@ -36,7 +37,6 @@ import { ReportsTab } from './components/ReportsTab';
 
 import { AddStudentModal } from './components/modals/AddStudentModal';
 import { RecordFeeModal } from './components/modals/RecordFeeModal';
-import { AdjustDueModal } from './components/modals/AdjustDueModal';
 import { AddChargeModal } from './components/modals/AddChargeModal';
 import { WhatsAppModal } from './components/modals/WhatsAppModal';
 import { AddTransactionModal } from './components/modals/AddTransactionModal';
@@ -139,7 +139,6 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [isRecordFeeOpen, setIsRecordFeeOpen] = useState(false);
   const [feeTargetStudent, setFeeTargetStudent] = useState<Student | undefined>(undefined);
-  const [adjustTargetDue, setAdjustTargetDue] = useState<FeeDue | null>(null);
   const [isAddChargeOpen, setIsAddChargeOpen] = useState(false);
 
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
@@ -165,7 +164,6 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
     setEditingStaff(null);
     setIsRecordFeeOpen(false);
     setFeeTargetStudent(undefined);
-    setAdjustTargetDue(null);
     setIsAddChargeOpen(false);
     setIsWhatsAppOpen(false);
     setWhatsAppTargetStudent(undefined);
@@ -185,17 +183,23 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
   const handleAddStudent = async (payload: {
     name: string; dateOfBirth: string | null; joinDate: string; parentName: string; phone: string; email: string; address: string;
     concessionPercent?: number; concessionReason?: string; lateBillingPolicy?: LateEnrollmentBillingPolicy | null;
-  }, batchIds: string[]) => {
+  }, batchIds: string[], feeAmounts: Record<string, number | null> = {}) => {
     // One request: the server writes the student and every enrollment in a single transaction,
     // so a failure saves nothing and pressing Save again cannot create a duplicate student.
-    await api.createStudent(session.token, { ...payload, batchIds: [...new Set(batchIds)] });
+    await api.createStudent(session.token, {
+      ...payload,
+      batchIds: [...new Set(batchIds)],
+      batchFeeAmounts: Object.entries(feeAmounts)
+        .filter((entry): entry is [string, number] => entry[1] != null)
+        .map(([batchId, amount]) => ({ batchId, amount })),
+    });
     await reload();
   };
 
   const handleUpdateStudent = async (studentId: string, payload: {
     name: string; dateOfBirth: string | null; joinDate: string; parentName: string; phone: string; email: string; address: string;
     concessionPercent?: number; concessionReason?: string;
-  }, batchIds: string[]) => {
+  }, batchIds: string[], feeAmounts: Record<string, number | null> = {}) => {
     const existing = students.find((s) => s.id === studentId);
     let updated = await api.updateStudent(session.token, studentId, { ...payload, isActive: existing?.isActive ?? true });
     const requestedBatchIds = [...new Set(batchIds)];
@@ -203,10 +207,17 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
     const activeBatchIds = new Set(activeEnrollments.map((enrollment) => enrollment.batchId));
 
     for (const targetBatchId of requestedBatchIds.filter((id) => !activeBatchIds.has(id))) {
-      updated = await api.enrollStudent(session.token, studentId, targetBatchId);
+      updated = await api.enrollStudent(session.token, studentId, targetBatchId, undefined, feeAmounts[targetBatchId] ?? null);
     }
     for (const enrollment of activeEnrollments.filter((item) => !requestedBatchIds.includes(item.batchId))) {
       updated = await api.endEnrollment(session.token, enrollment.id, 'Withdrawn');
+    }
+    // Only send a price the admin actually changed: every call restamps billing on the server.
+    for (const enrollment of activeEnrollments.filter((item) => requestedBatchIds.includes(item.batchId))) {
+      if (!(enrollment.batchId in feeAmounts)) continue;
+      const next = feeAmounts[enrollment.batchId];
+      if (next === (enrollment.feeAmountOverride ?? null)) continue;
+      updated = await api.setEnrollmentFeeAmount(session.token, enrollment.id, next);
     }
 
     await reload();
@@ -283,7 +294,7 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
       if (fee) {
         await handleAddFeeStructure({
           courseId: created.id, name: fee.name, amount: fee.amount, frequency: fee.frequency,
-          effectiveFrom: fee.dueDate
+          effectiveFrom: fee.dueDate, billingMode: fee.billingMode
         });
       }
     }
@@ -311,7 +322,7 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
 
   const handleAddFeeStructure = async (payload: {
     courseId: string; name: string; amount: number; frequency: FeeStructure['frequency']; effectiveFrom: string;
-    effectiveTo?: string | null;
+    effectiveTo?: string | null; billingMode?: FeeBillingMode;
   }) => {
     const created = await api.createFeeStructure(session.token, payload);
     setFeeStructures((prev) => [created, ...prev.filter((s) => s.courseId !== created.courseId || s.id !== created.id)]);
@@ -522,7 +533,6 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
             onOpenWhatsAppAll={() => openWhatsApp(undefined)}
             onOpenAddTransaction={openAddTransaction}
             onEditTransaction={openEditTransaction}
-            onAdjustDue={(due) => setAdjustTargetDue(due)}
             onOpenAddCharge={() => setIsAddChargeOpen(true)}
           />
         )}
@@ -579,14 +589,6 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
         initialStudent={feeTargetStudent}
         token={session.token}
         onRecordFee={handleRecordFee}
-      />
-
-      <AdjustDueModal
-        isOpen={adjustTargetDue !== null}
-        onClose={() => setAdjustTargetDue(null)}
-        due={adjustTargetDue}
-        token={session.token}
-        onApplied={reload}
       />
 
       <AddChargeModal

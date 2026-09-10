@@ -2,7 +2,7 @@ import { Button } from '../ui/button';
 import { JisIcon } from '../JisIcon';
 import { Switch } from '../ui/switch';
 import React, { useEffect, useState } from 'react';
-import { Course, FeeFrequency, FeeStructure, FEE_FREQUENCY_LABELS } from '../../types';
+import { Course, FeeBillingMode, FeeFrequency, FeeStructure, FEE_BILLING_MODE_LABELS, FEE_FREQUENCY_LABELS } from '../../types';
 import { useDialogLifecycle } from './useDialogLifecycle';
 import { addDaysToIso, parseIsoDate, toIsoDate, todayIsoDate as todayIso } from '../../lib/schedule';
 import { confirmAction } from '../../lib/confirm';
@@ -75,21 +75,32 @@ function FirstBillDateField({ id, value, onChange, frequency, min, isNewPlan }: 
   );
 }
 
-/** Select options for the per-course Upcoming notice: academy default, then 1–30 days before the due date. */
-const NOTICE_DEFAULT = 'default';
-const NOTICE_OPTIONS = [
-  { value: NOTICE_DEFAULT, label: 'Academy default' },
-  ...Array.from({ length: 30 }, (_, i) => i + 1).map((n) => ({ value: String(n), label: n === 1 ? '1 day before' : `${n} days before` })),
-];
+const BILLING_MODE_HINTS: Record<FeeBillingMode, string> = {
+  Fixed: 'One amount, billed to every student on the course.',
+  PerStudent: 'You set the amount for each student when you enrol them. Until you do, they get no bill.',
+  Unbilled: 'Nothing is billed. Take whatever you collect on the Collect fee screen.',
+};
 
-function UpcomingNoticeField({ id, value, onChange }: { id: string; value: number | null; onChange: (v: number | null) => void }) {
+function BillingModeField({ value, onChange }: { value: FeeBillingMode; onChange: (v: FeeBillingMode) => void }) {
   return (
-    <div className="rounded-2xl border border-[#dbdbdb] p-3.5 dark:border-[#243244]">
-      <label htmlFor={id} className="block text-sm font-bold text-[#212121] dark:text-white">Upcoming fee notice</label>
-      <p className="mt-0.5 mb-2.5 text-xs text-[#808080] dark:text-[#94a3b8]">Show upcoming fees this many days before the due date.</p>
-      <SimpleSelect id={id} value={value === null ? NOTICE_DEFAULT : String(value)}
-        onValueChange={(next) => onChange(next === NOTICE_DEFAULT ? null : Number(next))}
-        options={NOTICE_OPTIONS} />
+    <div>
+      <span className={labelClass}>How is the fee decided?</span>
+      <div className="space-y-1.5">
+        {(Object.keys(FEE_BILLING_MODE_LABELS) as FeeBillingMode[]).map((mode) => (
+          <label key={mode}
+            className={`flex cursor-pointer items-start gap-2.5 rounded-2xl border p-2.5 transition-colors ${
+              value === mode
+                ? 'border-[#3fc073] bg-[#e9f7ee] dark:border-[#3fc073] dark:bg-[#3fc073]/15'
+                : 'border-[#dbdbdb] hover:border-[#3fc073]/40 dark:border-[#243244]'}`}>
+            <input type="radio" name="course-billing-mode" value={mode} checked={value === mode}
+              onChange={() => onChange(mode)} className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#3fc073]" />
+            <span className="min-w-0">
+              <span className="block text-xs font-bold text-[#212121] dark:text-white">{FEE_BILLING_MODE_LABELS[mode]}</span>
+              <span className="mt-0.5 block text-xs text-[#808080] dark:text-[#94a3b8]">{BILLING_MODE_HINTS[mode]}</span>
+            </span>
+          </label>
+        ))}
+      </div>
     </div>
   );
 }
@@ -99,6 +110,7 @@ export interface NewCourseFee {
   amount: number;
   frequency: FeeFrequency;
   dueDate: string;
+  billingMode: FeeBillingMode;
 }
 
 interface AddCourseModalProps {
@@ -111,6 +123,7 @@ interface AddCourseModalProps {
   onArchive?: (courseId: string) => Promise<void>;
   onAddFeeStructure: (payload: {
     courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string;
+    billingMode: FeeBillingMode;
   }) => Promise<void>;
   onUpdateFeeStructure: (structureId: string, payload: {
     name: string; effectiveTo?: string | null; isActive: boolean;
@@ -130,10 +143,10 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   const [feeName, setFeeName] = useState('Monthly Fee');
   const [feeAmount, setFeeAmount] = useState('');
   const [feeFrequency, setFeeFrequency] = useState<FeeFrequency>('Monthly');
+  // Where the plan gets its amount: one price for all, a price per student, or no bill at all.
+  const [billingMode, setBillingMode] = useState<FeeBillingMode>('Fixed');
   // The date the first bill is dated. Recurring bills fall on the same day, one period apart.
   const [feeStartDate, setFeeStartDate] = useState(todayIso());
-  // Days before the due date a fee shows as Upcoming; null = academy default.
-  const [noticeDays, setNoticeDays] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState('');
@@ -167,8 +180,8 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     setFeeName('Monthly Fee');
     setFeeAmount('');
     setFeeFrequency('Monthly');
+    setBillingMode('Fixed');
     setFeeStartDate(todayIso());
-    setNoticeDays(editingCourse?.upcomingNotificationDays ?? null);
     setError('');
     setPlanFormOpen(false);
     setShowHistory(false);
@@ -176,10 +189,13 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   }, [isOpen, editingCourse]);
 
   // True when saving the plan form would create a NEW forward-dated plan rather than edit in place:
-  // there's no plan yet, or the amount/frequency has been changed.
+  // there's no plan yet, or the amount, frequency or billing mode has been changed.
   const planFormCreatesNew = !activePlan
-    || (Number(feeAmount) || 0) !== activePlan.amount
-    || feeFrequency !== activePlan.frequency;
+    || (billingMode === 'Fixed' && (Number(feeAmount) || 0) !== activePlan.amount)
+    || feeFrequency !== activePlan.frequency
+    || billingMode !== activePlan.billingMode;
+  // Only a fixed plan carries a price; the others take theirs per student or bill nothing.
+  const needsAmount = billingMode === 'Fixed';
 
   if (!isOpen) return null;
 
@@ -215,17 +231,19 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
     // In create mode the form only submits from step 2.
     if (!editingCourse && step !== 2) { goToFeeStep(); return; }
     const wantsFee = !editingCourse && setFeeNow;
-    const parsedAmount = Number(feeAmount);
-    if (wantsFee && (!feeName.trim() || !Number.isFinite(parsedAmount) || parsedAmount <= 0)) {
-      setError('Enter a valid fee name and amount, or turn off "Set the fee now".');
+    const parsedAmount = needsAmount ? Number(feeAmount) : 0;
+    if (wantsFee && !feeName.trim()) { setError('Enter a fee name, or turn off "Bill on a schedule now".'); return; }
+    if (wantsFee && needsAmount && (!Number.isFinite(parsedAmount) || parsedAmount <= 0)) {
+      setError('Enter the amount every student is billed, or choose a different way to decide the fee.');
       return;
     }
     setSubmitting(true);
     setError('');
     try {
       await onSave(name.trim(), description.trim(), isActive,
-        wantsFee ? { name: feeName.trim(), amount: parsedAmount, frequency: feeFrequency, dueDate: resolvedFeeDate } : null,
-        noticeDays);
+        wantsFee ? { name: feeName.trim(), amount: parsedAmount, frequency: feeFrequency, dueDate: resolvedFeeDate, billingMode } : null,
+        // No per-course override any more: every course uses the academy-wide notice setting.
+        null);
       onClose();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not save the course.');
@@ -237,9 +255,10 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   // One entry point. Pre-fills the current plan so a rename doesn't force re-typing the amount.
   const openPlanForm = () => {
     setFeeName(activePlan?.name ?? 'Monthly Fee');
-    setFeeAmount(activePlan ? String(activePlan.amount) : '');
+    setFeeAmount(activePlan && activePlan.billingMode === 'Fixed' ? String(activePlan.amount) : '');
     const freq = activePlan?.frequency ?? 'Monthly';
     setFeeFrequency(freq);
+    setBillingMode(activePlan?.billingMode ?? 'Fixed');
     // A price change supersedes the current plan, so default the start one period ahead of it.
     setFeeStartDate(activePlan ? addPeriodsIso(activePlan.effectiveFrom.slice(0, 10), freq, 1) : todayIso());
     setPlanActive(activePlan?.isActive ?? true);
@@ -251,20 +270,20 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
   // price). Anything else is an in-place edit of the current plan.
   const handlePlanSubmit = async () => {
     if (!editingCourse) return;
-    const parsedAmount = Number(feeAmount);
+    const parsedAmount = needsAmount ? Number(feeAmount) : 0;
     const trimmedName = feeName.trim();
-    if (!trimmedName || !Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      setPlanError('Enter a valid fee name and amount.');
+    if (!trimmedName) { setPlanError('Enter a fee name.'); return; }
+    if (needsAmount && (!Number.isFinite(parsedAmount) || parsedAmount <= 0)) {
+      setPlanError('Enter the amount every student is billed.');
       return;
     }
-    const priceChanged = !activePlan || parsedAmount !== activePlan.amount || feeFrequency !== activePlan.frequency;
     setPlanSubmitting(true);
     setPlanError('');
     try {
-      if (priceChanged) {
+      if (planFormCreatesNew) {
         await onAddFeeStructure({
           courseId: editingCourse.id, name: trimmedName, amount: parsedAmount,
-          frequency: feeFrequency, effectiveFrom: resolvedFeeDate,
+          frequency: feeFrequency, effectiveFrom: resolvedFeeDate, billingMode,
         });
       } else {
         await onUpdateFeeStructure(activePlan.id, {
@@ -366,12 +385,15 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                       <input id="course-fee-name" type="text" value={feeName} onChange={(event) => setFeeName(event.target.value)}
                         placeholder="e.g. Monthly Fee" className="settings-input" />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label htmlFor="course-fee-amount" className={labelClass}>Amount (₹)</label>
-                        <input id="course-fee-amount" type="number" min="1" step="1" value={feeAmount} onChange={(event) => setFeeAmount(event.target.value)}
-                          placeholder="2000" className="settings-input" />
-                      </div>
+                    <BillingModeField value={billingMode} onChange={setBillingMode} />
+                    <div className={needsAmount ? 'grid grid-cols-2 gap-3' : ''}>
+                      {needsAmount && (
+                        <div>
+                          <label htmlFor="course-fee-amount" className={labelClass}>Amount (₹)</label>
+                          <input id="course-fee-amount" type="number" min="1" step="1" value={feeAmount} onChange={(event) => setFeeAmount(event.target.value)}
+                            placeholder="2000" className="settings-input" />
+                        </div>
+                      )}
                       <div>
                         <label htmlFor="course-fee-frequency" className={labelClass}>Frequency</label>
                         <SimpleSelect id="course-fee-frequency" value={feeFrequency}
@@ -387,7 +409,6 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                     You can add a fee plan later from the course's page. Students won't be billed until then.
                   </p>
                 )}
-                <UpcomingNoticeField id="course-upcoming-notice" value={noticeDays} onChange={setNoticeDays} />
               </>
             )}
 
@@ -410,7 +431,11 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                     <div className="mt-2.5">
                       <div className="truncate text-sm font-bold text-[#212121] dark:text-white">{activePlan.name}</div>
                       <div className="mt-0.5 text-xs text-[#575757] dark:text-[#cbd5e1]">
-                        <span className="font-bold text-[#3fc073] tabular-nums">₹{activePlan.amount.toLocaleString('en-IN')}</span>
+                        <span className="font-bold text-[#3fc073] tabular-nums">
+                          {activePlan.billingMode === 'Fixed'
+                            ? `₹${activePlan.amount.toLocaleString('en-IN')}`
+                            : FEE_BILLING_MODE_LABELS[activePlan.billingMode]}
+                        </span>
                         {' · '}{FEE_FREQUENCY_LABELS[activePlan.frequency]}
                       </div>
                       <div className="mt-0.5 text-xs text-[#9e9e9e]">
@@ -435,11 +460,14 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                       <label className={labelClass}>Fee name</label>
                       <input value={feeName} onChange={(event) => setFeeName(event.target.value)} placeholder="e.g. Monthly Fee" className="settings-input" />
                     </div>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div>
-                        <label className={labelClass}>Amount (₹)</label>
-                        <input type="number" min="1" step="1" value={feeAmount} onChange={(event) => setFeeAmount(event.target.value)} placeholder="2000" className="settings-input" />
-                      </div>
+                    <BillingModeField value={billingMode} onChange={setBillingMode} />
+                    <div className={needsAmount ? 'grid grid-cols-2 gap-2.5' : ''}>
+                      {needsAmount && (
+                        <div>
+                          <label className={labelClass}>Amount (₹)</label>
+                          <input type="number" min="1" step="1" value={feeAmount} onChange={(event) => setFeeAmount(event.target.value)} placeholder="2000" className="settings-input" />
+                        </div>
+                      )}
                       <div>
                         <label className={labelClass}>Frequency</label>
                         <SimpleSelect aria-label="Fee frequency" value={feeFrequency}
@@ -459,7 +487,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                     {planError && <p className="text-xs font-bold text-[#ef4444]">{planError}</p>}
                     <div className="flex items-center justify-end gap-2 pt-0.5">
                       <Button type="button" onClick={() => setPlanFormOpen(false)} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#575757] hover:bg-[#f0f0f0] dark:hover:bg-[#172435]">Cancel</Button>
-                      <Button type="button" onClick={handlePlanSubmit} disabled={planSubmitting || !feeName.trim() || !feeAmount} className="btn-brand rounded-xl px-3 py-1.5 text-xs font-bold disabled:opacity-50">
+                      <Button type="button" onClick={handlePlanSubmit} disabled={planSubmitting || !feeName.trim() || (needsAmount && !feeAmount)} className="btn-brand rounded-xl px-3 py-1.5 text-xs font-bold disabled:opacity-50">
                         {planSubmitting ? 'Saving…' : planFormCreatesNew ? 'Save new plan' : 'Save changes'}
                       </Button>
                     </div>
@@ -477,7 +505,7 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                       <div className="mt-2 space-y-1.5">
                         {pastPlans.map((plan) => (
                           <div key={plan.id} className="rounded-xl bg-[#f0f0f0] px-2.5 py-1.5 text-xs text-[#808080] dark:bg-[#111c2b] dark:text-[#94a3b8]">
-                            {plan.name} · ₹{plan.amount.toLocaleString('en-IN')} / {FEE_FREQUENCY_LABELS[plan.frequency]} · ended {plan.effectiveTo ? fmtDate(plan.effectiveTo) : '—'}
+                            {plan.name} · {plan.billingMode === 'Fixed' ? `₹${plan.amount.toLocaleString('en-IN')}` : FEE_BILLING_MODE_LABELS[plan.billingMode]} / {FEE_FREQUENCY_LABELS[plan.frequency]} · ended {plan.effectiveTo ? fmtDate(plan.effectiveTo) : '—'}
                           </div>
                         ))}
                       </div>
@@ -485,9 +513,6 @@ export const AddCourseModal: React.FC<AddCourseModalProps> = ({
                   </div>
                 )}
               </div>
-            )}
-            {editingCourse && (
-              <UpcomingNoticeField id="course-upcoming-notice" value={noticeDays} onChange={setNoticeDays} />
             )}
           </div>
 

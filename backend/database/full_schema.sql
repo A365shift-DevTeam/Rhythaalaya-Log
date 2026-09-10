@@ -1069,5 +1069,34 @@ BEGIN
     VALUES ('20260904091945_BillingPeriodsGraceAndCreditNotes', '9.0.1');
     END IF;
 END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260910054923_FeeBillingModeAndPerStudentAmount') THEN
+    ALTER TABLE "FeeStructures" ADD "BillingMode" character varying(16) NOT NULL DEFAULT 'Fixed';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260910054923_FeeBillingModeAndPerStudentAmount') THEN
+    ALTER TABLE "Enrollments" ADD "FeeAmountOverride" numeric(12,2);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260910054923_FeeBillingModeAndPerStudentAmount') THEN
+    ALTER TABLE "Enrollments" ADD "FeeAmountSetOn" date;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260910054923_FeeBillingModeAndPerStudentAmount') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260910054923_FeeBillingModeAndPerStudentAmount', '9.0.1');
+    END IF;
+END $EF$;
 COMMIT;
 

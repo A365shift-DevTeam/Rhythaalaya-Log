@@ -75,6 +75,8 @@ export interface EnrollmentSummary {
   endedOn?: string;
   status: EnrollmentStatus;
   outstandingBalance: number;
+  /** This student's own price on a per-student fee plan; absent when the course sets one price for all. */
+  feeAmountOverride?: number;
 }
 
 export interface Student {
@@ -128,6 +130,14 @@ export interface FeeHead {
   structureCount: number;
 }
 
+/** Where a fee plan gets the amount it bills. */
+export type FeeBillingMode = 'Fixed' | 'PerStudent' | 'Unbilled';
+export const FEE_BILLING_MODE_LABELS: Record<FeeBillingMode, string> = {
+  Fixed: 'Same fee for everyone',
+  PerStudent: 'Fee set per student',
+  Unbilled: 'No bills, collect by hand',
+};
+
 export interface FeeStructure {
   id: string;
   courseId: string;
@@ -140,6 +150,7 @@ export interface FeeStructure {
   isActive: boolean;
   feeHeadId?: string;
   feeHeadName?: string;
+  billingMode: FeeBillingMode;
 }
 
 export interface FeeDue {

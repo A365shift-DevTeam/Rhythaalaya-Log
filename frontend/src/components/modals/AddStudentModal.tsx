@@ -14,8 +14,11 @@ const LAST_STEP = WIZARD_STEPS.length - 1;
 interface AddStudentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddStudent: (studentData: any, batchIds: string[]) => Promise<void>;
-  onUpdateStudent: (studentId: string, studentData: any, batchIds: string[]) => Promise<void>;
+  // feeAmounts is keyed by batch id and only carries batches whose course sets a fee per student;
+  // null in it means "no amount agreed", which raises no bill.
+  onAddStudent: (studentData: any, batchIds: string[], feeAmounts: Record<string, number | null>) => Promise<void>;
+  onUpdateStudent: (studentId: string, studentData: any, batchIds: string[],
+    feeAmounts: Record<string, number | null>) => Promise<void>;
   editingStudent?: Student | null;
   batches: Batch[];
   feeStructures: FeeStructure[];
@@ -40,9 +43,10 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
-  const [concessionPercent, setConcessionPercent] = useState('');
   const [billingPolicy, setBillingPolicy] = useState<LateEnrollmentBillingPolicy>(defaultBillingPolicy);
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
+  // Typed fee per batch, for courses whose plan sets the fee per student. Keyed by batch id.
+  const [feeAmounts, setFeeAmounts] = useState<Record<string, string>>({});
   const [batchMenuOpen, setBatchMenuOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -97,8 +101,11 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       setPhone(editingStudent.phone || '');
       setEmail(editingStudent.email || '');
       setAddress(editingStudent.address || '');
-      setConcessionPercent(editingStudent.concessionPercent ? String(editingStudent.concessionPercent) : '');
-      setSelectedBatchIds(editingStudent.enrollments.filter((e) => e.status === 'Active').map((e) => e.batchId));
+      const active = editingStudent.enrollments.filter((e) => e.status === 'Active');
+      setSelectedBatchIds(active.map((e) => e.batchId));
+      setFeeAmounts(Object.fromEntries(active
+        .filter((e) => e.feeAmountOverride != null)
+        .map((e) => [e.batchId, String(e.feeAmountOverride)])));
     } else {
       setName('');
       setDateOfBirth('');
@@ -107,8 +114,8 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       setPhone('');
       setEmail('');
       setAddress('');
-      setConcessionPercent('');
       setSelectedBatchIds([]);
+      setFeeAmounts({});
     }
     setBillingPolicy(defaultBillingPolicy);
     setStep(0);
@@ -133,13 +140,12 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     event?.preventDefault();
     if (isWizard && step < LAST_STEP) return;
     if (!name.trim()) { setError('Student name is required.'); return; }
-    const concession = Number(concessionPercent) || 0;
-    if (concession < 0 || concession > 100) { setError('Concession must be between 0 and 100 percent.'); return; }
     const phoneDigits = phone.replace(/\D/g, '').length;
     if (phone.trim() && (!/^\+?[0-9][0-9\s\-().]*$/.test(phone.trim()) || phoneDigits < 7 || phoneDigits > 15)) {
       setError('Enter a valid phone number (7–15 digits; +, spaces and dashes are fine).'); return;
     }
     if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Enter a valid email address (like name@example.com).'); return; }
+    if (badFeeAmount) { setError('A fee must be more than ₹0, with at most two decimal places.'); return; }
     setSubmitting(true);
     setError('');
     try {
@@ -151,12 +157,13 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
         address: address.trim() || undefined,
-        concessionPercent: concession,
+        // Fee concessions were removed from the app; every student bills at the full course fee.
+        concessionPercent: 0,
       };
       if (editingStudent) {
-        await onUpdateStudent(editingStudent.id, payload, selectedBatchIds);
+        await onUpdateStudent(editingStudent.id, payload, selectedBatchIds, resolvedFeeAmounts);
       } else {
-        await onAddStudent({ ...payload, lateBillingPolicy: billingPolicy }, selectedBatchIds);
+        await onAddStudent({ ...payload, lateBillingPolicy: billingPolicy }, selectedBatchIds, resolvedFeeAmounts);
       }
       onClose();
     } catch (requestError) {
@@ -184,6 +191,21 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   const canLeaveFirstStep = name.trim() !== '' && joinDate !== '';
   const selectedBatches = editableBatches.filter((batch) => selectedBatchIds.includes(batch.id));
 
+  // Batches whose course fee plan sets the amount per student, so this student needs their own figure.
+  const perStudentBatches = selectedBatches.filter((batch) => feeStructures
+    .some((plan) => plan.courseId === batch.courseId && plan.isActive && plan.billingMode === 'PerStudent'));
+  const badFeeAmount = perStudentBatches.some((batch) => {
+    const typed = (feeAmounts[batch.id] ?? '').trim();
+    if (!typed) return false; // blank is allowed: no amount agreed yet, so no bill
+    const value = Number(typed);
+    return !Number.isFinite(value) || value <= 0 || Math.round(value * 100) !== value * 100;
+  });
+  // What the parent handler applies: a number to bill, or null to leave (or make) the student unbilled.
+  const resolvedFeeAmounts = Object.fromEntries(perStudentBatches.map((batch) => {
+    const typed = (feeAmounts[batch.id] ?? '').trim();
+    return [batch.id, typed ? Number(typed) : null];
+  })) as Record<string, number | null>;
+
   const nameField = (
     <div className="sm:col-span-2">
       <label htmlFor="student-name" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">
@@ -208,15 +230,6 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       </label>
       <input id="student-join-date" type="date" required value={joinDate} onChange={(event) => setJoinDate(event.target.value)}
         className="settings-input" />
-    </div>
-  );
-  const concessionFields = (
-    <div>
-      <label htmlFor="student-concession" className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">Fee concession (%)</label>
-      <input id="student-concession" type="number" min={0} max={100} step={1} placeholder="0" value={concessionPercent}
-        onChange={(event) => setConcessionPercent(event.target.value)}
-        className="settings-input" />
-      <p className="mt-1 text-xs text-[#9e9e9e]">Automatically reduces every course fee for this student.</p>
     </div>
   );
   const parentNameField = (
@@ -312,6 +325,39 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
         </div>
       )}
     </div>
+  );
+
+  // One amount box per batch whose course leaves the fee to be set per student. Left blank the
+  // student is enrolled but unbilled, which is a normal state, not an error.
+  const perStudentFeeFields = perStudentBatches.length === 0 ? null : (
+    <fieldset className="mt-5">
+      <legend className="block text-xs font-bold text-[#575757] dark:text-[#cbd5e1] mb-1.5">This student's fee</legend>
+      <p className="mb-2.5 text-xs text-[#808080] dark:text-[#94a3b8]">
+        These courses set the fee per student. Leave a box empty to enrol without a fee for now — nothing is billed until you fill it in.
+      </p>
+      <div className="space-y-2.5">
+        {perStudentBatches.map((batch) => (
+          <div key={batch.id} className="flex items-center gap-3 rounded-2xl border border-[#dbdbdb] px-3.5 py-2.5 dark:border-[#243244]">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-xs font-bold text-[#212121] dark:text-white">{batch.courseName}</span>
+              <span className="block truncate text-xs text-[#808080] dark:text-[#94a3b8]">{batch.name}</span>
+            </span>
+            <span className="flex shrink-0 items-center gap-1.5">
+              <span className="text-sm font-bold text-[#808080]">₹</span>
+              <input type="number" min="0.01" step="0.01" inputMode="decimal"
+                aria-label={`Fee for ${batch.courseName}`}
+                value={feeAmounts[batch.id] ?? ''}
+                onChange={(event) => setFeeAmounts((prev) => ({ ...prev, [batch.id]: event.target.value }))}
+                placeholder="Amount"
+                className="min-h-10 w-28 rounded-xl border border-[#dbdbdb] bg-[#f0f0f0] px-2.5 text-sm font-bold text-[#212121] outline-none focus:border-[#3fc073] dark:border-[#243244] dark:bg-[#111c2b] dark:text-white" />
+            </span>
+          </div>
+        ))}
+      </div>
+      {badFeeAmount && (
+        <p className="mt-2 text-xs font-bold text-[#ef4444]">A fee must be more than ₹0, with at most two decimal places.</p>
+      )}
+    </fieldset>
   );
 
   // Per-student late-enrollment billing choice, pre-selected to the org-wide setting. Only for
@@ -411,7 +457,6 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                     {nameField}
                     {dateOfBirthField}
                     {joinDateField}
-                    {concessionFields}
                   </div>
                 </section>
               )}
@@ -432,6 +477,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                 <section>
                   <StepHeading headingRef={panelHeadingRef} title="Enroll in batches" hint="Select every batch this student should attend. Optional." />
                   {batchPicker}
+                  {perStudentFeeFields}
                   {billingPolicyPicker}
                 </section>
               )}
@@ -444,8 +490,6 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                       <ReviewRow label="Student name" value={name.trim()} />
                       <ReviewRow label="Date of birth" value={formatDate(dateOfBirth)} />
                       <ReviewRow label="Date of joining" value={formatDate(joinDate)} />
-                      <ReviewRow label="Fee concession" value={Number(concessionPercent) > 0
-                        ? `${Number(concessionPercent)}%` : ''} emptyText="None" />
                     </ReviewGroup>
                     <ReviewGroup title="Contact" onEdit={() => goToStep(1)}>
                       <ReviewRow label="Parent / guardian" value={parentName.trim()} />
@@ -459,6 +503,13 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                         value={selectedBatches.map((batch) => batch.name).join(', ')}
                         emptyText="None selected"
                       />
+                      {perStudentBatches.map((batch) => (
+                        <React.Fragment key={batch.id}>
+                          <ReviewRow label={`${batch.courseName} fee`}
+                            value={feeAmounts[batch.id]?.trim() ? `₹${Number(feeAmounts[batch.id]).toLocaleString('en-IN')}` : ''}
+                            emptyText="Not set — no bills yet" />
+                        </React.Fragment>
+                      ))}
                       <ReviewRow
                         label="Late enrollment billing"
                         value={POLICY_OPTIONS.find((option) => option.value === billingPolicy)?.label || billingPolicy}
@@ -481,7 +532,6 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                   {phoneField}
                   {emailField}
                   {addressField}
-                  {concessionFields}
                 </div>
               </section>
 
@@ -498,6 +548,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                   </div>
                 </div>
                 {batchPicker}
+                {perStudentFeeFields}
               </section>
 
               {errorBanner}

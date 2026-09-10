@@ -25,6 +25,28 @@ public sealed class TestHarness : IDisposable
 
     public static readonly DateOnly Today = BillingSchedule.TodayInTimeZone("Asia/Kolkata");
 
+    /// <summary>
+    /// Last day of the current billing month. A due dated on or before it is already payable
+    /// (Pending); only a later one is still Upcoming, so tests that need a not-yet-billed due
+    /// must date it past this, never merely a few days from today.
+    /// Read from the real clock once at type load: never mix this (or <see cref="MonthStart"/>,
+    /// <see cref="DaysToMonthEnd"/>, <see cref="NotYetBilled"/>) with a BusinessClock.Override into
+    /// another month — they would silently describe a different month than the code under test.
+    /// </summary>
+    public static readonly DateOnly MonthEnd = BillingSchedule.EndOfMonth(Today);
+
+    /// <summary>
+    /// First day of the current billing month. A monthly plan anchored here bills once inside this
+    /// month and not again until the next one, whatever day the suite happens to run on.
+    /// </summary>
+    public static readonly DateOnly MonthStart = new(Today.Year, Today.Month, 1);
+
+    /// <summary>Days from today to the end of the billing month; 0 when today is the last day.</summary>
+    public static int DaysToMonthEnd => MonthEnd.DayNumber - Today.DayNumber;
+
+    /// <summary>A date <paramref name="days"/> past the end of the current billing month, so it is Upcoming.</summary>
+    public static DateOnly NotYetBilled(int days = 1) => MonthEnd.AddDays(days);
+
     public TestHarness(LateEnrollmentBillingPolicy policy = LateEnrollmentBillingPolicy.Skip, int leadDays = 7,
         int? courseNoticeDays = null)
     {
@@ -89,11 +111,13 @@ public sealed class TestHarness : IDisposable
     public StudentLedgerService Ledger => new(Db, Generator, new FeeBalanceCalculator(Db));
 
     public FeeStructure AddStructure(decimal amount, FeeFrequency frequency, DateOnly effectiveFrom, DateOnly? effectiveTo = null,
-        Course? course = null, Guid? feeHeadId = null, string? name = null)
+        Course? course = null, Guid? feeHeadId = null, string? name = null,
+        FeeBillingMode billingMode = FeeBillingMode.Fixed)
     {
         var structure = new FeeStructure
         {
             TenantId = TenantId, CourseId = (course ?? Course).Id, Name = name ?? $"Fee {amount}", Amount = amount,
+            BillingMode = billingMode,
             Frequency = frequency, EffectiveFrom = effectiveFrom, EffectiveTo = effectiveTo, FeeHeadId = feeHeadId
         };
         Db.FeeStructures.Add(structure);

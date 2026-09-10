@@ -52,9 +52,10 @@ public sealed class AcademyServiceTests
     [Fact]
     public async Task HasBillableDues_IgnoresUpcomingDues()
     {
-        using var h = new TestHarness(leadDays: 7);
-        h.AddStructure(1000m, FeeFrequency.Monthly, Today.AddDays(3)); // first due inside lead window, still Upcoming
-        h.Enroll(Today);
+        using var h = new TestHarness(leadDays: TestHarness.DaysToMonthEnd + 3);
+        // Next month's due: generated inside the lead window, but not billable until that month starts.
+        h.AddStructure(1000m, FeeFrequency.Monthly, TestHarness.NotYetBilled(3));
+        h.Enroll(TestHarness.NotYetBilled(3));
 
         var student = await Service(h).GetStudentAsync(h.Student.Id, default);
         Assert.False(student.HasBillableDues); // not yet due = not yet billable

@@ -74,7 +74,8 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
     public async Task<FeeStructureDto> CreateFeeStructureAsync(CreateFeeStructureRequest request, CancellationToken ct)
     {
         RequireText(request.Name, nameof(request.Name));
-        RequireMoney(request.Amount, nameof(request.Amount));
+        // Only a fixed plan carries a price; the other modes take theirs per student or bill nothing.
+        if (request.BillingMode == FeeBillingMode.Fixed) RequireMoney(request.Amount, nameof(request.Amount));
         if (request.EffectiveTo.HasValue && request.EffectiveTo.Value < request.EffectiveFrom)
             throw new AppValidationException(nameof(request.EffectiveTo));
         if (!await db.Courses.AnyAsync(x => x.Id == request.CourseId && x.IsActive, ct))
@@ -99,7 +100,9 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
         var structure = new FeeStructure
         {
             TenantId = RequireTenant(), CourseId = request.CourseId, FeeHeadId = request.FeeHeadId,
-            Name = request.Name.Trim(), Amount = request.Amount,
+            Name = request.Name.Trim(),
+            Amount = request.BillingMode == FeeBillingMode.Fixed ? request.Amount : 0m,
+            BillingMode = request.BillingMode,
             Frequency = request.Frequency, EffectiveFrom = request.EffectiveFrom, EffectiveTo = request.EffectiveTo
         };
         db.FeeStructures.Add(structure);
@@ -710,7 +713,7 @@ public sealed class FinanceService(AppDbContext db, ITenantContext tenantContext
 
     private static FeeStructureDto MapStructure(FeeStructure x) =>
         new(x.Id, x.CourseId, x.Course.Name, x.Name, x.Amount, x.Frequency, x.EffectiveFrom, x.EffectiveTo, x.IsActive,
-            x.FeeHeadId, x.FeeHead?.Name);
+            x.FeeHeadId, x.FeeHead?.Name, x.BillingMode);
 
     private static TransactionDto MapTransaction(FinancialTransaction item) =>
         new(item.Id, item.Title, item.Type, item.Amount, item.Category, item.OccurredAt, item.FeePaymentId);

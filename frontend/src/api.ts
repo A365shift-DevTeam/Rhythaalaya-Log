@@ -1,5 +1,5 @@
 import { Achievement, AchievementCategory, BatchFinance, BatchFinanceRow, Batch, CollectionReport, Course,
-  FeeAdjustment, FeeAdjustmentType, FeeDue, FeeDueStatus, FeeFrequency, FeeHead, FinanceDashboard, FeePayment,
+  FeeAdjustment, FeeBillingMode, FeeDue, FeeDueStatus, FeeFrequency, FeeHead, FinanceDashboard, FeePayment,
   FeeStructure, LateEnrollmentBillingPolicy, OrgSettings, PaymentMethod, Receipt, Staff, Student, StudentLedger,
   Transaction } from './types';
 import { DEFAULT_WHATSAPP_TEMPLATE } from './whatsappTemplate';
@@ -168,6 +168,7 @@ export const api = {
   createStudent: (token: string, body: {
     name: string; dateOfBirth?: string | null; parentName?: string; phone?: string; email?: string;
     address?: string; joinDate?: string | null; batchIds?: string[];
+    batchFeeAmounts?: { batchId: string; amount: number }[];
     concessionPercent?: number; concessionReason?: string;
     lateBillingPolicy?: LateEnrollmentBillingPolicy | null;
   }) => request<any>('/students', { method: 'POST', body: JSON.stringify(body) }, token).then(mapStudent),
@@ -178,8 +179,12 @@ export const api = {
   }) => request<any>('/students/' + id, { method: 'PUT', body: JSON.stringify(body) }, token).then(mapStudent),
   archiveStudent: (token: string, id: string) =>
     request<void>('/students/' + id, { method: 'DELETE' }, token),
-  enrollStudent: (token: string, studentId: string, batchId: string, enrolledOn?: string) =>
-    request<any>('/students/enrollments', { method: 'POST', body: JSON.stringify({ studentId, batchId, enrolledOn: enrolledOn || null }) }, token).then(mapStudent),
+  enrollStudent: (token: string, studentId: string, batchId: string, enrolledOn?: string, feeAmount?: number | null) =>
+    request<any>('/students/enrollments', { method: 'POST', body: JSON.stringify({ studentId, batchId, enrolledOn: enrolledOn || null, feeAmount: feeAmount ?? null }) }, token).then(mapStudent),
+  // Sets or clears one student's own price on a per-student fee plan. Bills already raised keep
+  // the amount they were raised at; only later ones use the new figure.
+  setEnrollmentFeeAmount: (token: string, enrollmentId: string, amount: number | null) =>
+    request<any>(`/students/enrollments/${enrollmentId}/fee-amount`, { method: 'PUT', body: JSON.stringify({ amount }) }, token).then(mapStudent),
   endEnrollment: (token: string, enrollmentId: string, status: 'Completed' | 'Withdrawn', endedOn?: string) =>
     request<any>(`/students/enrollments/${enrollmentId}/end`, { method: 'PUT', body: JSON.stringify({ status, endedOn: endedOn || null }) }, token).then(mapStudent),
 
@@ -234,7 +239,7 @@ export const api = {
       .then(rows => rows.map(mapFeeStructure)),
   createFeeStructure: (token: string, body: {
     courseId: string; name: string; amount: number; frequency: FeeFrequency; effectiveFrom: string;
-    effectiveTo?: string | null;
+    effectiveTo?: string | null; billingMode?: FeeBillingMode;
   }) => request<any>('/finance/fee-structures', { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeeStructure),
   updateFeeStructure: (token: string, id: string, body: {
     name: string; effectiveTo?: string | null; isActive: boolean;
@@ -272,8 +277,6 @@ export const api = {
   }) => request<any>('/finance/payments', { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeePayment),
   dueAdjustments: (token: string, dueId: string) =>
     request<any[]>(`/finance/dues/${dueId}/adjustments`, {}, token).then(rows => rows.map(mapFeeAdjustment)),
-  addDueAdjustment: (token: string, dueId: string, body: { type: FeeAdjustmentType; amount: number; reason: string }) =>
-    request<any>(`/finance/dues/${dueId}/adjustments`, { method: 'POST', body: JSON.stringify(body) }, token).then(mapFeeDue),
   cancelDue: (token: string, dueId: string, reason: string) =>
     request<any>(`/finance/dues/${dueId}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) }, token).then(mapFeeDue),
   createCustomDue: (token: string, body: {
@@ -430,7 +433,8 @@ function mapStudent(x: any): Student {
     concessionPercent: x.concessionPercent ?? 0, concessionReason: x.concessionReason || undefined,
     enrollments: (x.enrollments || []).map((e: any) => ({
       id: e.id, batchId: e.batchId, batchName: e.batchName, courseId: e.courseId, courseName: e.courseName,
-      enrolledOn: e.enrolledOn, endedOn: e.endedOn || undefined, status: e.status, outstandingBalance: e.outstandingBalance
+      enrolledOn: e.enrolledOn, endedOn: e.endedOn || undefined, status: e.status, outstandingBalance: e.outstandingBalance,
+      feeAmountOverride: e.feeAmountOverride ?? undefined
     }))
   };
 }
@@ -438,7 +442,8 @@ function mapFeeStructure(x: any): FeeStructure {
   return {
     id: x.id, courseId: x.courseId, courseName: x.courseName, name: x.name, amount: x.amount,
     frequency: x.frequency, effectiveFrom: x.effectiveFrom, effectiveTo: x.effectiveTo || undefined, isActive: x.isActive,
-    feeHeadId: x.feeHeadId || undefined, feeHeadName: x.feeHeadName || undefined
+    feeHeadId: x.feeHeadId || undefined, feeHeadName: x.feeHeadName || undefined,
+    billingMode: x.billingMode || 'Fixed'
   };
 }
 function mapFeeHead(x: any): FeeHead {

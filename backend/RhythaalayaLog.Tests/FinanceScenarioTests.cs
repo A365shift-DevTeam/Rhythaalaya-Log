@@ -53,18 +53,19 @@ public sealed class FinanceScenarioTests(ITestOutputHelper output)
             Assert.Equal(D(2026, 9, 9), dues[0].PeriodEnd);
             Assert.Equal(2000m, dues[0].NetAmount);
             Assert.Equal(FeeDueStatus.Pending, dues[0].Status);
-            // 10 Sept is within the 7-day notice (4 + 7 = 11 Sept): generated as Upcoming.
+            // The 10 Sept bill belongs to the September billing month, which has already started,
+            // so it is payable now rather than waiting for the 10th.
             Assert.Equal(D(2026, 9, 10), dues[1].DueDate);
-            Assert.Equal(FeeDueStatus.Upcoming, dues[1].Status);
+            Assert.Equal(FeeDueStatus.Pending, dues[1].Status);
             Assert.Equal(2, dues.Count);
 
-            // 5–6. Outstanding vs upcoming on the student card.
+            // 5–6. Both September bills sit in outstanding; nothing is deferred to upcoming.
             var student = await h.Academy.GetStudentAsync(h.Student.Id, default);
             output.WriteLine($"Outstanding = {student.OutstandingBalance}, Upcoming = {student.UpcomingAmount}");
-            Assert.Equal(2000m, student.OutstandingBalance);
-            Assert.Equal(2000m, student.UpcomingAmount);
+            Assert.Equal(4000m, student.OutstandingBalance);
+            Assert.Equal(0m, student.UpcomingAmount);
 
-            // 7–8. ₹5,000 paid: current bill settled, the listed 10 Sept bill paid early, ₹1,000 on account.
+            // 7–8. ₹5,000 paid: both September bills settled, ₹1,000 on account.
             var advance = await h.Finance.RecordFeePaymentAsync(Payment(h.Student.Id, 5000m), default);
             var f = await new FeeBalanceCalculator(h.Db).StudentFinancialsAsync(h.Student.Id, default);
             output.WriteLine($"After payment: Pending = {f.Pending}, Available credit = {f.AvailableCredit}, Reserved = {f.ReservedCredit}");
@@ -72,19 +73,19 @@ public sealed class FinanceScenarioTests(ITestOutputHelper output)
             Assert.Equal(1000m, f.AvailableCredit);
             Assert.Equal(FeeDueStatus.Paid, h.DuesFor(enrollment.Id)[1].Status);
 
-            // 9. Refund ₹3,000 (credit note): ₹1,000 from credit, ₹2,000 pulled back from the early-paid bill.
+            // 9. Refund ₹3,000 (credit note): ₹1,000 from credit, ₹2,000 pulled back from the 10 Sept bill.
             var refund = await h.Finance.RefundFeePaymentAsync(advance.Id, new RefundFeePaymentRequest(3000m, "left early"), default);
             output.WriteLine($"Refund number = {refund.ReceiptNumber}");
             Assert.StartsWith("CN-", refund.ReceiptNumber);
             f = await new FeeBalanceCalculator(h.Db).StudentFinancialsAsync(h.Student.Id, default);
             Assert.Equal(0m, f.AvailableCredit);
-            Assert.Equal(FeeDueStatus.Upcoming, h.DuesFor(enrollment.Id)[1].Status);
+            Assert.Equal(FeeDueStatus.Pending, h.DuesFor(enrollment.Id)[1].Status);
             Assert.Equal(FeeDueStatus.Paid, h.DuesFor(enrollment.Id)[0].Status); // the settled current bill is untouched
         }
 
         using (BusinessClock.Override(At(2026, 9, 10)))
         {
-            // 10–11. 10 Sept: the upcoming bill falls due. Refunded money must not pay it.
+            // 10–11. 10 Sept: the bill reaches its own due date. Refunded money must not pay it.
             await new FeeDueGenerator(h.Db).EnsureForStudentAsync(h.Student.Id, default);
             var enrollment = h.Db.Enrollments.AsNoTracking().Single(x => x.StudentId == h.Student.Id);
             var septDue = h.DuesFor(enrollment.Id).Single(x => x.DueDate == D(2026, 9, 10));
@@ -159,13 +160,15 @@ public sealed class FinanceScenarioTests(ITestOutputHelper output)
         Assert.Equal(2000m, fifth);
         Assert.Equal(500m, sixth);
 
-        // 25. Notice window 1–30 days: the same course with a 1-day notice shows the bill only the day before.
+        // 25. Notice window 1–30 days: a 1-day notice shows next month's bill only the day before.
+        // The window governs bills beyond this month; everything inside the current month is
+        // generated regardless, because it is already payable.
         using var narrow = new TestHarness(courseNoticeDays: 1);
-        narrow.AddStructure(2000m, FeeFrequency.Monthly, D(2026, 9, 10));
-        var e2 = narrow.Enroll(D(2026, 9, 10));
-        using (BusinessClock.Override(At(2026, 9, 8))) await new FeeDueGenerator(narrow.Db).EnsureForStudentAsync(narrow.Student.Id, default);
+        narrow.AddStructure(2000m, FeeFrequency.Monthly, D(2026, 10, 1));
+        var e2 = narrow.Enroll(D(2026, 10, 1));
+        using (BusinessClock.Override(At(2026, 9, 29))) await new FeeDueGenerator(narrow.Db).EnsureForStudentAsync(narrow.Student.Id, default);
         Assert.Empty(narrow.DuesFor(e2.Id));
-        using (BusinessClock.Override(At(2026, 9, 9))) await new FeeDueGenerator(narrow.Db).EnsureForStudentAsync(narrow.Student.Id, default);
+        using (BusinessClock.Override(At(2026, 9, 30))) await new FeeDueGenerator(narrow.Db).EnsureForStudentAsync(narrow.Student.Id, default);
         Assert.Equal(FeeDueStatus.Upcoming, Assert.Single(narrow.DuesFor(e2.Id)).Status);
     }
 

@@ -13,7 +13,10 @@ public sealed record BatchDto(Guid Id, string Name, Guid CourseId, string Course
 public sealed record BatchSessionOverrideDto(Guid Id, DateOnly OriginalDate, DateOnly? NewDate, string? Reason);
 
 public sealed record EnrollmentSummaryDto(Guid Id, Guid BatchId, string BatchName, Guid CourseId, string CourseName,
-    DateOnly EnrolledOn, DateOnly? EndedOn, EnrollmentStatus Status, decimal OutstandingBalance);
+    DateOnly EnrolledOn, DateOnly? EndedOn, EnrollmentStatus Status, decimal OutstandingBalance,
+    // This student's own price on a per-student plan; null when the course bills one fixed price,
+    // bills nothing at all, or no price has been agreed for this student yet.
+    decimal? FeeAmountOverride = null);
 
 public sealed record StudentDto(Guid Id, string StudentNumber, string Name, DateOnly? DateOfBirth,
     string? ParentName, string? Address, string? Phone, string? Email, DateOnly JoinDate, bool IsActive,
@@ -46,7 +49,9 @@ public sealed record FeeHeadDto(Guid Id, string Name, int DisplayOrder, bool IsA
 
 public sealed record FeeStructureDto(Guid Id, Guid CourseId, string CourseName, string Name, decimal Amount,
     FeeFrequency Frequency, DateOnly EffectiveFrom, DateOnly? EffectiveTo, bool IsActive,
-    Guid? FeeHeadId = null, string? FeeHeadName = null);
+    Guid? FeeHeadId = null, string? FeeHeadName = null,
+    // Where the billed amount comes from: one fixed price, a price per student, or no bill at all.
+    FeeBillingMode BillingMode = FeeBillingMode.Fixed);
 
 public sealed record FeeDueDto(Guid Id, Guid StudentId, string StudentName, Guid EnrollmentId, Guid BatchId,
     string BatchName, string CourseName, Guid? FeeStructureId, DateOnly DueDate, decimal Amount,

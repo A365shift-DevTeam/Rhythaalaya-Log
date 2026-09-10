@@ -58,8 +58,8 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
     setSelectedStudentId(initial?.id ?? '');
     setPickerOpen(!initial);
     setQuery('');
-    const suggested = initial?.outstandingBalance || courseFeeTotal(initial, feeStructures);
-    setAmount(suggested > 0 ? String(suggested) : '');
+    // The cashier types the amount they are collecting; nothing is filled in for them.
+    setAmount('');
     setMethod('Upi');
     setRemarks('');
     setError('');
@@ -82,15 +82,9 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
         const outstanding = rows
           .filter((due) => due.status !== 'Paid' && due.status !== 'Cancelled')
           .sort((a, b) => (a.status === 'Overdue' ? -1 : b.status === 'Overdue' ? 1 : 0) || a.dueDate.localeCompare(b.dueDate));
+        // Loaded for the dues list and the totals shown under the amount field only —
+        // the amount itself is never filled in from them.
         setDues(outstanding);
-        // Suggest what has fallen due; bills that are listed but not yet due are shown separately.
-        const total = outstanding.filter((due) => due.status !== 'Upcoming').reduce((sum, due) => sum + due.balanceAmount, 0);
-        if (total > 0) {
-          setAmount(String(total));
-        } else {
-          const suggested = courseFeeTotal(eligibleStudents.find((s) => s.id === selectedStudentId), feeStructures);
-          if (suggested > 0) setAmount(String(suggested));
-        }
       })
       .catch((requestError) => { if (!ignore) setError(requestError instanceof Error ? requestError.message : 'Unable to load fee dues.'); });
     return () => { ignore = true; };
@@ -121,9 +115,8 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
 
   const handlePickStudent = (id: string) => {
     setSelectedStudentId(id);
-    const stu = eligibleStudents.find((s) => s.id === id);
-    const suggested = stu?.outstandingBalance || courseFeeTotal(stu, feeStructures);
-    setAmount(suggested > 0 ? String(suggested) : '');
+    // Drop anything typed for the previous student rather than carrying it over.
+    setAmount('');
     setPickerOpen(false);
     setQuery('');
   };
@@ -263,19 +256,7 @@ export const RecordFeeModal: React.FC<RecordFeeModalProps> = ({ isOpen, onClose,
               </span>
 
               <div>
-                <div className="mb-1 flex items-center justify-between">
-                  <label htmlFor="fee-amount" className="text-xs font-semibold text-[#575757] dark:text-[#cbd5e1]">Amount received (₹)</label>
-                  {totalOutstanding > 0 && Number(amount) !== totalOutstanding && (
-                    <Button type="button" onClick={() => setAmount(String(totalOutstanding))} className="text-xs font-bold text-[#3fc073] hover:underline">
-                      Use full ₹{totalOutstanding.toLocaleString('en-IN')}
-                    </Button>
-                  )}
-                  {totalOutstanding === 0 && suggestedCourseFee > 0 && Number(amount) !== suggestedCourseFee && (
-                    <Button type="button" onClick={() => setAmount(String(suggestedCourseFee))} className="text-xs font-bold text-[#3fc073] hover:underline">
-                      Use course fee ₹{suggestedCourseFee.toLocaleString('en-IN')}
-                    </Button>
-                  )}
-                </div>
+                <label htmlFor="fee-amount" className="mb-1 block text-xs font-semibold text-[#575757] dark:text-[#cbd5e1]">Amount received (₹)</label>
                 <input id="fee-amount" type="number" required min="0.01" step="0.01" value={amount} disabled={submitting}
                   aria-invalid={Boolean(amount) && Boolean(amountError)} aria-describedby="fee-amount-hint"
                   onChange={(event) => { setAmount(event.target.value); setError(''); }}

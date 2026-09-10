@@ -53,7 +53,6 @@ interface FinanceTabProps {
   onOpenWhatsAppAll: () => void;
   onOpenAddTransaction: () => void;
   onEditTransaction: (transaction: Transaction) => void;
-  onAdjustDue: (due: FeeDue) => void;
   onOpenAddCharge: () => void;
 }
 
@@ -75,7 +74,6 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
   onOpenWhatsAppAll: _onOpenWhatsAppAll,
   onOpenAddTransaction,
   onEditTransaction,
-  onAdjustDue,
   onOpenAddCharge,
 }) => {
   const categorical = darkMode ? CATEGORICAL_DARK : CATEGORICAL_LIGHT;
@@ -543,17 +541,6 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({
                               <span className="font-sans text-xs font-bold text-[#212121] dark:text-white tabular-nums">
                                 ₹{due.balanceAmount.toLocaleString('en-IN')}
                               </span>
-                              {canManage && (
-                                <Button
-                                  type="button"
-                                  onClick={() => onAdjustDue(due)}
-                                  aria-label={`Adjust due for ${due.studentName}`}
-                                  title="Discount, waive, or cancel this due"
-                                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#dbdbdb] dark:border-[#243244] bg-white dark:bg-[#0b1422] text-[#808080] hover:text-[#3fc073] hover:border-[#3fc073]/40 transition-all active:scale-95"
-                                >
-                                  <JisIcon className="text-[15px]">tune</JisIcon>
-                                </Button>
-                              )}
                             </div>
                           </div>
                         ))}

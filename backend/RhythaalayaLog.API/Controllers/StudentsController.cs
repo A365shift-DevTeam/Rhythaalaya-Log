@@ -43,6 +43,14 @@ public sealed class StudentsController(IAcademyService service) : ControllerBase
     public async Task<ActionResult<StudentDto>> Enroll(CreateEnrollmentRequest request, CancellationToken ct) =>
         Ok(await service.CreateEnrollmentAsync(request, ct));
 
+    // Setting what a student is charged is a pricing decision, so admins only — the same bar
+    // every fee plan change sits behind.
+    [HttpPut("enrollments/{enrollmentId:guid}/fee-amount")]
+    [Authorize(Roles = "TenantAdmin")]
+    public async Task<ActionResult<StudentDto>> SetEnrollmentFeeAmount(Guid enrollmentId,
+        SetEnrollmentFeeAmountRequest request, CancellationToken ct) =>
+        Ok(await service.SetEnrollmentFeeAmountAsync(enrollmentId, request, ct));
+
     [HttpPut("enrollments/{enrollmentId:guid}/end")]
     public async Task<ActionResult<StudentDto>> EndEnrollment(Guid enrollmentId, EndEnrollmentRequest request, CancellationToken ct) =>
         Ok(await service.EndEnrollmentAsync(enrollmentId, request, ct));

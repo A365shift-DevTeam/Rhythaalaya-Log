@@ -26,6 +26,7 @@ public interface IAcademyService
     Task ArchiveStudentAsync(Guid id, CancellationToken ct);
 
     Task<StudentDto> CreateEnrollmentAsync(CreateEnrollmentRequest request, CancellationToken ct);
+    Task<StudentDto> SetEnrollmentFeeAmountAsync(Guid enrollmentId, SetEnrollmentFeeAmountRequest request, CancellationToken ct);
     Task<StudentDto> EndEnrollmentAsync(Guid enrollmentId, EndEnrollmentRequest request, CancellationToken ct);
 
     Task<IReadOnlyList<StudentAchievementDto>> GetAchievementsAsync(Guid studentId, CancellationToken ct);

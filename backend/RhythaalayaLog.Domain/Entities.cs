@@ -23,6 +23,23 @@ public enum FeeAdjustmentType
     WriteOff
 }
 public enum LateEnrollmentBillingPolicy { Skip, Full, Prorated }
+
+/// <summary>Where a fee plan gets the amount it bills.</summary>
+public enum FeeBillingMode
+{
+    /// <summary>One price for everyone on the plan: <see cref="FeeStructure.Amount"/>.</summary>
+    Fixed,
+    /// <summary>
+    /// Each enrollment carries its own amount (<see cref="Enrollment.FeeAmountOverride"/>).
+    /// An enrollment without one raises no bill until an amount is entered.
+    /// </summary>
+    PerStudent,
+    /// <summary>
+    /// No bills at all. Fees are taken by hand on the Collect fee screen, so these students never
+    /// show an outstanding balance and never fall overdue.
+    /// </summary>
+    Unbilled
+}
 public enum AchievementCategory { Won, Participated, Other }
 
 [Flags]
@@ -123,8 +140,10 @@ public sealed class Course : ITenantOwned
     public required string Name { get; set; }
     public string? Description { get; set; }
     /// <summary>
-    /// Per-course "Upcoming" notice: how many days before its due date a fee shows as Upcoming
-    /// (1–30). Null falls back to the academy-wide <see cref="OrganizationSettings.FeeDueLeadDays"/>.
+    /// Per-course "Upcoming" notice: how many days before its due date a fee in a later billing
+    /// month is generated and listed as Upcoming (1–30). Fees dated in the current month are
+    /// always generated and pending from the 1st, whatever this is set to. Null falls back to the
+    /// academy-wide <see cref="OrganizationSettings.FeeDueLeadDays"/>.
     /// </summary>
     public int? UpcomingNotificationDays { get; set; }
     public bool IsActive { get; set; } = true;
@@ -220,6 +239,17 @@ public sealed class Enrollment : ITenantOwned
     public DateOnly? EndedOn { get; set; }
     /// <summary>Per-enrollment late-enrollment billing choice; null follows the org-wide setting.</summary>
     public LateEnrollmentBillingPolicy? LateBillingPolicy { get; set; }
+    /// <summary>
+    /// This student's own price on a <see cref="FeeBillingMode.PerStudent"/> plan. Null means no
+    /// amount has been agreed yet, and no bill is raised for such a plan.
+    /// </summary>
+    public decimal? FeeAmountOverride { get; set; }
+    /// <summary>
+    /// The day <see cref="FeeAmountOverride"/> was first entered. Per-student billing starts here,
+    /// never before, so agreeing a price today cannot raise a run of back-dated overdue bills for
+    /// the months nobody had priced.
+    /// </summary>
+    public DateOnly? FeeAmountSetOn { get; set; }
     public EnrollmentStatus Status { get; set; } = EnrollmentStatus.Active;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<AttendanceRecord> AttendanceRecords { get; set; } = [];
@@ -263,7 +293,10 @@ public sealed class FeeStructure : ITenantOwned
     public Guid? FeeHeadId { get; set; }
     public FeeHead? FeeHead { get; set; }
     public required string Name { get; set; }
+    /// <summary>The price billed when <see cref="BillingMode"/> is Fixed; ignored in the other modes.</summary>
     public decimal Amount { get; set; }
+    /// <summary>Where the billed amount comes from. Fixed is the long-standing behaviour.</summary>
+    public FeeBillingMode BillingMode { get; set; } = FeeBillingMode.Fixed;
     public FeeFrequency Frequency { get; set; }
     public DateOnly EffectiveFrom { get; set; }
     public DateOnly? EffectiveTo { get; set; }
@@ -410,7 +443,10 @@ public sealed class OrganizationSettings : ITenantOwned
     public string Currency { get; set; } = "INR";
     public string Locale { get; set; } = "en-IN";
     public string TimeZone { get; set; } = "Asia/Kolkata";
-    /// <summary>How many days before its due date a fee due is generated and shown as Upcoming.</summary>
+    /// <summary>
+    /// How many days before its due date a fee due in a later billing month is generated and shown
+    /// as Upcoming. The current month is always generated, since it is pending from the 1st.
+    /// </summary>
     public int FeeDueLeadDays { get; set; } = 7;
     /// <summary>Days after the due date before an unpaid due is marked Overdue (0 = the next day).</summary>
     public int FeeOverdueGraceDays { get; set; }
