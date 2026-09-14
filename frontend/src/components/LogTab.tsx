@@ -22,6 +22,8 @@ interface LogTabProps {
   isAdmin: boolean;
   /** Opens the WhatsApp composer for one student, from their attendance row. */
   onOpenWhatsApp: (student?: Student) => void;
+  /** Opens the fee collection dialog for one student, from their attendance row. */
+  onOpenRecordFee: (student?: Student) => void;
   onAddSessionOverride: (batchId: string, body: {
     originalDate: string; newDate: string | null; reason: string | null;
   }) => Promise<Batch>;
@@ -42,7 +44,7 @@ interface RosterEntry {
 type RollCallStatus = Extract<AttendanceStatus, 'P' | 'A'>;
 
 export const LogTab: React.FC<LogTabProps> = ({
-  students, batches, token, onOpenAddStudent, isAdmin, onOpenWhatsApp,
+  students, batches, token, onOpenAddStudent, isAdmin, onOpenWhatsApp, onOpenRecordFee,
   onAddSessionOverride, onRemoveSessionOverride,
 }) => {
   // The roll call carries only enrollment data, so fee standing and phone number are read off
@@ -542,6 +544,7 @@ export const LogTab: React.FC<LogTabProps> = ({
                     const initials = entry.studentName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
                     const student = studentsById.get(entry.studentId);
                     const fees = student ? feeStanding(student) : null;
+                    const hasFeesToCollect = Boolean(student?.isActive && student.outstandingBalance > 0);
 
                     // Removed student: faded, read-only history row — shows their track record
                     // (days attended) and this date's saved status, with no toggle.
@@ -608,6 +611,20 @@ export const LogTab: React.FC<LogTabProps> = ({
                             <Badge size="lg" variant={fees.variant} title={fees.full} className="hidden sm:inline-flex">
                               {fees.label}
                             </Badge>
+                          )}
+
+                          {student && hasFeesToCollect && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => onOpenRecordFee(student)}
+                              aria-label={`Collect fee from ${entry.studentName}`}
+                              title={`Collect fee · ${fees?.full ?? ''}`}
+                              className="w-9 gap-1.5 rounded-xl border border-[#cbecd8] bg-[#e9f7ee] px-0 font-bold text-[#35a160] hover:bg-[#cbecd8] hover:text-[#2b824e] active:scale-95 sm:w-auto sm:px-3 dark:border-[#3fc073]/30 dark:bg-[#3fc073]/15 dark:text-[#b3e6c7] dark:hover:bg-[#3fc073]/25 dark:hover:text-white"
+                            >
+                              <JisIcon className="text-[18px]">payments</JisIcon>
+                              <span className="hidden sm:inline">Collect</span>
+                            </Button>
                           )}
 
                           {student && (

@@ -560,6 +560,7 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
             onOpenAddStudent={openAddStudent}
             isAdmin={isAdmin}
             onOpenWhatsApp={openWhatsApp}
+            onOpenRecordFee={openRecordFee}
             onAddSessionOverride={handleAddBatchSessionOverride}
             onRemoveSessionOverride={handleRemoveBatchSessionOverride}
           />
