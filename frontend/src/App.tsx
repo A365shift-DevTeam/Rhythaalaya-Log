@@ -371,11 +371,14 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
     try {
       const XLSX = await import('xlsx');
       // Excel cells hold scalars only; nested values (enrollments, overrides) go in as JSON text.
-      const cell = (v: unknown) => Array.isArray(v) && v.every(x => typeof x !== 'object') ? v.join(', ')
-        : v !== null && typeof v === 'object' ? JSON.stringify(v) : v;
-      // avatar is a data URL that can exceed Excel's 32,767-char cell limit.
+      const cell = (v: unknown) => {
+        const out = Array.isArray(v) && v.every(x => typeof x !== 'object') ? v.join(', ')
+          : v !== null && typeof v === 'object' ? JSON.stringify(v) : v;
+        // Excel rejects cells over 32,767 chars — e.g. images stored as data URLs (avatar, logoUrl).
+        return typeof out === 'string' && out.length > 32767 ? '(too large for Excel — omitted)' : out;
+      };
       const rows = (items: object[]) => items.map(item => Object.fromEntries(
-        Object.entries(item).filter(([k]) => k !== 'avatar').map(([k, v]) => [k, cell(v)])));
+        Object.entries(item).map(([k, v]) => [k, cell(v)])));
       const book = XLSX.utils.book_new();
       const sheets: [string, object[]][] = [
         ['Students', students], ['Batches', batches], ['Courses', courses], ['Staff', staff], ['Transactions', transactions],
