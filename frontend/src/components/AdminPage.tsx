@@ -637,7 +637,7 @@ function DataBackupSection({ onExportData }: { onExportData: () => void }) {
                 Export Backup File
               </div>
               <div className="font-sans text-xs text-[#808080]">
-                Download local snapshot as JSON file
+                Download local snapshot as Excel file
               </div>
             </div>
           </div>

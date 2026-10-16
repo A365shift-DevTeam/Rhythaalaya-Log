@@ -367,15 +367,23 @@ function TenantApplication({ session, onLogout, darkMode, onToggleDarkMode }: {
     });
   };
 
-  const handleExportData = () => {
-    const backupData = { students, batches, courses, staff, transactions, settings, exportDate: new Date().toISOString() };
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `rhythaalaya_backup_${todayIsoDate()}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+  const handleExportData = async () => {
+    try {
+      const XLSX = await import('xlsx');
+      // Excel cells hold scalars only; nested values (enrollments, overrides) go in as JSON text.
+      const cell = (v: unknown) => Array.isArray(v) && v.every(x => typeof x !== 'object') ? v.join(', ')
+        : v !== null && typeof v === 'object' ? JSON.stringify(v) : v;
+      // avatar is a data URL that can exceed Excel's 32,767-char cell limit.
+      const rows = (items: object[]) => items.map(item => Object.fromEntries(
+        Object.entries(item).filter(([k]) => k !== 'avatar').map(([k, v]) => [k, cell(v)])));
+      const book = XLSX.utils.book_new();
+      const sheets: [string, object[]][] = [
+        ['Students', students], ['Batches', batches], ['Courses', courses], ['Staff', staff], ['Transactions', transactions],
+        ['Settings', Object.entries(settings).map(([setting, value]) => ({ setting, value }))],
+      ];
+      for (const [name, items] of sheets) XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(rows(items)), name);
+      XLSX.writeFile(book, `rhythaalaya_backup_${todayIsoDate()}.xlsx`);
+    } catch (error) { showError(error); }
   };
 
   const openRecordFee = (student?: Student) => { setFeeTargetStudent(student); setIsRecordFeeOpen(true); };
